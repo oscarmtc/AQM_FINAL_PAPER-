@@ -1,36 +1,117 @@
-```{r Download of packages, include=FALSE}
-# Load required libraries
-library(data.table)
-library(margins)
+---
+title: "AQM Final Paper: Code for Replication and Extension of the Analysis"
+author: "Ekaterina Leevik, Oscar Martinez & Elizabeth Sites & Lukas"
+date: ""
+output:
+  pdf_document:
+    toc: no
+    includes:
+      in_header: header.tex
+  # html_notebook:
+    # toc: no
+  html_document:
+    toc: no
+bibliography: hw3.bib
+---
+
+```{r Initial Setup & Download of Required Packages, include=FALSE}
+# The first line sets an option for the final document that can be produced from
+# the .Rmd file. Don't worry about it.
+knitr::opts_chunk$set(echo = TRUE)
+
+# The next bit (lines 22-43) is quite powerful and useful. 
+# First you define which packages you need for your analysis and assign it to 
+# the p_needed object. 
+p_needed <-
+  c("viridis", "knitr", "sandwich", "magrittr", "kableExtra", "MASS", "dplyr", "data.table", "margins")
+
+# Now you check which packages are already installed on your computer.
+# The function installed.packages() returns a vector with all the installed 
+# packages.
+packages <- rownames(installed.packages())
+# Then you check which of the packages you need are not installed on your 
+# computer yet. Essentially you compare the vector p_needed with the vector
+# packages. The result of this comparison is assigned to p_to_install.
+p_to_install <- p_needed[!(p_needed %in% packages)]
+# If at least one element is in p_to_install you then install those missing
+# packages.
+if (length(p_to_install) > 0) {
+  install.packages(p_to_install)
+}
+# Now that all packages are installed on the computer, you can load them for
+# this project. Additionally the expression returns whether the packages were
+# successfully loaded.
+sapply(p_needed, require, character.only = TRUE)
+
 ```
 
-``` {r Load of data}
+
+``` {r Load the main data source}
 
 data <- fread("spanish_political_attitudes_dataset_2017_to_2020.csv")
+
+# in order to use the "fread" function we first have to download the "data.table" package. This function is mainly employed for reading data from external files into R (in this case, the main data in in a csv format) in the form of data tables. It is especially useful when it comes to reading large datasets. 
+
+dim(data) # we inspect the dimensions of the data: it has a total of 7850 observations (each observation corresponds to a panelist) and 37 variables. 
+
+# We additionally inspect Whether there are any missing values across the columns and rows constituting the dataset. This is relevant for the latter optimization steps. 
+any(is.na(data))
+
+summary(data) # Overview of the data 
 
 ```
 
 ``` {r Code for the Preparation of the Data}
 
-# 
+# (1): Change the label for "codpanelista2"
 data$idcode <- data$codpanelista2
+
+#  (2): Generation of the variable "time" 
 data$time <- data$wave - 9
 data$time <- factor(data$time, levels = 0:3, labels = c("2017", "2018", "2019", "2020"))
-setorder(data, idcode, time)
+setorder(data, idcode, time) # the setorder() function will  reorders the rows of the data table "data" based on the values of specified columns, in this case "idcode" and "time". This line of code will reorder the dataset in such a way that the rows are first sorted by the values in the "idcode" column, and within each unique value of "idcode", the rows are further sorted according to the values in the "time" column.
 
-data$nwaves <- data[, .N, by = idcode]$N
-data$nwaves <- data$nwaves + 1
+#____________________________________
+#QUESTION: Panel setting in R?
+#xtset idcode time
+#____________________________________
 
-data$year <- data$wave
+# (3): Generation of variable "nwaves"; this variable will indicate the total number of waves completed by each respondent (referred to by the variable "idcode")
+
+# ... we first calculate the number of waves for each respondent ("idcode")
+wave_counts <- data[, .N, by = idcode]
+dim(wave_counts)
+
+# ... we then merge the result back to the original dataset according to the variable "idcode"
+data <- merge(data, wave_counts, by = "idcode", all.x = TRUE)
+
+# ... we assign the count of observations to the "nwaves" variable
+data$nwaves <- data$N
+
+# ... and finally remove the temporarily created "N" column
+data$N <- NULL
+
+# To finalize the generation of the new variable "nwaves", we add on unit to all observations. 
+data$nwaves <- data$nwaves + 1  # WHY + 1 ??
+
+# (4): Generation and assignments of values of variable "year"
+data$year <- data$wave # the values which the variable "year" takes depend on the wave number specified by "wave"
 data$year[data$year == 8] <- 2016
 data$year[data$year == 9] <- 2017
 data$year[data$year == 10] <- 2018
 data$year[data$year == 11] <- 2019
 data$year[data$year == 12] <- 2020
 
+# (5): Generation of a dichotomous variable "female"; it takes the value of 1 whenever the respondent is female and 0 otherwise. 
 data$female <- ifelse(data$sex == 2, 1, 0)
 
-data$age4 <- cut(data$age, breaks = c(15, 25, 35, 45, 100), labels = FALSE)
+# (6): Creation of variable "age_group"; this variable assigns a category to each respondent based on their age (given by "age")
+data$age_group <- cut(data$age, breaks = c(15, 25, 35, 45, 100), labels = FALSE)
+
+
+
+
+
 data$g3cohort <- cut(data$cohort, breaks = c(14, 29, 44, 100), labels = FALSE)
 
 data$edu3 <- cut(data$education, breaks = c(0, 4, 7, 11), labels = FALSE)
