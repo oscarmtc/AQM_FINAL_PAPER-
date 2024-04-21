@@ -48,7 +48,9 @@ sapply(p_needed, require, character.only = TRUE)
 
 ``` {r Load the main data source}
 
-data <- fread("spanish_political_attitudes_dataset_2017_to_2020.csv")
+data <- read("spanish_political_attitudes_dataset_2017_to_2020.csv")
+library(readr)
+spanish_political_attitudes_dataset_2017_to_2020 <- read_csv("spanish_political_attitudes_dataset_2017_to_2020.csv")
 
 # in order to use the "fread" function we first have to download the "data.table" package. This function is mainly employed for reading data from external files into R (in this case, the main data in in a csv format) in the form of data tables. It is especially useful when it comes to reading large datasets. 
 
