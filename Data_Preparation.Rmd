@@ -6,7 +6,9 @@ library(margins)
 
 ``` {r Load of data}
 
-data <- fread("spanish_political_attitudes_dataset_2017_to_2020.csv")
+data <- read("spanish_political_attitudes_dataset_2017_to_2020.csv")
+library(readr)
+spanish_political_attitudes_dataset_2017_to_2020 <- read_csv("spanish_political_attitudes_dataset_2017_to_2020.csv")
 
 ```
 
