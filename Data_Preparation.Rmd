@@ -1,6 +1,6 @@
 ---
 title: "AQM Final Paper: Code for Replication and Extension of the Analysis"
-author: "Ekaterina Leevik, Oscar Martinez Elizabeth Sites & Lukas"
+author: "Ekaterina Leevik, Oscar Martinez, Elizabeth Sites & Lukas Warode"
 date: ""
 output:
   pdf_document:
@@ -11,10 +11,11 @@ output:
     # toc: no
   html_document:
     toc: no
-bibliography: hw3.bib
+bibliography: 
 ---
 
-```{r Initial Setup & Download of Required Packages, include=FALSE}
+```{r Initial Setup & Download of Required Packages, include=FALSE} 
+
 # The first line sets an option for the final document that can be produced from
 # the .Rmd file. Don't worry about it.
 knitr::opts_chunk$set(echo = TRUE)
@@ -23,7 +24,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # First you define which packages you need for your analysis and assign it to 
 # the p_needed object. 
 p_needed <-
-  c("viridis", "knitr", "sandwich", "magrittr", "kableExtra", "MASS", "dplyr", "data.table", "margins")
+  c("viridis", "knitr", "sandwich", "magrittr", "kableExtra", "MASS", "dplyr", "data.table", "margins", "readr", "plm", "Hmisc")
 
 # Now you check which packages are already installed on your computer.
 # The function installed.packages() returns a vector with all the installed 
@@ -48,7 +49,6 @@ sapply(p_needed, require, character.only = TRUE)
 
 ``` {r Load the main data source}
 
-library(readr)
 data <- fread("spanish_political_attitudes_dataset_2017_to_2020.csv")
 
 # in order to use the "fread" function we first have to download the "data.table" package. This function is mainly employed for reading data from external files into R (in this case, the main data in in a csv format) in the form of data tables. It is especially useful when it comes to reading large datasets. 
@@ -67,28 +67,30 @@ summary(data) # Overview of the data
 # This initial code chunk has the purpose of preparing the data for the latter statistical analysis. The preparation steps conducted stem from the replication material of "Sexism and the far-right vote: The individual dynamics of gender backlash." Although the initial replication code is available for STATA, we rewrite the code for R. Although some commands may be different and some steps may be either added or removed, the variables resulting (as well as their scales and coding schemes) should be exactly the same. 
 
 #______________________________________________________________________________#
-# (1): Change the label for "codpanelista2"
-data$idcode <- data$codpanelista2
+# (1): Generation of variable "idcode" 
+
+data$idcode <- data$codpanelista2 
 
 #______________________________________________________________________________#
 #  (2): Generation of the variable "time" 
+
 data$time <- data$wave - 9
 data$time <- factor(data$time, levels = 0:3, labels = c("2017", "2018", "2019", "2020"))
-setorder(data, idcode, time) # the setorder() function will  reorders the rows of the data table "data" based on the values of specified columns, in this case "idcode" and "time". This line of code will reorder the dataset in such a way that the rows are first sorted by the values in the "idcode" column, and within each unique value of "idcode", the rows are further sorted according to the values in the "time" column.
+setorder(data, idcode, time) # the "setorder()" function will  reorders the rows of the data table "data" based on the values of specified columns, in this case "idcode" and "time". This line of code will reorder the dataset in such a way that the rows are first sorted by the values in the "idcode" column, and within each unique value of "idcode", the rows are further sorted according to the values in the "time" column.
+#______________________________________________________________________________#
+#  (3): Set the data to the panel data-format
+
+# ... and we finaly set the dataset as panel data ...
+pdata <- pdata.frame(data, index = c("idcode", "time"))
 
 #______________________________________________________________________________#
-
-#____________________________________
-#QUESTION: Panel setting in R?
-#xtset idcode time
-#____________________________________
-# (3): Generation of variable "nwaves"; this variable will indicate the total number of waves completed by each respondent (referred to by the variable "idcode")
+# (4): Generation of variable "nwaves"; this variable will indicate the total number of waves completed by each respondent (referred to by the variable "idcode")
 
 # ... we first calculate the number of waves for each respondent ("idcode")
-wave_counts <- data[, .N, by = idcode]
+wave_counts <- data[, .N, by = idcode] # ... this line computes the count of observations (rows) for each unique value of "idcode" in the dataset ...
 dim(wave_counts)
 # ... we then merge the result back to the original dataset according to the variable "idcode"
-data <- merge(data, wave_counts, by = "idcode", all.x = TRUE)
+data <- merge(data, wave_counts, by = "idcode", all.x = TRUE) # ... the "all.x = TRUE"-command specifies that all observations from the left dataset ("data") should be retained in the merged dataset, even if there are no matching observations in the right dataset ("wave_counts") ...
 # ... we assign the count of observations to the "nwaves" variable
 data$nwaves <- data$N
 # ... and finally remove the temporarily created "N" column
@@ -97,108 +99,102 @@ data$N <- NULL
 data$nwaves <- data$nwaves + 1  # WHY + 1 ??
 
 #______________________________________________________________________________#
-# (4): Generation and assignments of values of variable "year"
+# (5): Generation and assignments of values of variable "year"
+
 data$year <- data$wave # the values which the variable "year" takes depend on the wave number specified by "wave"
-data$year[data$year == 8] <- 2016
-data$year[data$year == 9] <- 2017
-data$year[data$year == 10] <- 2018
-data$year[data$year == 11] <- 2019
-data$year[data$year == 12] <- 2020
+data$year[data$year == 8] <- 2016 # ... this line assigns the value 2016 to the year variable in the dataset wherever the current value of year is equal to 8 ...
+data$year[data$year == 9] <- 2017 # ... 
+data$year[data$year == 10] <- 2018 # ... 
+data$year[data$year == 11] <- 2019 # ... 
+data$year[data$year == 12] <- 2020 # ... 
 
 #______________________________________________________________________________#
+# (6): Generation of a dichotomous variable "female"; it takes the value of 1 whenever the respondent is female and 0 otherwise. 
 
-# (5): Generation of a dichotomous variable "female"; it takes the value of 1 whenever the respondent is female and 0 otherwise. 
 data$female <- ifelse(data$sex == 2, 1, 0)
 
 #______________________________________________________________________________#
-# (6): Creation of variable "age_group"; this variable assigns a category to each respondent based on their age (given by "age")
-data$age_group <- cut(data$age, breaks = c(15, 25, 35, 45, 100), labels = FALSE)
+# (7): Creation of variable "age_group"; this variable assigns a category to each respondent based on their age (given by "age")
+
+data$age_group <- cut(data$age, breaks = c(15, 25, 35, 45, 100), labels = FALSE) # ... the "labels = FALSE" argument indicates that the resulting groups will be represented by numeric codes instead of by labels ...
 
 #______________________________________________________________________________#
-# (7): Generation of the variables for different cohorts 
-#
-#library(dplyr)
-#
-# Create coh0 column
-#data <- data %>%
-#  mutate(coh0 = ifelse(wave == 9, age, NA))
-#
-# Create coh1 column
-#data <- data %>%
-#  group_by(idcode) %>%
-#  mutate(coh1 = sum(coh0, na.rm = TRUE))
-# ... and replace coh1 values where wave = 10 and coh1 == NA
-#data <- data %>%
-#  mutate(coh1 = ifelse(wave == 10 & is.na(coh1), age - 1, coh1))
-#
-# Create coh2 column
-#data <- data %>%
-#  group_by(idcode) %>%
-#  mutate(coh2 = mean(coh1, na.rm = TRUE))
-# ... and replace coh2 values where wave == 11 and coh2 is missing or NA
-#data <- data %>%
-#  mutate(coh2 = ifelse(wave == 11 & is.na(coh2), age - 2, coh2))
-#
-# Create coh3 column
-#data <- data %>%
-#  group_by(idcode) %>%
-#  mutate(coh3 = mean(coh2, na.rm = TRUE))
-# ... and replace coh3 values where wave == 12 and coh3 is missing or NA
-#data <- data %>%
-#  mutate(coh3 = ifelse(wave == 12 & is.na(coh3), age - 3, coh3))
-#
-# Create coh4 column
-#data <- data %>%
-#  group_by(idcode) %>%
-#  mutate(coh4 = mean(coh3, na.rm = TRUE))
-#
-# Create cohort column
-#data <- data %>%
-#  mutate(cohort = coh4)
-#
-# Drop intermediate columns
-#data <- data %>%
-#  select(-coh0, -coh1, -coh2, -coh3, -coh4)
-#
-# Recode cohort column
-#data <- data %>%
-#  mutate(g3cohort = case_when(
-#    cohort >= 15 & cohort <= 29 ~ 1,
-#    cohort >= 30 & cohort <= 44 ~ 2,
-#    cohort >= 45 ~ 3
-#  ))
+# (8): Generation of the variables for different cohorts 
+
+# ... creation of variable "coh0" ...
+data <- data %>%
+  mutate(coh0 = ifelse(wave == 9, age, NA_real_))
+
+# Calculate total coh0 by idcode
+data <- data %>%
+  group_by(idcode) %>%
+  mutate(coh1 = sum(coh0, na.rm = TRUE))
+
+# Replace values in coh1
+data$coh1 <- ifelse(data$wave == 10 & data$coh1 >= data$age - 1, data$age - 1, data$coh1)
+
+# Calculate mean coh1 by idcode
+data <- data %>%
+  group_by(idcode) %>%
+  mutate(coh2 = mean(coh1, na.rm = TRUE))
+
+# Replace values in coh2
+data$coh2 <- ifelse(data$wave == 11 & data$coh2 >= data$age - 2, data$age - 2, data$coh2)
+
+# Calculate mean coh2 by idcode
+data <- data %>%
+  group_by(idcode) %>%
+  mutate(coh3 = mean(coh2, na.rm = TRUE))
+
+# Replace values in coh3
+data$coh3 <- ifelse(data$wave == 12 & data$coh3 >= data$age - 3, data$age - 3, data$coh3)
+
+# Calculate mean coh3 by idcode
+data <- data %>%
+  group_by(idcode) %>%
+  mutate(coh4 = mean(coh3, na.rm = TRUE))
+
+# Create cohort variable
+data <- data %>%
+  mutate(cohort = coh4)
+
+# Recode cohort variable
+data$g3cohort <- cut(data$cohort, breaks = c(14, 29, 44, 100), labels = FALSE)
+
+# Drop temporary variables
+data <- data %>%
+  select(-matches("coh(0|1|2|3|4)"))
 
 #______________________________________________________________________________#
-# (8): Generation of variable "edu"; this new variable is based on the values for the already existing variable "education"
+# (9): Generation of variable "edu"; this new variable is based on the values for the already existing variable "education"
 
 data$edu3 <- cut(data$education, breaks = c(0, 4, 7, 11), labels = FALSE) # the "cut" function divides the values of the variable "education" into intervals; in this case, the intervals are set to (0, 4], (4, 7], and (7, 11].
+data$edu3 <- factor(data$edu3, levels = c(1, 2, 3), labels = c("Lower secondary", "Upper secondary", "Tertiary")) # definition of labels for the three levels of education ...
 data$edu3_ <- factor(data$edu3) # This generates a dummy variable for each of the categories of the variable "edu3" generated above. 
 
 #______________________________________________________________________________#
-# (9): Specification of labels for the variable "livingpartner" according to its numeric values. 
+# (10): Specification of labels for the variable "livingpartner" according to its numeric values. 
 
 data$livingpartner <- factor(data$livingpartner, labels = c("Lives with partner", "Does not live with partner"))
 
 #______________________________________________________________________________#
-
-
-
-# (10): 
-
+# (11): Generation of the variable for respondent's income 
 
 data$hincome_all <- replace(data$hhincome, data$hhincome == 99, NA)
-data$hincome_all <- ifelse(is.na(data$hincome_all),
-                           ifelse(data$year == 2017, data$hincome_all[data$year == 2018],
-                                  ifelse(data$year == 2018, data$hincome_all[data$year == 2017],
-                                         ifelse(data$year == 2019, data$hincome_all[data$year == 2020],
-                                                ifelse(data$year == 2020, data$hincome_all[data$year == 2019], NA))))), by = idcode
+data <- data %>%
+  group_by(idcode) %>%
+  mutate(hincome_all = ifelse(is.na(hincome_all) & year == 2017, hincome_all[year == 2017],
+                       ifelse(is.na(hincome_all) & year == 2018, hincome_all[year == 2018],
+                       ifelse(is.na(hincome_all) & year == 2019, hincome_all[year == 2019],
+                       ifelse(is.na(hincome_all) & year == 2020, hincome_all[year == 2020],
+                       hincome_all))))) %>%
+  ungroup() #no
 
 data$x3hincall <- cut(data$hincome_all, breaks = c(0, 5, 8, 12), labels = FALSE)
 data$dhincome_all <- cut(data$hincome_all, breaks = c(0, 5, 8, 12), labels = FALSE)
 
-
 #______________________________________________________________________________#
-# (11): Generation of two variables for the respondent's interest in politics
+# (12): Generation of two variables for the respondent's interest in politics
 
 data$intpol <- (4 - data$polintr) / 3 # first created variable -> "intpol"
 data$dintpol <- ifelse(data$polintr %in% c(1, 2), 1, 0) # second created variable -> "dintpol; some notes regarding the code used: 
@@ -206,13 +202,17 @@ data$dintpol <- ifelse(data$polintr %in% c(1, 2), 1, 0) # second created variabl
     # If the condition is TRUE (i.e., if the value in "polintr" is 1 or 2), "dintpol" is assigned a value of 1; on the other hand, if the condition is FALSE (i.e., if the value for "polintr" is neither 1 nor 2), "dintpol" is coded as 0.
        
 #______________________________________________________________________________#
-# (12): Generation of two variables for the respondent's ideological identification
+# (13): Generation of two variables for the respondent's ideological identification
 
 data$ideol <- data$lrself / 10 # first created variable -> "ideol" based the value of the already existing variable "lrself"
-data$ideo5 <- cut(data$lrself, breaks = c(0, 2, 4, 5, 7, 10), labels = FALSE) # second created variable -> "ideo5" based the value of the already existing variable "lrself"; this variable assigns a value to each of the five defined intervals for the variable "lrself"
+data$ideo5 <- ifelse(data$lrself %in% 0:2, "Far left",
+              ifelse(data$lrself %in% c(3, 4), "Center left",
+              ifelse(data$lrself == 5, "Center",
+              ifelse(data$lrself %in% 6:7, "Center right",
+              ifelse(data$lrself %in% 8:10, "Far right", NA))))) # second created variable -> "ideo5" based the value of the already existing variable "lrself"; this variable assigns a value to each of the five defined intervals for the variable "lrself"
 
 #______________________________________________________________________________#
-# (13): Generation of variables to measure respondent's level of authoritarianism 
+# (14): Generation of variables to measure respondent's level of authoritarianism 
 
 data$a_respect <- ifelse(data$indeprespect == 2, 1, 0) # first created variable -> "a_respect" based the value of the already existing variable "indeprespect"
 
@@ -225,20 +225,14 @@ data$a_obedient <- ifelse(data$selfconfobed == 1, 1, 0) # fourth created variabl
 data$authoritarian <- rowMeans(data[, c("a_respect", "a_manner", "a_behave", "a_obedient")]) # fifth created variable -> "authoritarian"; each observation for this new variable stems from the row means of the variables "a_respect", "a_manner", "a_behave", and "a_obedient"; the function "rowMeans()" calculates the mean value across the specified columns (in this case, each specified column refers to a single variable) for each of the rows in the data set.
 
 #______________________________________________________________________________#
-# (14): Generation of variables to measure respondent's nativism
+# (15): Generation of variables to measure respondent's nativism
 
 data$natveco <- (10 - data$immigeco) / 10 # first created variable "natveco"
 data$natvcult <- data$immicult / 10 # second created variable "natvcult"
 data$nativism <- rowMeans(data[, c("natveco", "natvcult")]) # third created variable "nativism" referring to the row means of the variables "natveco" and "natvcult". 
 
-
-
-
-
 #______________________________________________________________________________#
-# (15): Generation of variables to measure respondent's level of populism 
-
-library(dplyr)
+# (16): Generation of variables to measure respondent's level of populism 
 
 # ... creation of a vector containing all the relevant variables
 pop_vars <- c("populisma", "populismd", "populismf", "populismi", "populismj", "populismn")
@@ -251,12 +245,12 @@ for (var in pop_vars) {
 data <- mutate(data, pop6amz = rowMeans(select(data, starts_with("ip_pop"))))
 
 #______________________________________________________________________________#
-# (16): Generation of variables to measure territorial preferences 
+# (17): Generation of variables to measure territorial preferences 
 
 data$orgterr <- (data$constpref - 1) / 4 # new variable "orgterr" based on the value of "constpref"
 
 #______________________________________________________________________________#
-# (17): Generation of variables to measure respondent's modern sexism 
+# (18): Generation of variables to measure respondent's modern sexism 
 
 # ... we initially create new variables ("imsex_1a" though "imsex_9i") corresponding to the values of the already existing variable "femindexa" though "femindexi" ...
 data <- mutate(data,
@@ -298,7 +292,7 @@ data <- mutate(data, msexism = rowMeans(select(data, starts_with("imsex_"))))
 data <- mutate(data, msexism = (msexism - 1) / 6)
 
 #______________________________________________________________________________#
-# (18): Variable for modern sexism according to Swim et al. (1995)
+# (19): Variable for modern sexism according to Swim et al. (1995)
 
 # ... we first calculate row mean of the variables imsex_1 through imsex_8 ... 
 data <- mutate(data, swim_msex = rowMeans(select(data, starts_with("imsex_")), na.rm = F))
@@ -306,7 +300,7 @@ data <- mutate(data, swim_msex = rowMeans(select(data, starts_with("imsex_")), n
 data <- mutate(data, swim_msex = (swim_msex - 1) / 6)
 
 #______________________________________________________________________________#
-# (19): Variable for respondent's engagement in Women's Day protests 
+# (20): Variable for respondent's engagement in Women's Day protests 
 
 # ... we first dichotomize th variables "femstrike", "femdemonstrate", "feminfo", "femtalk", and generate corresponding new binary variables for each ... 
 
@@ -319,19 +313,253 @@ data$p8m_talked <- ifelse(data$femtalk == 1, 1, 0) # fourth variable created -> 
 data$ip8m <- rowMeans(data[, c("p8m_strike", "p8m_demonst", "p8m_mobiliz", "p8m_talked")])
 
 #______________________________________________________________________________#
-# (20): Respondent's intended vote for the Vox-party (MAIN DEPENDENT VARIABLE)
+# (21): Respondent's intended vote for the Vox-party (MAIN DEPENDENT VARIABLE)
 
 data$vim_vox <- ifelse(data$voteintentionspain == 23, 1, 0) # the values for the created binary variable ("vim_vox") are defined as a function of the values for the already existing variable "voteintentionspain" 
 
 #______________________________________________________________________________#
-# (20): Respondent's intended vote for the PP-party (PLACEBO DEPENDENT VARIABLE)
+# (22): Respondent's intended vote for the PP-party (PLACEBO DEPENDENT VARIABLE)
 
 data$vim_pp <- ifelse(data$voteintentionspain == 2, 1, 0) # the values for the created binary variable ("vim_pp") are defined as a function of the values for the already existing variable "voteintentionspain" 
 
 #______________________________________________________________________________#
+# (23): Respondent's reported vote for the four largest parties in the 2016 election 
 
+# ... we first replace missing values in the "femstrike"' column with integer values ...
+data$femstrike[is.na(data$femstrike)] <- NA_integer_
 
-data$cut_violence <- (data$violence - 1) / 4
+# Re-code 'vote2016' into 'vr16_all' variable
+data$vr16_all <- ifelse(data$vote2016 == 1, 1,
+                        ifelse(data$vote2016 == 2, 2,
+                        ifelse(data$vote2016 %in% c(3, 5, 25), 3,
+                        ifelse(data$vote2016 == 4, 4,
+                        ifelse(data$vote2016 %in% 1:56, 5, NA)))))
+
+# Generate 'vr16_17' and 'vr16_18' variables for the years 2017 and 2018
+data$vr16_17 <- ifelse(data$year == 2017, data$vr16_all, NA_integer_)
+data$vr16_18 <- ifelse(data$year == 2018, data$vr16_all, NA_integer_)
+
+# Generate 'vr16_17a' and 'vr16_18a' variables by taking the maximum for each 'idcode'
+data <- data %>%
+  group_by(idcode) %>%
+  mutate(vr16_17a = ifelse(all(is.na(vr16_17)), NA_integer_, max(vr16_17, na.rm = TRUE)),
+         vr16_18a = ifelse(all(is.na(vr16_18)), NA_integer_, max(vr16_18, na.rm = TRUE)))
+
+# Generate the 'v16all' variable based on some conditions
+data$v16all <- ifelse(data$vr16_17a == 0 | is.na(data$vr16_17a), data$vr16_18a, data$vr16_17a)
+
+# Re-code the 'v16all' variable
+data$rv16all <- ifelse(data$v16all == 0, "Others",
+                       ifelse(data$v16all == 1, "PSOE",
+                       ifelse(data$v16all == 2, "PP",
+                       ifelse(data$v16all == 3, "Podemos",
+                       ifelse(data$v16all == 4, "Ciudadanos", NA)))))
+
+# Drop unnecessary variables
+data <- data %>%
+  select(-starts_with("vr16_"), -v16all)
+
+# Remove any remaining missing values
+data[is.na(data)] <- NA
+
+#______________________________________________________________________________#
+# (24): Creation of time-invariant variables fixed at their 2017/2018 values - these generated variables are used in the multilevel growth-curve models 
+
+# ... we initiate by creating the t1-variables ... 
+vars <- c("edu3", "x3hincall", "dintpol", "ideo5", "rv16all")
+# ... we then proceed and reorder the data 
+data <- data[order(data$idcode, data$year), ]
+# ... we then loop through each variable contained in the "vars"-vector ... 
+for (var in vars) {
+  # ... and create new variable prefixed with "t1" based on conditions ... 
+  new_var <- paste0("t1", var)
+  data[[new_var]] <- ave(data[[var]], data$idcode, data$year, FUN = function(x) {
+    if (length(x) > 0 && all(is.na(x[-1]))) {
+      x[1]
+    } else {
+      NA
+    }
+  })
+  
+  # Convert new variable to character if it's a factor
+  if (is.factor(data[[new_var]])) {
+    data[[new_var]] <- as.character(data[[new_var]])
+  }
+}
+
+# Sort the dataframe by "idcode" and "year"
+data <- data %>% arrange(idcode, year)
+
+# Create the t2partner variable
+data <- data %>%
+  group_by(idcode) %>%
+  mutate(t2partner = ifelse(nwaves == 4, lag(livingpartner), NA_integer_))
+
+# Create the t2ip8m variable
+data <- data %>%
+  group_by(idcode) %>%
+  mutate(t2ip8m = ifelse(nwaves == 4, lag(ip8m), NA_real_))
+
+# ... and finalize with the definition of appropriate labels for the variables ...
+names <- c("t2partner", "t2ip8m")
+labels <- list(
+  t2partner = c("1" = "Yes", "0" = "No"),
+  t2ip8m = c("1" = "Yes", "0" = "No")
+)
+
+# Assigning Labels to Variables
+for (i in 1:length(names)) {
+  levels(data[[names[i]]]) <- labels[[names[i]]]
+}
+
+# Variable Label Definitions
+labdef <- list(
+  t1edu3 = c("1" = "Lower 2ry", "2" = "Upper 2ry", "3" = "3ry"),
+  yesno = c("1" = "Yes", "0" = "No"),
+  income = c("1" = "Low", "2" = "Mid", "3" = "High"),
+  intpol = c("0" = "Low", "1" = "High"),
+  t1ideo5 = c("1" = "Far left", "2" = "Left", "3" = "Center", "4" = "Right", "5" = "Far right")
+)
+
+# Assign variable labels using label()
+for (i in 1:length(names)) {
+  levels(data[[names[i]]]) <- labdef[[names[i]]]
+}
+
+#______________________________________________________________________________#
+# (25): Generation of lagged and change variables 
+
+library(zoo)
+
+vars <- c("vim_vox", "authoritarian", "ideol", "nativism", "orgterr", "pop6", "msexism", "swim_msex")
+
+for (var in vars) {
+  data <- data %>% 
+    mutate(l2var := lag(.data[[var]], n = 2),
+           lsvar := .data[[var]] - lag(.data[[var]]))
+}
+
+# ... and finalize with the generation of positive and negative change variables for "sexism" and "ls.msexism"
+pdata$posmsex <- pdata$lsmsex * (pdata$lsmsex > 0)
+pdata$negmsex <- pdata$lsmsex * (pdata$lsmsex < 0)
+pdata$posswim <- pdata$lsswim_msex * (pdata$lsmsex > 0)
+pdata$negswim <- pdata$lsswim_msex * (pdata$lsmsex < 0)
+
+#______________________________________________________________________________#
+# (26): Assignment of labels to variables in the dataset 
+
+# Labeling of the variables
+label(data$female) <- "Female"
+label(data$age) <- "Age"
+label(data$cohort) <- "Cohort"
+label(data$edu3) <- "Education"
+label(data$livingpartner) <- "Lives with partner"
+label(data$dhincome_all) <- "Income"
+label(data$intpol) <- "Interest in politics"
+label(data$ideol) <- "Ideological identification"
+label(data$authoritarian) <- "Authoritarianism"
+label(data$pop6amz) <- "Populism"
+label(data$nativism) <- "Nativism"
+label(data$orgterr) <- "Territorial preference"
+label(data$msexism) <- "Sexism"
+label(data$swim_msex) <- "Sexism"
+label(data$vim_vox) <- "Vox intention"
+label(data$vim_pp) <- "PP intention"
+label(data$g3cohort) <- "Cohort"
+label(data$t1edu3) <- "Education (ref. Lower 2ry or less)"
+label(data$t1ideo5) <- "Ideological identification (ref. Far left)"
+label(data$t2partner) <- "Lives with partner"
+label(data$t1x3hincall) <- "Income (ref. Low)"
+label(data$t1dintpol) <- "Interest in politics"
+label(data$t1rv16all) <- "Vote in 2016 (ref. PP)"
 
 ```
+
+
+``` {r }
+
+
+
+```
+``` {r }
+
+
+
+```
+
+``` {r }
+
+
+
+```
+
+``` {r }
+
+
+
+```
+
+``` {r }
+
+
+
+```
+
+``` {r }
+
+
+
+```
+
+``` {r }
+
+
+
+```
+
+``` {r }
+
+
+
+```
+
+``` {r }
+
+
+
+```
+
+``` {r }
+
+
+
+```
+
+``` {r }
+
+
+
+```
+
+``` {r }
+
+
+
+```
+
+``` {r }
+
+
+
+```
+
+``` {r }
+
+
+
+```
+
+
+
+
 
