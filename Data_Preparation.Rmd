@@ -190,14 +190,28 @@ data_panel$coh4 <- NULL
 data_panel$g3cohort <- cut(data_panel$cohort, breaks = c(15, 29, 44, 100), labels = FALSE)
 summary(data_panel$g3cohort) # CHECK: STATA mean slightly different (2.107898 )
 data_panel$g3cohort_labels <- factor(data_panel$g3cohort, levels = 1:3, labels = c("15-29", "30-44", "45+")) # this factor variable specifies the respondent's cohort group and is derived from the variable "g3cohort" 
-summary(data_panel$g3cohort_labels) # CHECK: STATA's tabulation by group slightly diffeent 
+summary(data_panel$g3cohort_labels) # CHECK: STATA's tabulation by group slightly different 
 
 #______________________________________________________________________________#
-# (9): Generation of variable "edu"; this new variable is based on the values for the already existing variable "education"
+# (9): Generation of variable "edu" (this new variable is based on the values for the already existing variable "education") + generation of dummy variables for different education levels 
 
-data$edu3 <- cut(data$education, breaks = c(0, 4, 7, 11), labels = FALSE) # the "cut" function divides the values of the variable "education" into intervals; in this case, the intervals are set to (0, 4], (4, 7], and (7, 11].
-data$edu3 <- factor(data$edu3, levels = c(1, 2, 3), labels = c("Lower secondary", "Upper secondary", "Tertiary")) # definition of labels for the three levels of education ...
-data$edu3_ <- factor(data$edu3) # This generates a dummy variable for each of the categories of the variable "edu3" generated above. 
+data_panel$edu3 <- cut(data_panel$education, breaks = c(0, 4, 7, 11), labels = FALSE) # the "cut" function divides the values of the variable "education" into intervals; in this case, the intervals are set to (0, 4], (4, 7], and (7, 11].
+data_panel$edu3_labels <- factor(data_panel$edu3, levels = c(1, 2, 3), labels = c("Lower secondary", "Upper secondary", "Tertiary")) # definition of labels for the three levels of education ...
+summary(data_panel$edu3_labels) # CHECK: STATA's tabulation by educational is the same
+
+# ... based on the previously generated "edu3_labels"-variable, we proceed to generate dummy variables for all three education labels in the data set ... 
+
+# ... a dummy variable for lower education ...
+data_panel$edu3_1 <- ifelse(data_panel$edu3_labels == "Lower secondary", 1, 0)
+summary(data_panel$edu3_1) # CHECK: same summary statistics as in STATA output 
+
+# ... a dummy variable for upper secondary education ...
+data_panel$edu3_2 <- ifelse(data_panel$edu3_labels == "Upper secondary", 1, 0)
+mean(data_panel$edu3_2) # CHECK: same summary statistics as in STATA output 
+
+# ... a dummy variable for tertiary education ...
+data_panel$edu3_3 <- ifelse(data_panel$edu3_labels == "Tertiary", 1, 0)
+mean(data_panel$edu3_3) # CHECK: same summary statistics as in STATA output 
 
 #______________________________________________________________________________#
 # (10): Specification of labels for the variable "livingpartner" according to its numeric values. 
