@@ -216,9 +216,16 @@ mean(data_panel$edu3_3) # CHECK: same summary statistics as in STATA output
 #______________________________________________________________________________#
 # (10): Specification of labels for the variable "livingpartner" according to its numeric values. 
 
-data$livingpartner <- factor(data$livingpartner, labels = c("Lives with partner", "Does not live with partner"))
+data_panel$livingpartner_labels <- factor(data_panel$livingpartner, labels = c("Lives with partner", "Does not live with partner")) 
 
 #______________________________________________________________________________#
+
+
+
+
+
+
+
 # (11): Generation of the variable for respondent's income 
 
 data$hincome_all <- replace(data$hhincome, data$hhincome == 99, NA)
@@ -234,103 +241,201 @@ data <- data %>%
 data$x3hincall <- cut(data$hincome_all, breaks = c(0, 5, 8, 12), labels = FALSE)
 data$dhincome_all <- cut(data$hincome_all, breaks = c(0, 5, 8, 12), labels = FALSE)
 
+
+
+
+
+
+
 #______________________________________________________________________________#
 # (12): Generation of two variables for the respondent's interest in politics
 
-data$intpol <- (4 - data$polintr) / 3 # first created variable -> "intpol"
-data$dintpol <- ifelse(data$polintr %in% c(1, 2), 1, 0) # second created variable -> "dintpol; some notes regarding the code used: 
+data_panel$intpol <- (4 - data_panel$polintr) / 3 # the variable "intpol" will range between 0 and 1, with values closer to 1 indicating a stronger interest in politics 
+mean (data_panel$intpol) # CHECK: same descriptive statistics as STATA output 
+
+data_panel$dintpol <- ifelse(data$polintr %in% c(1, 2), 1, 0) # second created variable -> "dintpol; some notes regarding the code used: 
     # data$polintr %in% c(1, 2) -> This condition checks if each value in the "polintr" variable is either 1 or 2
     # If the condition is TRUE (i.e., if the value in "polintr" is 1 or 2), "dintpol" is assigned a value of 1; on the other hand, if the condition is FALSE (i.e., if the value for "polintr" is neither 1 nor 2), "dintpol" is coded as 0.
-       
+data_panel$dintpol_labels <- factor(data_panel$dintpol, labels = c("Hardly or not at all", "Quite or very")) 
+summary(data_panel$dintpol_labels) # CHECK: same descriptive statistics as STATA output 
+
 #______________________________________________________________________________#
 # (13): Generation of two variables for the respondent's ideological identification
 
-data$ideol <- data$lrself / 10 # first created variable -> "ideol" based the value of the already existing variable "lrself"
-data$ideo5 <- ifelse(data$lrself %in% 0:2, "Far left",
-              ifelse(data$lrself %in% c(3, 4), "Center left",
-              ifelse(data$lrself == 5, "Center",
-              ifelse(data$lrself %in% 6:7, "Center right",
-              ifelse(data$lrself %in% 8:10, "Far right", NA))))) # second created variable -> "ideo5" based the value of the already existing variable "lrself"; this variable assigns a value to each of the five defined intervals for the variable "lrself"
+data_panel$ideol <- data_panel$lrself / 10 # the variable "ideol" will range between 0 and 1, with values closer to 1 indicating a right-leaned position ... 
+summary(data_panel$ideol) # CHECK: same descriptive statistics as STATA output 
+
+data_panel$ideo5 <- ifelse(data_panel$lrself %in% 0:2, 1,
+                    ifelse(data_panel$lrself %in% 3:4, 2,
+                    ifelse(data_panel$lrself == 5, 3,
+                    ifelse(data_panel$lrself %in% 6:7, 4,
+                    ifelse(data_panel$lrself %in% 8:10,5, NA))))) # second created variable -> "ideo5" based the value of the already existing variable "lrself"; this variable assigns a value to each of the five defined intervals for the variable "lrself"
+
+# ... we finally create a factor variable to label the different numeric values of "ideo5" ...
+data_panel$ideo5_labels <- factor(data_panel$ideo5, labels = c("Far left", "Center left", "Center", "Center right", "Far right")) 
+summary(data_panel$ideo5_labels) # CHECK: same descriptive statistics as STATA output
 
 #______________________________________________________________________________#
 # (14): Generation of variables to measure respondent's level of authoritarianism 
 
-data$a_respect <- ifelse(data$indeprespect == 2, 1, 0) # first created variable -> "a_respect" based the value of the already existing variable "indeprespect"
+data_panel$a_respect <- ifelse(data_panel$indeprespect == 2, 1, 0) # first created variable -> "a_respect" based the value of the already existing variable "indeprespect"
+mean(data_panel$a_respect) # CHECK: same descriptive statistics as STATA output 
 
-data$a_manner <- ifelse(data$curiosmanners == 2, 1, 0) # second created variable -> "a_manner" based the value of the already existing variable "curiosmanners"
+data_panel$a_manner <- ifelse(data_panel$curiosmanners == 2, 1, 0) # second created variable -> "a_manner" based the value of the already existing variable "curiosmanners"
+mean(data_panel$a_manner) # CHECK: same descriptive statistics as STATA output 
 
-data$a_behave <- ifelse(data$empathybehave == 2, 1, 0) # third created variable -> "a_behave" based the value of the already existing variable "empathybehave"
+data_panel$a_behave <- ifelse(data_panel$empathybehave == 2, 1, 0) # third created variable -> "a_behave" based the value of the already existing variable "empathybehave"
+mean(data_panel$a_behave) # CHECK: same descriptive statistics as STATA output 
 
-data$a_obedient <- ifelse(data$selfconfobed == 1, 1, 0) # fourth created variable -> "a_obedient" based the value of the already existing variable "selfconfobed"
+data_panel$a_obedient <- ifelse(data_panel$selfconfobed == 1, 1, 0) # fourth created variable -> "a_obedient" based the value of the already existing variable "selfconfobed"
+mean(data_panel$a_obedient) # CHECK: same descriptive statistics as STATA output 
 
-data$authoritarian <- rowMeans(data[, c("a_respect", "a_manner", "a_behave", "a_obedient")]) # fifth created variable -> "authoritarian"; each observation for this new variable stems from the row means of the variables "a_respect", "a_manner", "a_behave", and "a_obedient"; the function "rowMeans()" calculates the mean value across the specified columns (in this case, each specified column refers to a single variable) for each of the rows in the data set.
+data_panel$authoritarian <- rowMeans(data_panel[, c("a_respect", "a_manner", "a_behave", "a_obedient")]) # fifth created variable -> "authoritarian"; each observation for this new variable stems from the row means of the variables "a_respect", "a_manner", "a_behave", and "a_obedient"; the function "rowMeans()" calculates the mean value across the specified columns (in this case, each specified column refers to a single variable) for each of the rows in the data set.
+mean(data_panel$authoritarian) # CHECK: same descriptive statistics as STATA output 
 
 #______________________________________________________________________________#
 # (15): Generation of variables to measure respondent's nativism
 
-data$natveco <- (10 - data$immigeco) / 10 # first created variable "natveco"
-data$natvcult <- data$immicult / 10 # second created variable "natvcult"
-data$nativism <- rowMeans(data[, c("natveco", "natvcult")]) # third created variable "nativism" referring to the row means of the variables "natveco" and "natvcult". 
+data_panel$natveco <- (10 - data_panel$immigeco) / 10 # this creates a variable ranging from 0 to 1, where values closer to 1 refer to a more negative attitude towards immigrant's effect of the economy 
+mean(data_panel$natveco) # CHECK: same descriptive statistics as STATA output 
+
+data_panel$natvcult <- data_panel$immicult / 10 # second created variable "natvcult" will range from 0 10 1, where values closer to 1 indicate that respondents believe that immigrants should have the same culture and customs as natives 
+mean(data_panel$natvcult) # CHECK: same descriptive statistics as STATA output 
+
+data_panel$nativism <- rowMeans(data_panel[, c("natveco", "natvcult")]) # third created variable "nativism" referring to the row means of the variables "natveco" and "natvcult". 
+mean(data_panel$nativism) # CHECK: same descriptive statistics as STATA output 
 
 #______________________________________________________________________________#
 # (16): Generation of variables to measure respondent's level of populism 
 
 # ... creation of a vector containing all the relevant variables
-pop_vars <- c("populisma", "populismd", "populismf", "populismi", "populismj", "populismn")
+populism_vars <- c("populisma", "populismd", "populismf", "populismi", "populismj", "populismn")
 # ... we generate a loop in order to iterate the following procedure for each of the variables in the vector "pop_vars" (created above) ...
-for (var in pop_vars) {
+for (var in populism_vars) {
   # ... the "paste0("ip_", var)" command will generate a new variable by appending the prefix "ip_" to the current variable name (to be able to use the "paste0()", we need the "dplyr" package)
-  data <- mutate(data, !!paste0("ip_", var) := (get(var) - 1) / 6)
+  data_panel <- mutate(data_panel, !!paste0("ip_", var) := (get(var) - 1) / 6)
 }
-# ... we finally calculate Calculate the row mean of rescaled variables
-data <- mutate(data, pop6amz = rowMeans(select(data, starts_with("ip_pop"))))
+# ... and finally calculate the row means for each of the "ip_pop" variables and store these in a new variable called "pop6amz" ...
+data_panel$pop6amz <- rowMeans(data_panel[grep("^ip_pop", names(data_panel))])
+mean(data_panel$pop6amz) # CHECK: same descriptive statistics as STATA output 
 
 #______________________________________________________________________________#
 # (17): Generation of variables to measure territorial preferences 
 
-data$orgterr <- (data$constpref - 1) / 4 # new variable "orgterr" based on the value of "constpref"
+data_panel$orgterr <- (data_panel$constpref - 1) / 4 # new variable "orgterr" based on the value of "constpref" is created, ranging between 0 and 1 ... 
+mean(data_panel$orgterr) # CHECK: same descriptive statistics as STATA output 
 
+#______________________________________________________________________________#
+data_panel <- data_panel[order(data_panel$idcode), ]
 #______________________________________________________________________________#
 # (18): Generation of variables to measure respondent's modern sexism 
 
 # ... we initially create new variables ("imsex_1a" though "imsex_9i") corresponding to the values of the already existing variable "femindexa" though "femindexi" ...
-data <- mutate(data,
-               imsex_1a = femindexa,
-               imsex_2b = femindexb,
-               imsex_3c = femindexc,
-               imsex_4d = femindexd,
-               imsex_5e = femindexe,
-               imsex_6f = femindexf,
-               imsex_7g = femindexg,
-               imsex_8h = femindexh,
-               imsex_9i = femindexi)
+
+data_panel$imsex_1a <- data_panel$femindexa
+data_panel$imsex_2b <- data_panel$femindexb
+data_panel$imsex_3c <- data_panel$femindexc
+data_panel$imsex_4d <- data_panel$femindexd
+data_panel$imsex_5e <- data_panel$femindexe
+data_panel$imsex_6f <- data_panel$femindexf
+data_panel$imsex_7g <- data_panel$femindexg
+data_panel$imsex_8h <- data_panel$femindexh
+data_panel$imsex_9i <- data_panel$femindexi
+
+class(data_panel$imsex_1a)
+class(data_panel$imsex_2b)
+class(data_panel$imsex_3c)
+class(data_panel$imsex_4d)
+class(data_panel$imsex_5e)
+class(data_panel$imsex_6f)
+class(data_panel$imsex_7g)
+class(data_panel$imsex_8h)
+class(data_panel$imsex_9i)
+
+data_panel$imsex_1a <- as.numeric(data_panel$imsex_1a)
+data_panel$imsex_2b <- as.numeric(data_panel$imsex_2b)
+data_panel$imsex_3c <- as.numeric(data_panel$imsex_3c)
+data_panel$imsex_4d <- as.numeric(data_panel$imsex_4d)
+data_panel$imsex_5e <- as.numeric(data_panel$imsex_5e)
+data_panel$imsex_6f <- as.numeric(data_panel$imsex_6f)
+data_panel$imsex_7g <- as.numeric(data_panel$imsex_7g)
+data_panel$imsex_8h <- as.numeric(data_panel$imsex_8h)
+data_panel$imsex_9i <- as.numeric(data_panel$imsex_9i)
+
+
+
+
+
+# Recode imsex_2b, imsex_6f, imsex_7g variables
+
+
+data_panel <- data_panel %>%
+  mutate(imsex_2b = recode(imsex_2b, `1` = 7, `2` = 6, `3` = 5, `4` = 4, `5` = 3, `6` = 2, `7` = 1),
+         imsex_6f = recode(imsex_6f, `1` = 7, `2` = 6, `3` = 5, `4` = 4, `5` = 3, `6` = 2, `7` = 1),
+         imsex_7g = recode(imsex_7g, `1` = 7, `2` = 6, `3` = 5, `4` = 4, `5` = 3, `6` = 2, `7` = 1)) %>%
+  mutate(across(starts_with("imsex_"), ~na_if(., "")))
+
+
+
 # ... we proceed to modify the values of some of the variables generated above ... 
-data <- mutate(data,
-               imsex_2b = case_when(imsex_2b == 1 ~ 7,
-                                    imsex_2b == 2 ~ 6,
-                                    imsex_2b == 3 ~ 5,
-                                    imsex_2b == 4 ~ 4,
-                                    imsex_2b == 5 ~ 3,
-                                    imsex_2b == 6 ~ 2,
-                                    imsex_2b == 7 ~ 1),
-               imsex_6f = case_when(imsex_6f == 1 ~ 7,
-                                    imsex_6f == 2 ~ 6,
-                                    imsex_6f == 3 ~ 5,
-                                    imsex_6f == 4 ~ 4,
-                                    imsex_6f == 5 ~ 3,
-                                    imsex_6f == 6 ~ 2,
-                                    imsex_6f == 7 ~ 1),
-               imsex_7g = case_when(imsex_7g == 1 ~ 7,
-                                    imsex_7g == 2 ~ 6,
-                                    imsex_7g == 3 ~ 5,
-                                    imsex_7g == 4 ~ 4,
-                                    imsex_7g == 5 ~ 3,
-                                    imsex_7g == 6 ~ 2,
-                                    imsex_7g == 7 ~ 1))
+data_panel <- mutate(data_panel,
+                     imsex_2b = case_when(is.na(imsex_2b) ~ NA_real_,
+                                          imsex_2b == 1 ~ 7, 
+                                          imsex_2b == 2 ~ 6,
+                                          imsex_2b == 3 ~ 5,
+                                          imsex_2b == 4 ~ 4,
+                                          imsex_2b == 5 ~ 3,
+                                          imsex_2b == 6 ~ 2,
+                                          imsex_2b == 7 ~ 1,
+                                          TRUE ~ imsex_2b))
+
+data_panel <- mutate(data_panel,
+                     imsex_6f = case_when(is.na(imsex_6f) ~ NA_real_,
+                                          imsex_6f == 1 ~ 7, 
+                                          imsex_6f == 2 ~ 6,
+                                          imsex_6f == 3 ~ 5,
+                                          imsex_6f == 4 ~ 4,
+                                          imsex_6f == 5 ~ 3,
+                                          imsex_6f == 6 ~ 2,
+                                          imsex_6f == 7 ~ 1,
+                                          TRUE ~ imsex_6f))
+
+
+data_panel <- mutate(data_panel,
+                     imsex_7g = case_when(is.na(imsex_7g) ~ NA_real_,
+                                          imsex_7g == 1 ~ 7,
+                                          imsex_7g == 2 ~ 6,
+                                          imsex_7g == 3 ~ 5,
+                                          imsex_7g == 4 ~ 4,
+                                          imsex_7g == 5 ~ 3,
+                                          imsex_7g == 6 ~ 2,
+                                          imsex_7g == 7 ~ 1,
+                                          TRUE ~ imsex_7g))
+
+mean(data_panel$imsex_2b) # CHECK: same descriptive statistics as STATA output 
+mean(data_panel$imsex_6f) # CHECK: same descriptive statistics as STATA output 
+mean(data_panel$imsex_7g) # CHECK: same descriptive statistics as STATA output 
+mean(data_panel$imsex_1a) # CHECK: same descriptive statistics as STATA output 
+mean(data_panel$imsex_3c) # CHECK: same descriptive statistics as STATA output 
+mean(data_panel$imsex_4d) # CHECK: same descriptive statistics as STATA output  
+mean(data_panel$imsex_5e) # CHECK: same descriptive statistics as STATA output  
+mean(data_panel$imsex_8h) # CHECK: same descriptive statistics as STATA output 
+mean(data_panel$imsex_9i) # CHECK: same descriptive statistics as STATA output 
+
 # ... we then compute the row mean of variables starting with the string "imsex_" and store the estimated value in a new variable called "msexism" ... 
-data <- mutate(data, msexism = rowMeans(select(data, starts_with("imsex_"))))
+data_panel$msexism <- rowMeans(data_panel[, c("imsex_2b", "imsex_6f", "imsex_7g","imsex_1a","imsex_3c","imsex_4d","imsex_5e","imsex_8h", "imsex_9i")])
+
+data_panel$nativism <- rowMeans(data_panel[, c("natveco", "natvcult")]) 
+
 # ... we finally rescale the newly created variable "msexism" ... 
-data <- mutate(data, msexism = (msexism - 1) / 6)
+data_panel$msexism <-  (data_panel$msexism- 1 / 6)
+
+class(data_panel$orgterr)
+
+
+data_panel$orgterr <- (data_panel$constpref - 1) / 4 
+
+
 
 #______________________________________________________________________________#
 # (19): Variable for modern sexism according to Swim et al. (1995)
