@@ -331,86 +331,78 @@ data_panel <- data_panel[order(data_panel$idcode), ]
 # (18): Generation of variables to measure respondent's modern sexism 
 
 # ... we initially create new variables ("imsex_1a" though "imsex_9i") corresponding to the values of the already existing variable "femindexa" though "femindexi" ...
-
 data_panel$imsex_1a <- data_panel$femindexa
-data_panel$imsex_2b <- data_panel$femindexb
+data_panel$imsex_2b_t <- data_panel$femindexb
 data_panel$imsex_3c <- data_panel$femindexc
 data_panel$imsex_4d <- data_panel$femindexd
 data_panel$imsex_5e <- data_panel$femindexe
-data_panel$imsex_6f <- data_panel$femindexf
-data_panel$imsex_7g <- data_panel$femindexg
+data_panel$imsex_6f_t <- data_panel$femindexf
+data_panel$imsex_7g_t <- data_panel$femindexg
 data_panel$imsex_8h <- data_panel$femindexh
 data_panel$imsex_9i <- data_panel$femindexi
 
+# ... we then examine the class of the newly generated variables ...
 class(data_panel$imsex_1a)
-class(data_panel$imsex_2b)
+class(data_panel$imsex_2b_t)
 class(data_panel$imsex_3c)
 class(data_panel$imsex_4d)
 class(data_panel$imsex_5e)
-class(data_panel$imsex_6f)
-class(data_panel$imsex_7g)
+class(data_panel$imsex_6f_t)
+class(data_panel$imsex_7g_t)
 class(data_panel$imsex_8h)
 class(data_panel$imsex_9i)
 
+# ... and modify their class to ensure that they are all of the type "numeric" ...
 data_panel$imsex_1a <- as.numeric(data_panel$imsex_1a)
-data_panel$imsex_2b <- as.numeric(data_panel$imsex_2b)
+data_panel$imsex_2b_t <- as.numeric(data_panel$imsex_2b_t)
 data_panel$imsex_3c <- as.numeric(data_panel$imsex_3c)
 data_panel$imsex_4d <- as.numeric(data_panel$imsex_4d)
 data_panel$imsex_5e <- as.numeric(data_panel$imsex_5e)
-data_panel$imsex_6f <- as.numeric(data_panel$imsex_6f)
-data_panel$imsex_7g <- as.numeric(data_panel$imsex_7g)
+data_panel$imsex_6f_t <- as.numeric(data_panel$imsex_6f_t)
+data_panel$imsex_7g_t <- as.numeric(data_panel$imsex_7g_t)
 data_panel$imsex_8h <- as.numeric(data_panel$imsex_8h)
 data_panel$imsex_9i <- as.numeric(data_panel$imsex_9i)
 
-
-
-
-
-# Recode imsex_2b, imsex_6f, imsex_7g variables
-
-
-data_panel <- data_panel %>%
-  mutate(imsex_2b = recode(imsex_2b, `1` = 7, `2` = 6, `3` = 5, `4` = 4, `5` = 3, `6` = 2, `7` = 1),
-         imsex_6f = recode(imsex_6f, `1` = 7, `2` = 6, `3` = 5, `4` = 4, `5` = 3, `6` = 2, `7` = 1),
-         imsex_7g = recode(imsex_7g, `1` = 7, `2` = 6, `3` = 5, `4` = 4, `5` = 3, `6` = 2, `7` = 1)) %>%
-  mutate(across(starts_with("imsex_"), ~na_if(., "")))
-
-
-
-# ... we proceed to modify the values of some of the variables generated above ... 
+# ... we proceed to modify the values of some of the variables "imsex_2b_t", "imsex_6f_t", "imsex_7g_t", and store the new values as "imsex_2b", "imsex_6f", and "imsex_7g" respectively. ... 
+# ... we first recode "imsex_2b" ...
+data_panel$imsex_2b <- NA # we first generate an "empty" variable 
 data_panel <- mutate(data_panel,
-                     imsex_2b = case_when(is.na(imsex_2b) ~ NA_real_,
-                                          imsex_2b == 1 ~ 7, 
-                                          imsex_2b == 2 ~ 6,
-                                          imsex_2b == 3 ~ 5,
-                                          imsex_2b == 4 ~ 4,
-                                          imsex_2b == 5 ~ 3,
-                                          imsex_2b == 6 ~ 2,
-                                          imsex_2b == 7 ~ 1,
-                                          TRUE ~ imsex_2b))
-
+                     imsex_2b = case_when(
+                       imsex_2b_t == 1 ~ 7, 
+                       imsex_2b_t == 2 ~ 6,
+                       imsex_2b_t == 3 ~ 5,
+                       imsex_2b_t == 4 ~ 4,
+                       imsex_2b_t == 5 ~ 3,
+                       imsex_2b_t == 6 ~ 2,
+                       imsex_2b_t == 7 ~ 1
+                       )
+                     )
+# ... we then recode "imsex_6f" ...
+data_panel$imsex_6f <- NA # we first generate an "empty" variable 
 data_panel <- mutate(data_panel,
-                     imsex_6f = case_when(is.na(imsex_6f) ~ NA_real_,
-                                          imsex_6f == 1 ~ 7, 
-                                          imsex_6f == 2 ~ 6,
-                                          imsex_6f == 3 ~ 5,
-                                          imsex_6f == 4 ~ 4,
-                                          imsex_6f == 5 ~ 3,
-                                          imsex_6f == 6 ~ 2,
-                                          imsex_6f == 7 ~ 1,
-                                          TRUE ~ imsex_6f))
-
-
+                     imsex_6f = case_when(
+                       imsex_6f_t == 1 ~ 7, 
+                       imsex_6f_t == 2 ~ 6,
+                       imsex_6f_t == 3 ~ 5,
+                       imsex_6f_t == 4 ~ 4,
+                       imsex_6f_t == 5 ~ 3,
+                       imsex_6f_t == 6 ~ 2,
+                       imsex_6f_t == 7 ~ 1
+                       )
+                     )
+# ... and finally "imsex_7g" ...
+data_panel$imsex_7g <- NA # we first generate an "empty" variable 
 data_panel <- mutate(data_panel,
-                     imsex_7g = case_when(is.na(imsex_7g) ~ NA_real_,
-                                          imsex_7g == 1 ~ 7,
-                                          imsex_7g == 2 ~ 6,
-                                          imsex_7g == 3 ~ 5,
-                                          imsex_7g == 4 ~ 4,
-                                          imsex_7g == 5 ~ 3,
-                                          imsex_7g == 6 ~ 2,
-                                          imsex_7g == 7 ~ 1,
-                                          TRUE ~ imsex_7g))
+                     imsex_7g = case_when(
+                       imsex_7g_t == 1 ~ 7, 
+                       imsex_7g_t == 2 ~ 6,
+                       imsex_7g_t == 3 ~ 5,
+                       imsex_7g_t == 4 ~ 4,
+                       imsex_7g_t == 5 ~ 3,
+                       imsex_7g_t == 6 ~ 2,
+                       imsex_7g_t == 7 ~ 1
+                       )
+                     )
 
 mean(data_panel$imsex_2b) # CHECK: same descriptive statistics as STATA output 
 mean(data_panel$imsex_6f) # CHECK: same descriptive statistics as STATA output 
@@ -425,15 +417,12 @@ mean(data_panel$imsex_9i) # CHECK: same descriptive statistics as STATA output
 # ... we then compute the row mean of variables starting with the string "imsex_" and store the estimated value in a new variable called "msexism" ... 
 data_panel$msexism <- rowMeans(data_panel[, c("imsex_2b", "imsex_6f", "imsex_7g","imsex_1a","imsex_3c","imsex_4d","imsex_5e","imsex_8h", "imsex_9i")])
 
-data_panel$nativism <- rowMeans(data_panel[, c("natveco", "natvcult")]) 
-
 # ... we finally rescale the newly created variable "msexism" ... 
-data_panel$msexism <-  (data_panel$msexism- 1 / 6)
+data_panel$msexism <- (data_panel$msexism - 1) / 6
+mean(data_panel$msexism) # CHECK: same descriptive statistics as STATA output 
 
-class(data_panel$orgterr)
 
 
-data_panel$orgterr <- (data_panel$constpref - 1) / 4 
 
 
 
