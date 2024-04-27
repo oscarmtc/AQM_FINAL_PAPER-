@@ -55,9 +55,6 @@ data <- fread("spanish_political_attitudes_dataset_2017_to_2020.csv")
 
 dim(data) # we inspect the dimensions of the data: it has a total of 7850 observations (each observation corresponds to a panelist) and 37 variables. 
 
-# We additionally inspect Whether there are any missing values across the columns and rows constituting the dataset. This is relevant for the latter optimization steps. 
-any(is.na(data))
-
 summary(data) # Overview of the data 
 
 ```
@@ -70,18 +67,25 @@ summary(data) # Overview of the data
 # (1): Generation of variable "idcode" 
 
 data$idcode <- data$codpanelista2 
+summary(data$idcode) # CHECK: same descriptive statistics as STATA output 
 
 #______________________________________________________________________________#
 #  (2): Generation of the variable "time" 
 
 data$time <- data$wave - 9
-data$time <- factor(data$time, levels = 0:3, labels = c("2017", "2018", "2019", "2020"))
-setorder(data, idcode, time) # the "setorder()" function will  reorders the rows of the data table "data" based on the values of specified columns, in this case "idcode" and "time". This line of code will reorder the dataset in such a way that the rows are first sorted by the values in the "idcode" column, and within each unique value of "idcode", the rows are further sorted according to the values in the "time" column.
+data$time_labels <- factor(data$time, levels = 0:3, labels = c("2017", "2018", "2019", "2020"))
+setorder(data, idcode, time_labels) # the "setorder()" function will  reorders the rows of the data table "data" based on the values of specified columns, in this case "idcode" and "time". This line of code will reorder the dataset in such a way that the rows are first sorted by the values in the "idcode" column, and within each unique value of "idcode", the rows are further sorted according to the values in the "time_labels" column.
+summary(data$time) # CHECK: same descriptive statistics as STATA output 
+summary(data$time_labels) # this is an additional factor variable created to assign the specific years to the "time" variable" 
+
 #______________________________________________________________________________#
-#  (3): Set the data to the panel data-format
+#  (3): Set the data to the panel data-format and sort according to "idcode"
 
 # ... and we finaly set the dataset as panel data ...
-pdata <- pdata.frame(data, index = c("idcode", "time"))
+data_panel <- pdata.frame(data, index = c("idcode", "time"))
+
+# ... we also sort the dataset according to the variable "idcode" 
+data_panel <- data_panel[order(data_panel$idcode), ]
 
 #______________________________________________________________________________#
 # (4): Generation of variable "nwaves"; this variable will indicate the total number of waves completed by each respondent (referred to by the variable "idcode")
@@ -90,80 +94,103 @@ pdata <- pdata.frame(data, index = c("idcode", "time"))
 wave_counts <- data[, .N, by = idcode] # ... this line computes the count of observations (rows) for each unique value of "idcode" in the dataset ...
 dim(wave_counts)
 # ... we then merge the result back to the original dataset according to the variable "idcode"
-data <- merge(data, wave_counts, by = "idcode", all.x = TRUE) # ... the "all.x = TRUE"-command specifies that all observations from the left dataset ("data") should be retained in the merged dataset, even if there are no matching observations in the right dataset ("wave_counts") ...
+data_panel <- merge(data_panel, wave_counts, by = "idcode", all.x = TRUE) # ... the "all.x = TRUE"-command specifies that all observations from the left dataset ("data") should be retained in the merged dataset, even if there are no matching observations in the right dataset ("wave_counts") ...
 # ... we assign the count of observations to the "nwaves" variable
-data$nwaves <- data$N
+data_panel$nwaves <- data_panel$N 
 # ... and finally remove the temporarily created "N" column
-data$N <- NULL
-# To finalize the generation of the new variable "nwaves", we add on unit to all observations. 
-data$nwaves <- data$nwaves + 1  # WHY + 1 ??
+data_panel$N <- NULL
+summary(data_panel$nwaves) # CHECK: same descriptive statistics as STATA output 
 
 #______________________________________________________________________________#
 # (5): Generation and assignments of values of variable "year"
 
-data$year <- data$wave # the values which the variable "year" takes depend on the wave number specified by "wave"
-data$year[data$year == 8] <- 2016 # ... this line assigns the value 2016 to the year variable in the dataset wherever the current value of year is equal to 8 ...
-data$year[data$year == 9] <- 2017 # ... 
-data$year[data$year == 10] <- 2018 # ... 
-data$year[data$year == 11] <- 2019 # ... 
-data$year[data$year == 12] <- 2020 # ... 
+data_panel$year <- data_panel$wave # the values which the variable "year" takes depend on the wave number specified by "wave"
+data_panel$year[data_panel$year == 8] <- 2016 # ... this line assigns the value 2016 to the "year" variable in the dataset wherever the current value of "year" is equal to 8 ...
+data_panel$year[data_panel$year == 9] <- 2017 # ... 
+data_panel$year[data_panel$year == 10] <- 2018 # ... 
+data_panel$year[data_panel$year == 11] <- 2019 # ... 
+data_panel$year[data_panel$year == 12] <- 2020 # ... 
+mean(data_panel$year) # CHECK: same descriptive statistics as STATA output 
 
 #______________________________________________________________________________#
 # (6): Generation of a dichotomous variable "female"; it takes the value of 1 whenever the respondent is female and 0 otherwise. 
 
-data$female <- ifelse(data$sex == 2, 1, 0)
+data_panel$female <- ifelse(data_panel$sex == 2, 1, 0)
+summary(data_panel$female) # CHECK: same descriptive statistics as STATA output 
 
 #______________________________________________________________________________#
-# (7): Creation of variable "age_group"; this variable assigns a category to each respondent based on their age (given by "age")
+# (7): Creation of variable "age4"; this variable assigns a category to each respondent based on their age (given by "age")
 
-data$age_group <- cut(data$age, breaks = c(15, 25, 35, 45, 100), labels = FALSE) # ... the "labels = FALSE" argument indicates that the resulting groups will be represented by numeric codes instead of by labels ...
+data_panel$age4 <- cut(data_panel$age, breaks = c(16, 25, 35, 45, 100), labels = FALSE) # ... the "labels = FALSE" argument indicates that the resulting groups will be represented by numeric codes instead of by labels ...
+data_panel$age4_labels <- factor(data_panel$age4, levels = 1:4, labels = c("16-25", "26-35", "36-45", "46+")) # this factor variable specifies the respondent's age group
+summary(data_panel$age4) # CHECK: same summary statistics as STATA output 
 
 #______________________________________________________________________________#
 # (8): Generation of the variables for different cohorts 
 
-# ... creation of variable "coh0" ...
-data <- data %>%
-  mutate(coh0 = ifelse(wave == 9, age, NA_real_))
+# ... we initiate with the creation of the variable "coh0" ...
+data_panel$coh0 <- ifelse(data_panel$wave == 9, data_panel$age, NA_real_)
+mean(data_panel$coh0, na.rm = TRUE) # CHECK: same initial descriptive statistics as STATA output 
 
-# Calculate total coh0 by idcode
-data <- data %>%
+# ... we then generate the variable "coh1" ...
+data_panel <- data_panel %>%
   group_by(idcode) %>%
-  mutate(coh1 = sum(coh0, na.rm = TRUE))
+  mutate(coh1 = sum(coh0, na.rm = TRUE)) %>%
+  ungroup()
+# ... we replace values of 0 for NA's ...
+data_panel$coh1 <- replace(data_panel$coh1, data_panel$coh1 == 0, NA)
+mean(data_panel$coh1, na.rm = TRUE) # CHECK: same initial descriptive statistics as STATA output 
 
-# Replace values in coh1
-data$coh1 <- ifelse(data$wave == 10 & data$coh1 >= data$age - 1, data$age - 1, data$coh1)
+#______________________________________________________________________________#
+data_panel <- data_panel[order(data_panel$idcode), ]
+#______________________________________________________________________________#
 
-# Calculate mean coh1 by idcode
-data <- data %>%
+# ... we then replace values for the variable "coh1" ...
+data_panel$coh1 <- ifelse(data_panel$wave == 10, data_panel$age - 1, data_panel$coh1)
+summary(data_panel$coh1) # CHECK: STATA mean: 38.72556  !!!!!!!!!!!!!!!!!!!!!!!
+
+# ... we then generate a new variable called "coh2" ...
+data_panel <- data_panel %>%
   group_by(idcode) %>%
   mutate(coh2 = mean(coh1, na.rm = TRUE))
+mean(data_panel$coh2, na.rm = T) # CHECK: STATA mean slightly different (38.39091)
 
-# Replace values in coh2
-data$coh2 <- ifelse(data$wave == 11 & data$coh2 >= data$age - 2, data$age - 2, data$coh2)
+# ... some values of "coh2" are replaced ... 
+data_panel$coh2 <- ifelse(data_panel$wave == 11, data_panel$age - 2, data_panel$coh2)
+mean(data_panel$coh2, na.rm = T) # CHECK: STATA mean slightly different (38.39685)
 
-# Calculate mean coh2 by idcode
-data <- data %>%
+# ... we proceed with the creation of a variable called "coh23" ...
+data_panel <- data_panel %>%
   group_by(idcode) %>%
   mutate(coh3 = mean(coh2, na.rm = TRUE))
+mean(data_panel$coh3, na.rm = T) # CHECK: STATA mean slightly different (38.39897)
 
-# Replace values in coh3
-data$coh3 <- ifelse(data$wave == 12 & data$coh3 >= data$age - 3, data$age - 3, data$coh3)
+# ... some values of "coh3" are replaced ... 
+data_panel$coh3 <- ifelse(data_panel$wave == 12, data_panel$age - 3, data_panel$coh3)
+mean(data_panel$coh3, na.rm = T) # CHECK: STATA mean slightly different (38.2921)
 
-# Calculate mean coh3 by idcode
-data <- data %>%
+# ... we then generate a new variable called "coh4" ...
+data_panel <- data_panel %>%
   group_by(idcode) %>%
   mutate(coh4 = mean(coh3, na.rm = TRUE))
+mean(data_panel$coh4, na.rm = T) # CHECK: STATA mean slightly different (38.2921)
 
-# Create cohort variable
-data <- data %>%
-  mutate(cohort = coh4)
+# ... a new variable ("cohort") is created ... 
+data_panel$cohort <- data_panel$coh4
+summary(data_panel$cohort) # CHECK: STATA mean slightly different (38.2921)
+
+# ... we eliminate the variables "coh0", "coh1", "coh2", "coh3", and "coh4" ...
+data_panel$coh0 <- NULL
+data_panel$coh1 <- NULL
+data_panel$coh2 <- NULL
+data_panel$coh3 <- NULL
+data_panel$coh4 <- NULL
 
 # Recode cohort variable
-data$g3cohort <- cut(data$cohort, breaks = c(14, 29, 44, 100), labels = FALSE)
-
-# Drop temporary variables
-data <- data %>%
-  select(-matches("coh(0|1|2|3|4)"))
+data_panel$g3cohort <- cut(data_panel$cohort, breaks = c(15, 29, 44, 100), labels = FALSE)
+summary(data_panel$g3cohort) # CHECK: STATA mean slightly different (2.107898 )
+data_panel$g3cohort_labels <- factor(data_panel$g3cohort, levels = 1:3, labels = c("15-29", "30-44", "45+")) # this factor variable specifies the respondent's cohort group and is derived from the variable "g3cohort" 
+summary(data_panel$g3cohort_labels) # CHECK: STATA's tabulation by group slightly diffeent 
 
 #______________________________________________________________________________#
 # (9): Generation of variable "edu"; this new variable is based on the values for the already existing variable "education"
