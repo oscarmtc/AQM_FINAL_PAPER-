@@ -191,7 +191,6 @@ data_panel$g3cohort <- cut(data_panel$cohort, breaks = c(15, 29, 44, 100), label
 summary(data_panel$g3cohort) # CHECK: STATA mean slightly different (2.107898 )
 data_panel$g3cohort_labels <- factor(data_panel$g3cohort, levels = 1:3, labels = c("15-29", "30-44", "45+")) # this factor variable specifies the respondent's cohort group and is derived from the variable "g3cohort" 
 summary(data_panel$g3cohort_labels) # CHECK: STATA's tabulation by group slightly different 
-
 #______________________________________________________________________________#
 # (9): Generation of variable "edu" (this new variable is based on the values for the already existing variable "education") + generation of dummy variables for different education levels 
 
@@ -421,36 +420,45 @@ data_panel$msexism <- rowMeans(data_panel[, c("imsex_2b", "imsex_6f", "imsex_7g"
 data_panel$msexism <- (data_panel$msexism - 1) / 6
 mean(data_panel$msexism) # CHECK: same descriptive statistics as STATA output 
 
-
-
-
-
-
 #______________________________________________________________________________#
 # (19): Variable for modern sexism according to Swim et al. (1995)
 
 # ... we first calculate row mean of the variables imsex_1 through imsex_8 ... 
-data <- mutate(data, swim_msex = rowMeans(select(data, starts_with("imsex_")), na.rm = F))
+data_panel$swim_msex <- rowMeans(data_panel[, c("imsex_1a", "imsex_2b", "imsex_3c", "imsex_4d", "imsex_5e", "imsex_6f", "imsex_7g", "imsex_8h" )])
+mean(data_panel$swim_msex) #  CHECK: same descriptive statistics as STATA output 
+
 # ... and then rescale values of the created variable "swim_msex" ...
-data <- mutate(data, swim_msex = (swim_msex - 1) / 6)
+data_panel$swim_msex <- (data_panel$swim_msex - 1) / 6
+mean(data_panel$swim_msex) # CHECK: same descriptive statistics as STATA output 
 
 #______________________________________________________________________________#
-# (20): Variable for respondent's engagement in Women's Day protests 
+# (20): Generation of variables for respondent's engagement in Women's Day protests 
 
-# ... we first dichotomize th variables "femstrike", "femdemonstrate", "feminfo", "femtalk", and generate corresponding new binary variables for each ... 
+# ... we first dichotomize the variables "femstrike", "femdemonstrate", "feminfo", "femtalk", and generate corresponding new binary variables for each ... 
 
-data$p8m_strike <- ifelse(data$femstrike == 1, 1, 0) # first variable created -> "p8m_strike"
-data$p8m_demonst <- ifelse(data$femdemonstrate == 1, 1, 0) # second variable created -> "p8m_demonst"
-data$p8m_mobiliz <- ifelse(data$feminfo == 1, 1, 0) # third variable created -> "p8m_mobiliz"
-data$p8m_talked <- ifelse(data$femtalk == 1, 1, 0) # fourth variable created -> "p8m_talked"
+data_panel$p8m_strike <- ifelse(data_panel$femstrike == 1, 1, 0) # first variable created -> "p8m_strike"
+mean(data_panel$p8m_strike, na.rm = T) # CHECK: same descriptive statistics as STATA output 
+data_panel$p8m_demonst <- ifelse(data_panel$femdemonstrate == 1, 1, 0) # second variable created -> "p8m_demonst"
+mean(data_panel$p8m_demonst, na.rm = T) # CHECK: same descriptive statistics as STATA output 
 
+data_panel$p8m_mobiliz <- ifelse(data_panel$feminfo == 1, 1, 0) # third variable created -> "p8m_mobiliz"
+mean(data_panel$p8m_mobiliz, na.rm = T) # CHECK: same descriptive statistics as STATA output 
+
+data_panel$p8m_talked <- ifelse(data_panel$femtalk == 1, 1, 0) # fourth variable created -> "p8m_talked"
+mean(data_panel$p8m_talked, na.rm = T) # CHECK: same descriptive statistics as STATA output 
 # ... and finally estimate the row mean for each observation out of the four generated variables above ... 
-data$ip8m <- rowMeans(data[, c("p8m_strike", "p8m_demonst", "p8m_mobiliz", "p8m_talked")])
+data_panel$ip8m <- rowMeans(data_panel[, c("p8m_strike", "p8m_demonst", "p8m_mobiliz", "p8m_talked")])
+mean(data_panel$ip8m,na.rm = T) # CHECK: same descriptive statistics as STATA output 
 
 #______________________________________________________________________________#
 # (21): Respondent's intended vote for the Vox-party (MAIN DEPENDENT VARIABLE)
 
-data$vim_vox <- ifelse(data$voteintentionspain == 23, 1, 0) # the values for the created binary variable ("vim_vox") are defined as a function of the values for the already existing variable "voteintentionspain" 
+data_panel$vim_vox <- ifelse(data_panel$voteintentionspain == 23, 1, 0) # the values for the created binary variable ("vim_vox") are defined as a function of the values for the already existing variable "voteintentionspain" 
+mean(data_panel$vim_vox)
+
+# ... and we proceed with the generation of a corresponding factor variable ...
+data_panel$vim_vox_labels <- factor(data_panel$vim_vox, labels = c("Else", "Vox")) 
+summary(data_panel$vim_vox_labels) # CHECK: same descriptive statistics as STATA output
 
 #______________________________________________________________________________#
 # (22): Respondent's intended vote for the PP-party (PLACEBO DEPENDENT VARIABLE)
