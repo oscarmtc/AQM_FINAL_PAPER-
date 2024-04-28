@@ -218,33 +218,20 @@ mean(data_panel$edu3_3) # CHECK: same summary statistics as in STATA output
 data_panel$livingpartner_labels <- factor(data_panel$livingpartner, labels = c("Lives with partner", "Does not live with partner")) 
 
 #______________________________________________________________________________#
-
-
-
-
-
-
-
 # (11): Generation of the variable for respondent's income 
 
-data$hincome_all <- replace(data$hhincome, data$hhincome == 99, NA)
-data <- data %>%
-  group_by(idcode) %>%
-  mutate(hincome_all = ifelse(is.na(hincome_all) & year == 2017, hincome_all[year == 2017],
-                       ifelse(is.na(hincome_all) & year == 2018, hincome_all[year == 2018],
-                       ifelse(is.na(hincome_all) & year == 2019, hincome_all[year == 2019],
-                       ifelse(is.na(hincome_all) & year == 2020, hincome_all[year == 2020],
-                       hincome_all))))) %>%
-  ungroup() #no
-
-data$x3hincall <- cut(data$hincome_all, breaks = c(0, 5, 8, 12), labels = FALSE)
-data$dhincome_all <- cut(data$hincome_all, breaks = c(0, 5, 8, 12), labels = FALSE)
-
-
-
-
-
-
+#data$hincome_all <- replace(data$hhincome, data$hhincome == 99, NA)
+#data <- data %>%
+#  group_by(idcode) %>%
+#  mutate(hincome_all = ifelse(is.na(hincome_all) & year == 2017, hincome_all[year == 2017],
+#                       ifelse(is.na(hincome_all) & year == 2018, hincome_all[year == 2018],
+#                       ifelse(is.na(hincome_all) & year == 2019, hincome_all[year == 2019],
+#                       ifelse(is.na(hincome_all) & year == 2020, hincome_all[year == 2020],
+#                       hincome_all))))) %>%
+#  ungroup() #no
+#
+#data$x3hincall <- cut(data$hincome_all, breaks = c(0, 5, 8, 12), labels = FALSE)
+#data$dhincome_all <- cut(data$hincome_all, breaks = c(0, 5, 8, 12), labels = FALSE)
 
 #______________________________________________________________________________#
 # (12): Generation of two variables for the respondent's interest in politics
@@ -506,7 +493,7 @@ mean(data_panel$vr16_17, na.rm=T) # CHECK: same descriptive statistics as STATA 
 data_panel$vr16_18 <- ifelse(data_panel$year == 2018, data_panel$vr16_all, NA_integer_)
 mean(data_panel$vr16_18, na.rm=T) # CHECK: same descriptive statistics as STATA output
 
-# ... we proceed to generate 'vr16_17a' and 'vr16_18a' variables by taking the maximum for value of "vr16_17" and "vr16_18" for each respondent ... 
+# ... we proceed to generate the 'vr16_17a' and 'vr16_18a' variables by taking the maximum for value of "vr16_17" and "vr16_18" for each respondent ... 
 data_panel <- data_panel %>%
   group_by(idcode) %>%
   mutate(vr16_17a = ifelse(all(is.na(vr16_17)), NA_integer_, max(vr16_17, na.rm = TRUE)),
@@ -514,30 +501,42 @@ data_panel <- data_panel %>%
 mean(data_panel$vr16_17a, na.rm=T) # CHECK: same descriptive statistics as STATA output
 mean(data_panel$vr16_18a, na.rm=T) # CHECK: same descriptive statistics as STATA output
 
-# ... we first generate the 'v16all' variable based with the same values as "vr16_17a" ...
+# ... we generate the 'v16all' variable based with the same values as "vr16_17a" ...
 data_panel$v16all <- data_panel$vr16_17a
+mean(data_panel$v16all, na.rm=T) # CHECK: same descriptive statistics as STATA output
 
-# ... we the replace values in "v16all" with values from "vr16_18a" based on conditions ...
+# ... and continue with replacing the values in "v16all" with values from "vr16_18a" based on conditions ...
 condition <- (data_panel$vr16_17a == 0 | is.na(data_panel$vr16_17a)) & !is.na(data_panel$vr16_18a)
 data_panel$v16all[condition] <- data_panel$vr16_18a[condition]
 mean(data_panel$v16all, na.rm = T) # CHECK: same descriptive statistics as STATA output
 
 # ... and we then re-code the 'v16all' variable and store the new coding scheme in a new variable called "rv16all" ...
 
+data_panel$v16all_t <- data_panel$v16all
+
 data_panel$rv16all <- NA
+
+
+
+# recode v16all (0=4 "Others")(1=1 "PSOE")(2=0 "PP")(3=2 "Podemos")(4=3 "Ciudadanos")(*=.), gen(rv16all)
+
+data_panel$rv16all <- NA # we first generate an "empty" variable 
 data_panel <- mutate(data_panel,
-                    rv16all = case_when(
-                      v16all == 1 ~ 1,
-                      v16all == 2 ~ 0,
-                      v16all == 3 ~ 2,
-                      v16all == 4 ~ 3
-                      )
-                    )
+                     rv16all = case_when(
+                       v16all == 0 ~ 4, 
+                       v16all == 1 ~ 1,
+                       v16all == 2 ~ 0,
+                       v16all == 3 ~ 2,
+                       v16all == 4 ~ 3)
+                     )
+
+
+
 
 mean(data_panel$rv16all, na.rm = T) # CHECK: same descriptive statistics as STATA output
 
 
-data_panel$v16all_labels <- factor(data_panel$v16all, labels = c("Others", "PSOE", "PP", "Podemos", "Ciudadanos")) 
+data_panel$rv16all_labels <- factor(data_panel$v16all, labels = c("Others", "PSOE", "PP", "Podemos", "Ciudadanos")) 
 summary(data_panel$v16all_labels) # CHECK: same descriptive statistics as STATA output
 
 
