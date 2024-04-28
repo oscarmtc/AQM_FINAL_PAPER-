@@ -463,30 +463,69 @@ summary(data_panel$vim_vox_labels) # CHECK: same descriptive statistics as STATA
 #______________________________________________________________________________#
 # (22): Respondent's intended vote for the PP-party (PLACEBO DEPENDENT VARIABLE)
 
-data$vim_pp <- ifelse(data$voteintentionspain == 2, 1, 0) # the values for the created binary variable ("vim_pp") are defined as a function of the values for the already existing variable "voteintentionspain" 
+data_panel$vim_pp <- ifelse(data_panel$voteintentionspain == 2, 1, 0) # the values for the created binary variable ("vim_pp") are defined as a function of the values for the already existing variable "voteintentionspain" 
+mean(data_panel$vim_pp) # CHECK: same descriptive statistics as STATA output
+
+# ... and we proceed with the generation of a corresponding factor variable ...
+data_panel$vim_pp_labels <- factor(data_panel$vim_pp, labels = c("Else", "PP")) 
+summary(data_panel$vim_pp_labels) # CHECK: same descriptive statistics as STATA output
 
 #______________________________________________________________________________#
+
+
+
+
+
+
+
+
 # (23): Respondent's reported vote for the four largest parties in the 2016 election 
 
-# ... we first replace missing values in the "femstrike"' column with integer values ...
-data$femstrike[is.na(data$femstrike)] <- NA_integer_
-
 # Re-code 'vote2016' into 'vr16_all' variable
-data$vr16_all <- ifelse(data$vote2016 == 1, 1,
-                        ifelse(data$vote2016 == 2, 2,
-                        ifelse(data$vote2016 %in% c(3, 5, 25), 3,
-                        ifelse(data$vote2016 == 4, 4,
-                        ifelse(data$vote2016 %in% 1:56, 5, NA)))))
+data_panel$vr16_all <- ifelse(data_panel$vote2016 == 1, 1,
+                        ifelse(data_panel$vote2016 == 2, 2,
+                        ifelse(data_panel$vote2016 %in% c(3, 5, 25), 3,
+                        ifelse(data_panel$vote2016 == 4, 4,
+                        ifelse(data_panel$vote2016 %in% 1:56, 0, NA)))))
+summary(data_panel$vr16_all) # CHECK: same descriptive statistics as STATA output
 
-# Generate 'vr16_17' and 'vr16_18' variables for the years 2017 and 2018
-data$vr16_17 <- ifelse(data$year == 2017, data$vr16_all, NA_integer_)
-data$vr16_18 <- ifelse(data$year == 2018, data$vr16_all, NA_integer_)
+data_panel$vr16_all_labels <- factor(data_panel$vr16_all, labels = c("Else", "PSOE", "PP", "Podemos", "Cs")) 
+summary(data_panel$vr16_all_labels) # CHECK: same descriptive statistics as STATA output
 
-# Generate 'vr16_17a' and 'vr16_18a' variables by taking the maximum for each 'idcode'
-data <- data %>%
-  group_by(idcode) %>%
-  mutate(vr16_17a = ifelse(all(is.na(vr16_17)), NA_integer_, max(vr16_17, na.rm = TRUE)),
-         vr16_18a = ifelse(all(is.na(vr16_18)), NA_integer_, max(vr16_18, na.rm = TRUE)))
+#______________________________________________________________________________#
+# Generation of variable to capture respondent's decision not to turn out to vote 
+
+data_panel$abstain_vote <- ifelse(is.na(data_panel$vr16_all), 1, 0)
+summary(data_panel$abstain_vote)
+#______________________________________________________________________________#
+
+# Generate 'vr16_17' and 'vr16_18' variables for the years 2017 and 2018 - this is because the vote choice was only asked in the 2017 and 2018 waves ...
+data_panel$vr16_17 <- ifelse(data_panel$year == 2017, data_panel$vr16_all, NA_integer_)
+mean(data_panel$vr16_17, na.rm=T) # CHECK: same descriptive statistics as STATA output
+
+data_panel$vr16_18 <- ifelse(data_panel$year == 2018, data_panel$vr16_all, NA_integer_)
+mean(data_panel$vr16_18, na.rm=T) # CHECK: same descriptive statistics as STATA output
+
+
+
+
+
+
+
+
+
+# ... we then generate the variables 'vr16_17a' and 'vr16_18a' variables by taking the maximum for value of "vr16_17" and "vr16_18", respectively, for each respondent
+
+data_panel$vr16_17a <- ave(data_panel$vr16_17, data_panel$idcode, FUN = max)
+mean(data_panel$vr16_17a, na.rm = T) # CHECK: same descriptive statistics as STATA output
+
+
+
+
+
+data_panel$vr16_18a <- ave(data_panel$vr16_18, data_panel$idcode, FUN = max)
+mean(data_panel$vr16_18a) # CHECK: same descriptive statistics as STATA output
+
 
 # Generate the 'v16all' variable based on some conditions
 data$v16all <- ifelse(data$vr16_17a == 0 | is.na(data$vr16_17a), data$vr16_18a, data$vr16_17a)
@@ -504,6 +543,32 @@ data <- data %>%
 
 # Remove any remaining missing values
 data[is.na(data)] <- NA
+
+
+
+
+
+
+egen vr16_17a=max(vr16_17), by(idcode)
+egen vr16_18a=max(vr16_18), by(idcode)
+
+
+gen v16all=vr16_17a
+replace v16all=vr16_18a if (vr16_17a==0 | vr16_17a>=.) & vr16_18a<.
+
+
+recode v16all (0=4 "Others")(1=1 "PSOE")(2=0 "PP")(3=2 "Podemos")(4=3 "Ciudadanos")(*=.), gen(rv16all)
+
+drop vr16_all v16all vr16_17* vr16_18* 
+
+
+
+
+
+
+
+
+
 
 #______________________________________________________________________________#
 # (24): Creation of time-invariant variables fixed at their 2017/2018 values - these generated variables are used in the multilevel growth-curve models 
