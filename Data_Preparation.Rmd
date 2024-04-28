@@ -529,6 +529,17 @@ data_panel <- select(data_panel, -starts_with("vr16_all"),
 
 mean(data_panel$rv16all, na.rm = T) # CHECK: same descriptive statistics as STATA output
 
+
+
+
+
+
+
+
+
+
+
+
 #______________________________________________________________________________#
 # (24): Creation of time-invariant variables fixed at their 2017/2018 values - these generated variables are used in the multilevel growth-curve models 
 # NOTE: ADD INCOME VARIABLE "x3hincall" !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
@@ -554,30 +565,107 @@ mean(data_panel$t1dintpol, na.rm = T) # CHECK: same descriptive statistics as ST
 mean(data_panel$t1ideo5, na.rm = T) # CHECK: same descriptive statistics as STATA output
 mean(data_panel$t1rv16all, na.rm = T) # CHECK: same descriptive statistics as STATA output
 
+###############################################################################
+# ... we continue with the generation of the variable "t2partner"; for this purpose, the following steps are conducted (A - D): 
+# A > ... we sort the data by "icode" and "year" ...
+sorted_data <- data_panel %>% arrange(idcode, year)
+# B > ... we then filter the data to include only those observations for which nwaves == 4 ...
+filtered_data <- sorted_data %>% filter(nwaves == 4)
+# C > ... we then group by "idcode" and create a new variable "t2partner" with the value from the second observation ...
+t2partner_data <- filtered_data %>%
+  group_by(idcode) %>%
+  mutate(t2partner = nth(livingpartner, 2)) %>%
+  ungroup()
+# D > ... we finally merge the "t2partner" from the filtered data frame column back to the original data frame ("data_panel") ...
+data_panel <- merge(data_panel, t2partner_data[, c("idcode", "year", "t2partner")], by = c("idcode", "year"), all.x = TRUE)
 
+mean(data_panel$t2partner, na.rm = T) # CHECK: same descriptive statistics as STATA output
 
+###############################################################################
+# ... we proceed with the generation of the variable "t2ip8m" following the same steps (A - D) as above: 
+# A > ...
+sorted_data_2<- data_panel %>% arrange(idcode, year)
+# B > ...
+filtered_data_2 <- sorted_data_2 %>% filter(nwaves == 4)
+# C > ...
+t2ip8m_data <- filtered_data_2 %>%
+  group_by(idcode) %>%
+  mutate(t2ip8m = nth(ip8m, 2)) %>%
+  ungroup()
+# D > ...
+data_panel <- merge(data_panel, t2ip8m_data[, c("idcode", "year", "t2ip8m")], by = c("idcode", "year"), all.x = TRUE)
 
+mean(data_panel$t2ip8m, na.rm = T) # CHECK: same descriptive statistics as STATA output
 
+################################################################################ 
+# ... we then assign labels to the following variables ...
 
-
-
-
-
-
-
-
-
+attr(data_panel$t2partner, "label") <- "Lives with partner"
+attr(data_panel$t2ip8m, "label") <- "Women's Day protest engagement"
+t1edu3_labels <- c("1" = "Lower 2ry", "2" = "Upper 2ry", "3" = "3ry")
+    attr(data_panel$t1edu3, "labels") <- t1edu3_labels
+t2partner_labels <- c("1" = "Yes", "0" = "No")
+    attr(data_panel$t2partner, "labels") <- t2partner_labels
+t1dintpol_labels <- c("0" = "Low", "1" = "High")
+    attr(data_panel$t1dintpol, "labels") <- t1dintpol_labels
+t1ideo5_labels <- c("1" = "Far left", "2" = "Left", "3" = "Center", "4" = "Right", "5" = "Far right")
+    attr(data_panel$t1ideo5, "labels") <- t1ideo5_labels
+    
 #______________________________________________________________________________#
 data_panel <- data_panel[order(data_panel$idcode), ]
 #______________________________________________________________________________#
-# (25): Generation of lagged and change variables 
+# (25): Creation of lagged and change-variables
+    
+# ... we first define a vector containing all the variables that will be used ...
+# Define the variables to use
+variables_to_use <- c("vim_vox", "authoritarian", "ideol", "nativism", "orgterr", "pop6", "msexism", "swim_msex")
 
+# Loop through each unique idcode
+for (id in unique(data_panel$idcode)) {
+  # Subset data for the current idcode
+  subset_data <- data_panel[data_panel$idcode == id, ]
+  
+  # Check if there are at least two observations for the same idcode
+  if (nrow(subset_data) >= 2) {
+    # Loop through each variable
+    for (var in variables_to_use) {
+      lagged_var <- paste0("l2_", var)  # Lagged variable name
+      
+      # Calculate lagged variable
+      subset_data[[lagged_var]] <- c(NA, head(subset_data[[var]], -1))
+    }
+  } else {
+    # If less than two observations, assign NA for lagged variables
+    for (var in variables_to_use) {
+      lagged_var <- paste0("l2_", var)  # Lagged variable name
+      subset_data[[lagged_var]] <- NA
+    }
+  }
+  
+  # ... we finally append the data subset to the original dataframe "data_panel" ...
+  data_panel[data_panel$idcode == id, ] <- subset_data
+}
+# ... we inspect the generated variables to ensure that they are the same as those generated in the original STATA output ... 
 
+mean(data_panel$l2_vim_vox, na.rm = T)
+mean(data_panel$l2_authoritarian, na.rm = T)
+mean(data_panel$l2_ideol, na.rm = T)
+mean(data_panel$l2_nativism, na.rm = T)
+mean(data_panel$l2_orgterr, na.rm = T)
+mean(data_panel$l2_pop6amz, na.rm = T)
+mean(data_panel$l2_msexism, na.rm = T)
+mean(data_panel$l2_swim_msex, na.rm = T)
 
+mean(data_panel$ls_vim_vox, na.rm = T)
+mean(data_panel$ls_authoritarian, na.rm = T)
+mean(data_panel$ls_ideol, na.rm = T)
+mean(data_panel$ls_nativism, na.rm = T)
+mean(data_panel$ls_orgterr, na.rm = T)
+mean(data_panel$ls_pop6amz, na.rm = T)
+mean(data_panel$ls_msexism, na.rm = T)
+mean(data_panel$ls_swim_msex, na.rm = T)
 
-
-
-
+# CHECK: same descriptive statistics as STATA output
 
 
 #______________________________________________________________________________#
