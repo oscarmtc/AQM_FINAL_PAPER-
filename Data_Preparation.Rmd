@@ -458,14 +458,6 @@ data_panel$vim_pp_labels <- factor(data_panel$vim_pp, labels = c("Else", "PP"))
 summary(data_panel$vim_pp_labels) # CHECK: same descriptive statistics as STATA output
 
 #______________________________________________________________________________#
-
-
-
-
-
-
-
-
 # (23): Respondent's reported vote for the four largest parties in the 2016 election 
 
 # Re-code 'vote2016' into 'vr16_all' variable
@@ -511,16 +503,9 @@ data_panel$v16all[condition] <- data_panel$vr16_18a[condition]
 mean(data_panel$v16all, na.rm = T) # CHECK: same descriptive statistics as STATA output
 
 # ... and we then re-code the 'v16all' variable and store the new coding scheme in a new variable called "rv16all" ...
-
 data_panel$v16all_t <- data_panel$v16all
-
-data_panel$rv16all <- NA
-
-
-
-# recode v16all (0=4 "Others")(1=1 "PSOE")(2=0 "PP")(3=2 "Podemos")(4=3 "Ciudadanos")(*=.), gen(rv16all)
-
 data_panel$rv16all <- NA # we first generate an "empty" variable 
+
 data_panel <- mutate(data_panel,
                      rv16all = case_when(
                        v16all == 0 ~ 4, 
@@ -530,15 +515,11 @@ data_panel <- mutate(data_panel,
                        v16all == 4 ~ 3)
                      )
 
-
-
-
 mean(data_panel$rv16all, na.rm = T) # CHECK: same descriptive statistics as STATA output
 
 
-data_panel$rv16all_labels <- factor(data_panel$v16all, labels = c("Others", "PSOE", "PP", "Podemos", "Ciudadanos")) 
-summary(data_panel$v16all_labels) # CHECK: same descriptive statistics as STATA output
-
+data_panel$rv16all_labels <- factor(data_panel$rv16all, labels = c("PP", "PSOE", "Podemos", "Ciudadanos", "Others")) 
+summary(data_panel$rv16all_labels) # CHECK: same descriptive statistics as STATA output
 
 # ... and we finalize by eliminating variables that will no longer be used ... 
 data_panel <- select(data_panel, -starts_with("vr16_all"), 
@@ -546,122 +527,103 @@ data_panel <- select(data_panel, -starts_with("vr16_all"),
                                  -starts_with("vr16_17"), 
                                  -starts_with("vr16_18"))
 
-
-
-
-
-
+mean(data_panel$rv16all, na.rm = T) # CHECK: same descriptive statistics as STATA output
 
 #______________________________________________________________________________#
 # (24): Creation of time-invariant variables fixed at their 2017/2018 values - these generated variables are used in the multilevel growth-curve models 
+# NOTE: ADD INCOME VARIABLE "x3hincall" !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
 
-# ... we initiate by creating the t1-variables ... 
-vars <- c("edu3", "x3hincall", "dintpol", "ideo5", "rv16all")
-# ... we then proceed and reorder the data 
-data <- data[order(data$idcode, data$year), ]
-# ... we then loop through each variable contained in the "vars"-vector ... 
-for (var in vars) {
-  # ... and create new variable prefixed with "t1" based on conditions ... 
-  new_var <- paste0("t1", var)
-  data[[new_var]] <- ave(data[[var]], data$idcode, data$year, FUN = function(x) {
-    if (length(x) > 0 && all(is.na(x[-1]))) {
-      x[1]
-    } else {
-      NA
-    }
-  })
+# ... we define the variables that will be used ...
+selected_variables <- c("edu3", "dintpol", "ideo5", "rv16all")
+
+# ... and loop through each of the selected variables ... 
+for (var in selected_variables) {
+  # ... we subset the data for nwaves == 4 and the variable is not missing ...
+  subset_data <- subset(data_panel, nwaves == 4 & !is.na(data_panel[[var]]))
   
-  # Convert new variable to character if it's a factor
-  if (is.factor(data[[new_var]])) {
-    data[[new_var]] <- as.character(data[[new_var]])
-  }
+  # ... and then get the first value for each "idcode" ...
+  first_values <- tapply(subset_data[[var]], subset_data$idcode, function(x) x[1])
+  
+  # ... we finally merge the first values back into the main dataframe ...
+  data_panel[paste0("t1", var)] <- first_values[match(data_panel$idcode, names(first_values))]
 }
 
-# Sort the dataframe by "idcode" and "year"
-data <- data %>% arrange(idcode, year)
+# ... we inspect the newly created variable to ensure same results as in the original STATA output... 
+mean(data_panel$t1edu3, na.rm = T) # CHECK: same descriptive statistics as STATA output
+mean(data_panel$t1dintpol, na.rm = T) # CHECK: same descriptive statistics as STATA output
+mean(data_panel$t1ideo5, na.rm = T) # CHECK: same descriptive statistics as STATA output
+mean(data_panel$t1rv16all, na.rm = T) # CHECK: same descriptive statistics as STATA output
 
-# Create the t2partner variable
-data <- data %>%
-  group_by(idcode) %>%
-  mutate(t2partner = ifelse(nwaves == 4, lag(livingpartner), NA_integer_))
 
-# Create the t2ip8m variable
-data <- data %>%
-  group_by(idcode) %>%
-  mutate(t2ip8m = ifelse(nwaves == 4, lag(ip8m), NA_real_))
 
-# ... and finalize with the definition of appropriate labels for the variables ...
-names <- c("t2partner", "t2ip8m")
-labels <- list(
-  t2partner = c("1" = "Yes", "0" = "No"),
-  t2ip8m = c("1" = "Yes", "0" = "No")
-)
 
-# Assigning Labels to Variables
-for (i in 1:length(names)) {
-  levels(data[[names[i]]]) <- labels[[names[i]]]
-}
 
-# Variable Label Definitions
-labdef <- list(
-  t1edu3 = c("1" = "Lower 2ry", "2" = "Upper 2ry", "3" = "3ry"),
-  yesno = c("1" = "Yes", "0" = "No"),
-  income = c("1" = "Low", "2" = "Mid", "3" = "High"),
-  intpol = c("0" = "Low", "1" = "High"),
-  t1ideo5 = c("1" = "Far left", "2" = "Left", "3" = "Center", "4" = "Right", "5" = "Far right")
-)
 
-# Assign variable labels using label()
-for (i in 1:length(names)) {
-  levels(data[[names[i]]]) <- labdef[[names[i]]]
-}
 
+
+
+
+
+
+
+
+#______________________________________________________________________________#
+data_panel <- data_panel[order(data_panel$idcode), ]
 #______________________________________________________________________________#
 # (25): Generation of lagged and change variables 
 
-library(zoo)
 
-vars <- c("vim_vox", "authoritarian", "ideol", "nativism", "orgterr", "pop6", "msexism", "swim_msex")
 
-for (var in vars) {
-  data <- data %>% 
-    mutate(l2var := lag(.data[[var]], n = 2),
-           lsvar := .data[[var]] - lag(.data[[var]]))
-}
 
-# ... and finalize with the generation of positive and negative change variables for "sexism" and "ls.msexism"
-pdata$posmsex <- pdata$lsmsex * (pdata$lsmsex > 0)
-pdata$negmsex <- pdata$lsmsex * (pdata$lsmsex < 0)
-pdata$posswim <- pdata$lsswim_msex * (pdata$lsmsex > 0)
-pdata$negswim <- pdata$lsswim_msex * (pdata$lsmsex < 0)
+
+
+
+
+
+#______________________________________________________________________________#
+# (26): Generation of variables for positive and negative (lagged) change in sexism (extended and original modern 
+
+data_panel$posmsex <- data_panel$lsmsex * (data_panel$lsmsex > 0)
+summary(data_panel$posmsex) 
+
+data_panel$negmsex <- data_panel$lsmsex * (data_panel$lsmsex < 0)
+summary(data_panel$negmsex) 
+
+data_panel$posswim <- data_panel$lsswim_msex * (data_panel$lsmsex > 0)
+summary(data_panel$posswim) 
+
+data_panel$negswim <- data_panel$lsswim_msex * (data_panel$lsmsex < 0)
+summary(data_panel$negswim) 
+
+
 
 #______________________________________________________________________________#
 # (26): Assignment of labels to variables in the dataset 
 
 # Labeling of the variables
-label(data$female) <- "Female"
-label(data$age) <- "Age"
-label(data$cohort) <- "Cohort"
-label(data$edu3) <- "Education"
-label(data$livingpartner) <- "Lives with partner"
-label(data$dhincome_all) <- "Income"
-label(data$intpol) <- "Interest in politics"
-label(data$ideol) <- "Ideological identification"
-label(data$authoritarian) <- "Authoritarianism"
-label(data$pop6amz) <- "Populism"
-label(data$nativism) <- "Nativism"
-label(data$orgterr) <- "Territorial preference"
-label(data$msexism) <- "Sexism"
-label(data$swim_msex) <- "Sexism"
-label(data$vim_vox) <- "Vox intention"
-label(data$vim_pp) <- "PP intention"
-label(data$g3cohort) <- "Cohort"
-label(data$t1edu3) <- "Education (ref. Lower 2ry or less)"
-label(data$t1ideo5) <- "Ideological identification (ref. Far left)"
-label(data$t2partner) <- "Lives with partner"
-label(data$t1x3hincall) <- "Income (ref. Low)"
-label(data$t1dintpol) <- "Interest in politics"
-label(data$t1rv16all) <- "Vote in 2016 (ref. PP)"
+label(data_panel$female) <- "Female"
+label(data_panel$age) <- "Age"
+label(data_panel$cohort) <- "Cohort"
+label(data_panel$edu3) <- "Education"
+label(data_panel$livingpartner) <- "Lives with partner"
+#label(data_panel$dhincome_all) <- "Income"
+label(data_panel$intpol) <- "Interest in politics"
+label(data_panel$ideol) <- "Ideological identification"
+label(data_panel$authoritarian) <- "Authoritarianism"
+label(data_panel$pop6amz) <- "Populism"
+label(data_panel$nativism) <- "Nativism"
+label(data_panel$orgterr) <- "Territorial preference"
+label(data_panel$msexism) <- "Sexism"
+label(data_panel$swim_msex) <- "Sexism"
+label(data_panel$vim_vox) <- "Vox intention"
+label(data_panel$vim_pp) <- "PP intention"
+label(data_panel$g3cohort) <- "Cohort"
+label(data_panel$t1edu3) <- "Education (ref. Lower 2ry or less)"
+label(data_panel$t1ideo5) <- "Ideological identification (ref. Far left)"
+label(data_panel$t2partner) <- "Lives with partner"
+#label(data_panel$t1x3hincall) <- "Income (ref. Low)"
+label(data_panel$t1dintpol) <- "Interest in politics"
+label(data_panel$t1rv16all) <- "Vote in 2016 (ref. PP)"
 
 ```
 
