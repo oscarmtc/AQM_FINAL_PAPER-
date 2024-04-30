@@ -220,15 +220,65 @@ data_panel$livingpartner_labels <- factor(data_panel$livingpartner, labels = c("
 #______________________________________________________________________________#
 # (11): Generation of the variable for respondent's income 
 
-#data$hincome_all <- replace(data$hhincome, data$hhincome == 99, NA)
-#data <- data %>%
-#  group_by(idcode) %>%
-#  mutate(hincome_all = ifelse(is.na(hincome_all) & year == 2017, hincome_all[year == 2017],
-#                       ifelse(is.na(hincome_all) & year == 2018, hincome_all[year == 2018],
-#                       ifelse(is.na(hincome_all) & year == 2019, hincome_all[year == 2019],
-#                       ifelse(is.na(hincome_all) & year == 2020, hincome_all[year == 2020],
-#                       hincome_all))))) %>%
-#  ungroup() #no
+data_panel$hincome_all <- replace(data_panel$hhincome, data_panel$hhincome == 99, NA)
+
+as.numeric(data_panel$year)
+
+class(data_panel$year)
+
+#firstly we need to create separate variables for each year
+
+    data_panel$hincome_17 <- ifelse(data_panel$year == 2017, data_panel$hhincome, NA_real_)
+     data_panel$hincome_18<- ifelse(data_panel$year == 2018, data_panel$hhincome, NA_real_)
+      data_panel$hincome_19 <- ifelse(data_panel$year == 2019, data_panel$hhincome, NA_real_)
+       data_panel$hincome_20 <- ifelse(data_panel$year == 2020, data_panel$hhincome, NA_real_)
+
+#now we need to group everything by idcode
+       
+         
+data_panel <- data_panel %>%
+  group_by(idcode) %>%
+  mutate(
+    hincome17all_tmp = ifelse(is.na(hincome_17) & !is.na(dplyr::lead(hincome_17)), dplyr::lead(hincome_17), hincome_17),
+    hincome18all_tmp = ifelse(is.na(hincome_18) & !is.na(dplyr::lead(hincome_18)), dplyr::lead(hincome_18), hincome_18),
+    hincome19all_tmp = ifelse(is.na(hincome_19) & !is.na(dplyr::lead(hincome_19)), dplyr::lead(hincome_19), hincome_19),
+    hincome20all_tmp = ifelse(is.na(hincome_20) & !is.na(dplyr::lead(hincome_20)), dplyr::lead(hincome_20), hincome_20)
+  ) %>%
+  ungroup()
+
+#here we put the values of subsequent years
+
+data_panel <- data_panel %>%
+  mutate(
+    hincome17all = ifelse(is.na(hincome17all), hincome18all, hincome17all),
+    hincome17all = ifelse(is.na(hincome17all), hincome19all, hincome17all),
+    hincome17all = ifelse(is.na(hincome17all), hincome20all, hincome17all),
+    hincome18all = ifelse(is.na(hincome18all), hincome17all, hincome18all),
+    hincome18all = ifelse(is.na(hincome18all), hincome19all, hincome18all),
+    hincome18all = ifelse(is.na(hincome18all), hincome20all, hincome18all),
+    hincome19all = ifelse(is.na(hincome19all), hincome18all, hincome19all),
+    hincome19all = ifelse(is.na(hincome19all), hincome20all, hincome19all),
+    hincome19all = ifelse(is.na(hincome19all), hincome17all, hincome19all),
+    hincome20all = ifelse(is.na(hincome20all), hincome19all, hincome20all),
+    hincome20all = ifelse(is.na(hincome20all), hincome18all, hincome20all),
+    hincome20all = ifelse(is.na(hincome20all), hincome17all, hincome20all)
+  )  #
+
+#create variable hincome_all
+data_panel <- data_panel %>%
+  mutate(
+    hincome_all = ifelse(year == 2017, hincome17all,
+                        ifelse(year == 2018, hincome18all,
+                               ifelse(year == 2019, hincome19all,
+                                      ifelse(year == 2020, hincome20all, NA))))
+  ) %>%
+  select(-matches("^hincome(17|18|19|20)$"))  
+
+# Recode hincome_all to x3hincall
+data_panel$x3hincall <- cut(data_panel$hincome_all, breaks = c(0, 5, 8, 12), labels = c("Low", "Mid", "High"), include.lowest = TRUE)
+
+# Generate dhincome_all
+data$dhincome_all <- (data$hincome_all - 1) / 11
 #
 #data$x3hincall <- cut(data$hincome_all, breaks = c(0, 5, 8, 12), labels = FALSE)
 #data$dhincome_all <- cut(data$hincome_all, breaks = c(0, 5, 8, 12), labels = FALSE)
@@ -578,8 +628,9 @@ t2partner_data <- filtered_data %>%
   ungroup()
 # D > ... we finally merge the "t2partner" from the filtered data frame column back to the original data frame ("data_panel") ...
 data_panel <- merge(data_panel, t2partner_data[, c("idcode", "year", "t2partner")], by = c("idcode", "year"), all.x = TRUE)
+#DOESN'T WORK OUT AS THESE VARIABLES OVERLAP 
 
-mean(data_panel$t2partner, na.rm = T) # CHECK: same descriptive statistics as STATA output
+mean(t2partner_data$t2partner, na.rm = T) # CHECK: same descriptive statistics as STATA output
 
 ###############################################################################
 # ... we proceed with the generation of the variable "t2ip8m" following the same steps (A - D) as above: 
