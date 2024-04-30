@@ -220,6 +220,7 @@ data_panel$livingpartner_labels <- factor(data_panel$livingpartner, labels = c("
 #______________________________________________________________________________#
 # (11): Generation of the variable for respondent's income 
 
+
 data_panel$hincome_all <- replace(data_panel$hhincome, data_panel$hhincome == 99, NA)
 
 as.numeric(data_panel$year)
@@ -239,10 +240,10 @@ class(data_panel$year)
 data_panel <- data_panel %>%
   group_by(idcode) %>%
   mutate(
-    hincome17all_tmp = ifelse(is.na(hincome_17) & !is.na(dplyr::lead(hincome_17)), dplyr::lead(hincome_17), hincome_17),
-    hincome18all_tmp = ifelse(is.na(hincome_18) & !is.na(dplyr::lead(hincome_18)), dplyr::lead(hincome_18), hincome_18),
-    hincome19all_tmp = ifelse(is.na(hincome_19) & !is.na(dplyr::lead(hincome_19)), dplyr::lead(hincome_19), hincome_19),
-    hincome20all_tmp = ifelse(is.na(hincome_20) & !is.na(dplyr::lead(hincome_20)), dplyr::lead(hincome_20), hincome_20)
+    hincome17all = max(hincome_17, na.rm = TRUE),
+    hincome18all = max(hincome_18, na.rm = TRUE),
+    hincome19all = max(hincome_19, na.rm = TRUE),
+    hincome20all = max(hincome_20, na.rm = TRUE)
   ) %>%
   ungroup()
 
@@ -270,15 +271,15 @@ data_panel <- data_panel %>%
     hincome_all = ifelse(year == 2017, hincome17all,
                         ifelse(year == 2018, hincome18all,
                                ifelse(year == 2019, hincome19all,
-                                      ifelse(year == 2020, hincome20all, NA))))
+                                      ifelse(year == 2020, hincome20all, NA_real_))))
   ) %>%
-  select(-matches("^hincome(17|18|19|20)$"))  
+  select(-hincome17all, -hincome18all, hincome19all, hincome20all)  
 
 # Recode hincome_all to x3hincall
 data_panel$x3hincall <- cut(data_panel$hincome_all, breaks = c(0, 5, 8, 12), labels = c("Low", "Mid", "High"), include.lowest = TRUE)
 
 # Generate dhincome_all
-data$dhincome_all <- (data$hincome_all - 1) / 11
+data_panel$dhincome_all <- (data_panel$hincome_all - 1) / 11
 #
 #data$x3hincall <- cut(data$hincome_all, breaks = c(0, 5, 8, 12), labels = FALSE)
 #data$dhincome_all <- cut(data$hincome_all, breaks = c(0, 5, 8, 12), labels = FALSE)
