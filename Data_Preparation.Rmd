@@ -24,7 +24,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # First you define which packages you need for your analysis and assign it to 
 # the p_needed object. 
 p_needed <-
-  c("viridis", "knitr", "sandwich", "magrittr", "kableExtra", "MASS", "dplyr", "data.table", "margins", "readr", "plm", "Hmisc")
+  c("viridis", "knitr", "sandwich", "magrittr", "kableExtra", "MASS", "dplyr", "data.table", "margins", "readr", "plm", "Hmisc", "stargazer")
 
 # Now you check which packages are already installed on your computer.
 # The function installed.packages() returns a vector with all the installed 
@@ -47,6 +47,7 @@ sapply(p_needed, require, character.only = TRUE)
 ```
 
 
+
 ``` {r Load the main data source}
 
 data <- fread("spanish_political_attitudes_dataset_2017_to_2020.csv")
@@ -59,7 +60,7 @@ summary(data) # Overview of the data
 
 ```
 
-``` {r Code for the Preparation of the Data}
+``` {r Code for the Preparation of the Data : idcode, time, nwaves, year, female, age}
 
 # This initial code chunk has the purpose of preparing the data for the latter statistical analysis. The preparation steps conducted stem from the replication material of "Sexism and the far-right vote: The individual dynamics of gender backlash." Although the initial replication code is available for STATA, we rewrite the code for R. Although some commands may be different and some steps may be either added or removed, the variables resulting (as well as their scales and coding schemes) should be exactly the same. 
 
@@ -124,7 +125,9 @@ summary(data_panel$female) # CHECK: same descriptive statistics as STATA output
 data_panel$age4 <- cut(data_panel$age, breaks = c(16, 25, 35, 45, 100), labels = FALSE) # ... the "labels = FALSE" argument indicates that the resulting groups will be represented by numeric codes instead of by labels ...
 data_panel$age4_labels <- factor(data_panel$age4, levels = 1:4, labels = c("16-25", "26-35", "36-45", "46+")) # this factor variable specifies the respondent's age group
 summary(data_panel$age4) # CHECK: same summary statistics as STATA output 
+```
 
+``` {r variabale for cohort}
 #______________________________________________________________________________#
 # (8): Generation of the variables for different cohorts 
 
@@ -180,17 +183,18 @@ data_panel$cohort <- data_panel$coh4
 summary(data_panel$cohort) # CHECK: STATA mean slightly different (38.2921)
 
 # ... we eliminate the variables "coh0", "coh1", "coh2", "coh3", and "coh4" ...
-data_panel$coh0 <- NULL
-data_panel$coh1 <- NULL
-data_panel$coh2 <- NULL
-data_panel$coh3 <- NULL
-data_panel$coh4 <- NULL
+
+data_panel <- select(data_panel, -coh0, -coh1,-coh2, -coh3, -coh4 )
 
 # Recode cohort variable
 data_panel$g3cohort <- cut(data_panel$cohort, breaks = c(15, 29, 44, 100), labels = FALSE)
 summary(data_panel$g3cohort) # CHECK: STATA mean slightly different (2.107898 )
 data_panel$g3cohort_labels <- factor(data_panel$g3cohort, levels = 1:3, labels = c("15-29", "30-44", "45+")) # this factor variable specifies the respondent's cohort group and is derived from the variable "g3cohort" 
 summary(data_panel$g3cohort_labels) # CHECK: STATA's tabulation by group slightly different 
+
+```
+
+```{r education and partner}
 #______________________________________________________________________________#
 # (9): Generation of variable "edu" (this new variable is based on the values for the already existing variable "education") + generation of dummy variables for different education levels 
 
@@ -216,12 +220,18 @@ mean(data_panel$edu3_3) # CHECK: same summary statistics as in STATA output
 # (10): Specification of labels for the variable "livingpartner" according to its numeric values. 
 
 data_panel$livingpartner_labels <- factor(data_panel$livingpartner, labels = c("Lives with partner", "Does not live with partner")) 
+```
 
+```{r income}
 #______________________________________________________________________________#
 # (11): Generation of the variable for respondent's income 
 
+data_panel$hincome_all <- data_panel$hhincome
+  
+data_panel$hincome_all <- ifelse(data_panel$hincome_all==99, NA, data_panel$hincome_all)
 
-data_panel$hincome_all <- replace(data_panel$hhincome, data_panel$hhincome == 99, NA)
+mean(data_panel$hincome_all,  na.rm = TRUE) # everything is cooool
+
 
 as.numeric(data_panel$year)
 
@@ -229,10 +239,10 @@ class(data_panel$year)
 
 #firstly we need to create separate variables for each year
 
-    data_panel$hincome_17 <- ifelse(data_panel$year == 2017, data_panel$hhincome, NA_real_)
-     data_panel$hincome_18<- ifelse(data_panel$year == 2018, data_panel$hhincome, NA_real_)
-      data_panel$hincome_19 <- ifelse(data_panel$year == 2019, data_panel$hhincome, NA_real_)
-       data_panel$hincome_20 <- ifelse(data_panel$year == 2020, data_panel$hhincome, NA_real_)
+data_panel$hincome_17 <- ifelse(data_panel$year == 2017, data_panel$hincome_all, NA)
+data_panel$hincome_18<- ifelse(data_panel$year == 2018, data_panel$hincome_all, NA)
+data_panel$hincome_19 <- ifelse(data_panel$year == 2019, data_panel$hincome_all, NA)
+data_panel$hincome_20 <- ifelse(data_panel$year == 2020, data_panel$hincome_all, NA)
 
 #now we need to group everything by idcode
        
@@ -240,10 +250,10 @@ class(data_panel$year)
 data_panel <- data_panel %>%
   group_by(idcode) %>%
   mutate(
-    hincome17all = max(hincome_17, na.rm = TRUE),
-    hincome18all = max(hincome_18, na.rm = TRUE),
-    hincome19all = max(hincome_19, na.rm = TRUE),
-    hincome20all = max(hincome_20, na.rm = TRUE)
+    hincome17all = ifelse(all(is.na(hincome_17)), NA, max(hincome_17, na.rm = TRUE)),
+    hincome18all = ifelse(all(is.na(hincome_18)), NA, max(hincome_18, na.rm = TRUE)),
+    hincome19all = ifelse(all(is.na(hincome_19)), NA, max(hincome_19, na.rm = TRUE)),
+    hincome20all = ifelse(all(is.na(hincome_20)), NA, max(hincome_20, na.rm = TRUE))
   ) %>%
   ungroup()
 
@@ -263,7 +273,9 @@ data_panel <- data_panel %>%
     hincome20all = ifelse(is.na(hincome20all), hincome19all, hincome20all),
     hincome20all = ifelse(is.na(hincome20all), hincome18all, hincome20all),
     hincome20all = ifelse(is.na(hincome20all), hincome17all, hincome20all)
-  )  #
+  )  
+
+mean(data_panel$hincome17all, na.rm = TRUE) #work for 17 (mean = 6.31945), 18 (mean = 6.378386), 19 (mean = 6.484415), 20 ( mean = 6.48741). i compared with STATA_DATA
 
 #create variable hincome_all
 data_panel <- data_panel %>%
@@ -273,16 +285,19 @@ data_panel <- data_panel %>%
                                ifelse(year == 2019, hincome19all,
                                       ifelse(year == 2020, hincome20all, NA_real_))))
   ) %>%
-  select(-hincome17all, -hincome18all, hincome19all, hincome20all)  
+  select(-hincome_17, -hincome_18, -hincome_19, -hincome_20) 
+
+mean(data_panel$hincome_all, na.rm=TRUE) # similar to mean in Stata_Data (6.417858)
 
 # Recode hincome_all to x3hincall
-data_panel$x3hincall <- cut(data_panel$hincome_all, breaks = c(0, 5, 8, 12), labels = c("Low", "Mid", "High"), include.lowest = TRUE)
+data_panel$x3hincall <- cut(data_panel$hincome_all, breaks = c(0, 5, 8, 12), labels = FALSE, include.lowest = TRUE)
 
 # Generate dhincome_all
 data_panel$dhincome_all <- (data_panel$hincome_all - 1) / 11
-#
-#data$x3hincall <- cut(data$hincome_all, breaks = c(0, 5, 8, 12), labels = FALSE)
-#data$dhincome_all <- cut(data$hincome_all, breaks = c(0, 5, 8, 12), labels = FALSE)
+
+```
+
+```{r interest in politics, ideology, authoritarianism, nativism, populism and territory}
 
 #______________________________________________________________________________#
 # (12): Generation of two variables for the respondent's interest in politics
@@ -364,6 +379,12 @@ mean(data_panel$orgterr) # CHECK: same descriptive statistics as STATA output
 
 #______________________________________________________________________________#
 data_panel <- data_panel[order(data_panel$idcode), ]
+
+
+```
+
+``` {r sexism}
+
 #______________________________________________________________________________#
 # (18): Generation of variables to measure respondent's modern sexism 
 
@@ -469,6 +490,10 @@ mean(data_panel$swim_msex) #  CHECK: same descriptive statistics as STATA output
 data_panel$swim_msex <- (data_panel$swim_msex - 1) / 6
 mean(data_panel$swim_msex) # CHECK: same descriptive statistics as STATA output 
 
+```
+
+
+```{r protests}
 #______________________________________________________________________________#
 # (20): Generation of variables for respondent's engagement in Women's Day protests 
 
@@ -487,7 +512,10 @@ mean(data_panel$p8m_talked, na.rm = T) # CHECK: same descriptive statistics as S
 # ... and finally estimate the row mean for each observation out of the four generated variables above ... 
 data_panel$ip8m <- rowMeans(data_panel[, c("p8m_strike", "p8m_demonst", "p8m_mobiliz", "p8m_talked")])
 mean(data_panel$ip8m,na.rm = T) # CHECK: same descriptive statistics as STATA output 
+```
 
+
+```{r dependent variables}
 #______________________________________________________________________________#
 # (21): Respondent's intended vote for the Vox-party (MAIN DEPENDENT VARIABLE)
 
@@ -521,6 +549,9 @@ summary(data_panel$vr16_all) # CHECK: same descriptive statistics as STATA outpu
 
 data_panel$vr16_all_labels <- factor(data_panel$vr16_all, labels = c("Else", "PSOE", "PP", "Podemos", "Cs")) 
 summary(data_panel$vr16_all_labels) # CHECK: same descriptive statistics as STATA output
+```
+
+``` {r turnout and vote choices}
 
 #______________________________________________________________________________#
 # Generation of variable to capture respondent's decision not to turn out to vote 
@@ -579,18 +610,9 @@ data_panel <- select(data_panel, -starts_with("vr16_all"),
                                  -starts_with("vr16_18"))
 
 mean(data_panel$rv16all, na.rm = T) # CHECK: same descriptive statistics as STATA output
+```
 
-
-
-
-
-
-
-
-
-
-
-
+```{r loop, here we have problems :( }
 #______________________________________________________________________________#
 # (24): Creation of time-invariant variables fixed at their 2017/2018 values - these generated variables are used in the multilevel growth-curve models 
 # NOTE: ADD INCOME VARIABLE "x3hincall" !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
@@ -768,90 +790,23 @@ label(data_panel$t1rv16all) <- "Vote in 2016 (ref. PP)"
 ```
 
 
-``` {r }
+
+``` {r original, table 3, replication, everything works!!!!}
+install.packages("brglm2")
+library(brglm2)
+
+t3m1 <- glm(vim_vox ~ female + age + edu3_2 + edu3_3 + dhincome_all + livingpartner + intpol + l2vim_vox + l2authoritarian + l2ideol + l2nativism + l2orgterr + l2pop6amz + l2msexism + lsvim_vox + lsauthoritarian + lsideol + lsnativism + lsorgterr + lspop6amz + lsmsexism, family = binomial(logit), method = "brglmFit",  data = STATA_DATA %>% filter(year == 2019))
 
 
+## Column 2 (model 2, 2020)
+t3m2 <- glm(vim_vox ~ female + age + edu3_2 + edu3_3 + dhincome_all + livingpartner + intpol + l2vim_vox + l2authoritarian + l2ideol + l2nativism + l2orgterr + l2pop6amz + l2msexism + lsvim_vox + lsauthoritarian + lsideol + lsnativism + lsorgterr + lspop6amz + lsmsexism, family = binomial(logit), method = "brglmFit", data = STATA_DATA %>% filter(year == 2020))
 
+## Column 3 (model 3, 2019)
+t3m3 <- update(t3m1, ~. - lsmsexism + posmsex + negmsex)
+
+## Column 4 (model 4, 2020)
+t3m4 <- update(t3m2, ~. - lsmsexism + posmsex + negmsex)
+
+stargazer(t3m1, t3m2, t3m3, t3m4, type = "text", dep.var.caption = "", dep.var.labels.include = F, column.labels = c("2019", "2020", "2019", "2020"), keep.stat = "n", star.char = c("+", "*", "**"), star.cutoffs = c(0.1, 0.05, 0.01),  notes = c("+ p<0.1; * p<0.05; ** p<0.01"), covariate.labels = c("Female", "Age", "Upper secondary", "Tertiary", "Income", "Lives with partner", "Interest in politics", "Vox intention (t-2)", "Authoritarianism (t-2)", "Ideological identification (t-2)", "Nativism (t-2)", "Territorial preference (t-2)", "Populism (t-2)", "Sexism (t-2)", "Vox intention (t-1 minus t-2)", "Authoritarianism (t-1 minus t-2)", "Ideological identification (t-1 minus t-2)", "Nativism (t-1 minus t-2)", "Territorial preference (t-1 minus t-2)", "Populism (t-1 minus t-2)", "Sexism (t-1 minus t-2)", "Increase in sexism (t-1 minus t-2)", "Decrease in sexism (t-1 minus t-2)"), notes.append = F, no.space = T, title = "Table 3. Effect of prior change in attitudes and vote intention on intended vote for Vox")
 ```
-``` {r }
-
-
-
-```
-
-``` {r }
-
-
-
-```
-
-``` {r }
-
-
-
-```
-
-``` {r }
-
-
-
-```
-
-``` {r }
-
-
-
-```
-
-``` {r }
-
-
-
-```
-
-``` {r }
-
-
-
-```
-
-``` {r }
-
-
-
-```
-
-``` {r }
-
-
-
-```
-
-``` {r }
-
-
-
-```
-
-``` {r }
-
-
-
-```
-
-``` {r }
-
-
-
-```
-
-``` {r }
-
-
-
-```
-
-
-
-
 
