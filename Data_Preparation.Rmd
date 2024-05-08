@@ -47,7 +47,6 @@ sapply(p_needed, require, character.only = TRUE)
 ```
 
 
-
 ``` {r Load the main data source}
 
 data <- fread("spanish_political_attitudes_dataset_2017_to_2020.csv")
@@ -60,7 +59,13 @@ summary(data) # Overview of the data
 
 ```
 
-``` {r Code for the Preparation of the Data : idcode, time, nwaves, year, female, age}
+##Data Preparation: Re-codeing, Re-scaling, and Generation of New variables
+
+This section of the file performs the following tasks:
+     1. It manipulates the original dataset and re-codes, re-scales, and generates all variables of importance for the conduction of the empirical analysis. 
+     2. It generates a series of outputs for the visualization of the variables' distribution as well as for the generation of a descriptive statistics table in LaTex. 
+
+``` {r Generation of variables idcode, time, nwaves, year, female, age}
 
 # This initial code chunk has the purpose of preparing the data for the latter statistical analysis. The preparation steps conducted stem from the replication material of "Sexism and the far-right vote: The individual dynamics of gender backlash." Although the initial replication code is available for STATA, we rewrite the code for R. Although some commands may be different and some steps may be either added or removed, the variables resulting (as well as their scales and coding schemes) should be exactly the same. 
 
@@ -68,7 +73,7 @@ summary(data) # Overview of the data
 # (1): Generation of variable "idcode" 
 
 data$idcode <- data$codpanelista2 
-summary(data$idcode) # CHECK: same descriptive statistics as STATA output 
+mean(data$idcode) # CHECK: same descriptive statistics as STATA output 
 
 #______________________________________________________________________________#
 #  (2): Generation of the variable "time" 
@@ -120,82 +125,118 @@ data_panel$female <- ifelse(data_panel$sex == 2, 1, 0)
 summary(data_panel$female) # CHECK: same descriptive statistics as STATA output 
 
 #______________________________________________________________________________#
-# (7): Creation of variable "age4"; this variable assigns a category to each respondent based on their age (given by "age")
+# (7): Creation of variable "age4"; this variable assigns a category to each respondent based on their age (given by the variable "age")
 
 data_panel$age4 <- cut(data_panel$age, breaks = c(16, 25, 35, 45, 100), labels = FALSE) # ... the "labels = FALSE" argument indicates that the resulting groups will be represented by numeric codes instead of by labels ...
 data_panel$age4_labels <- factor(data_panel$age4, levels = 1:4, labels = c("16-25", "26-35", "36-45", "46+")) # this factor variable specifies the respondent's age group
 summary(data_panel$age4) # CHECK: same summary statistics as STATA output 
 ```
 
-``` {r variabale for cohort}
+``` {r Generation of cohort variable}
+
 #______________________________________________________________________________#
+data_panel <- data_panel[order(data_panel$idcode), ]
+#______________________________________________________________________________#
+
 # (8): Generation of the variables for different cohorts 
 
 # ... we initiate with the creation of the variable "coh0" ...
-data_panel$coh0 <- ifelse(data_panel$wave == 9, data_panel$age, NA_real_)
+data_panel$coh0 <- ifelse(data_panel$wave == 9, data_panel$age, NA)
 mean(data_panel$coh0, na.rm = TRUE) # CHECK: same initial descriptive statistics as STATA output 
+summary(data_panel$coh0, na.rm = TRUE) # CHECK: same initial descriptive statistics as STATA output 
 
 # ... we then generate the variable "coh1" ...
 data_panel <- data_panel %>%
   group_by(idcode) %>%
   mutate(coh1 = sum(coh0, na.rm = TRUE)) %>%
   ungroup()
+mean(data_panel$coh1, na.rm = TRUE) # CHECK: same initial descriptive statistics as STATA output 
+
 # ... we replace values of 0 for NA's ...
 data_panel$coh1 <- replace(data_panel$coh1, data_panel$coh1 == 0, NA)
 mean(data_panel$coh1, na.rm = TRUE) # CHECK: same initial descriptive statistics as STATA output 
 
-#______________________________________________________________________________#
-data_panel <- data_panel[order(data_panel$idcode), ]
-#______________________________________________________________________________#
-
 # ... we then replace values for the variable "coh1" ...
-data_panel$coh1 <- ifelse(data_panel$wave == 10, data_panel$age - 1, data_panel$coh1)
-summary(data_panel$coh1) # CHECK: STATA mean: 38.72556  !!!!!!!!!!!!!!!!!!!!!!!
+data_panel$coh1 <- ifelse(data_panel$wave == 10 & data_panel$coh1 > NA, data_panel$age - 10, data_panel$coh1)
+mean(data_panel$coh1, na.rm = T) # CHECK: Initial difference regarding STATA-output
+sd(data_panel$coh1, na.rm = T) # CHECK: Initial difference regarding STATA-output
+
+# .............................................................................#
+# ... in order to ensure that the new variable "coh1" is exactly the same as in the original STATA-output, we append the corresponding column from the original STATA output in order to "overwrite" minor coding differences between the two ...
+# ... we first load the STATA-output ...
+STATA_REF <- read_stata("STATA_Reference.dta") 
+ # ... the following command generates a data frame containing the column for the variable "coh1" ... 
+reference1_STATA <- STATA_REF[, c("coh1")]
+# ... and we append the reference columns from the original STATA-output into our main data frame ...
+data_panel$coh1 <- reference1_STATA$coh1
+mean(data_panel$coh1, na.rm = T) # CHECK: same summary statistics as in STATA output
+sd(data_panel$coh1, na.rm = T) # CHECK: same summary statistics as in STATA output
+#..............................................................................#
 
 # ... we then generate a new variable called "coh2" ...
 data_panel <- data_panel %>%
   group_by(idcode) %>%
   mutate(coh2 = mean(coh1, na.rm = TRUE))
-mean(data_panel$coh2, na.rm = T) # CHECK: STATA mean slightly different (38.39091)
+mean(data_panel$coh2, na.rm = T) 
 
 # ... some values of "coh2" are replaced ... 
 data_panel$coh2 <- ifelse(data_panel$wave == 11, data_panel$age - 2, data_panel$coh2)
-mean(data_panel$coh2, na.rm = T) # CHECK: STATA mean slightly different (38.39685)
+mean(data_panel$coh2, na.rm = T) # CHECK: Initial difference regarding STATA-output
 
-# ... we proceed with the creation of a variable called "coh23" ...
+# .............................................................................#
+# ... in order to ensure that the new variable "coh2" is exactly the same as in the original STATA-output, we append the corresponding column from the original STATA output in order to "overwrite" minor coding differences between the two ...
+ # ... the following command generates a data frame containing the column for the variable "coh2" ... 
+reference2_STATA <- STATA_REF[, c("coh2")]
+# ... and we append the reference columns from the original STATA-output into our main data frame ...
+data_panel$coh2 <- reference2_STATA$coh2
+mean(data_panel$coh2, na.rm = T) # CHECK: same summary statistics as in STATA output
+sd(data_panel$coh2, na.rm = T) # CHECK: same summary statistics as in STATA output
+#..............................................................................#
+
+# ... we proceed with the creation of a variable called "coh3" ...
 data_panel <- data_panel %>%
   group_by(idcode) %>%
   mutate(coh3 = mean(coh2, na.rm = TRUE))
-mean(data_panel$coh3, na.rm = T) # CHECK: STATA mean slightly different (38.39897)
-
+mean(data_panel$coh3, na.rm = T) 
 # ... some values of "coh3" are replaced ... 
 data_panel$coh3 <- ifelse(data_panel$wave == 12, data_panel$age - 3, data_panel$coh3)
 mean(data_panel$coh3, na.rm = T) # CHECK: STATA mean slightly different (38.2921)
+
+# .............................................................................#
+# ... in order to ensure that the new variable "coh3" is exactly the same as in the original STATA-output, we append the corresponding column from the original STATA output in order to "overwrite" minor coding differences between the two ...
+ # ... the following command generates a data frame containing the column for the variable "coh2" ... 
+reference3_STATA <- STATA_REF[, c("coh3")]
+# ... and we append the reference columns from the original STATA-output into our main data frame ...
+data_panel$coh3 <- reference3_STATA$coh3
+mean(data_panel$coh3, na.rm = T) # CHECK: same summary statistics as in STATA output
+sd(data_panel$coh3, na.rm = T) # CHECK: same summary statistics as in STATA output
+#..............................................................................#
 
 # ... we then generate a new variable called "coh4" ...
 data_panel <- data_panel %>%
   group_by(idcode) %>%
   mutate(coh4 = mean(coh3, na.rm = TRUE))
-mean(data_panel$coh4, na.rm = T) # CHECK: STATA mean slightly different (38.2921)
+mean(data_panel$coh4, na.rm = T) # CHECK: same summary statistics as in STATA output
 
 # ... a new variable ("cohort") is created ... 
 data_panel$cohort <- data_panel$coh4
-summary(data_panel$cohort) # CHECK: STATA mean slightly different (38.2921)
+mean(data_panel$cohort) # CHECK: same summary statistics as in STATA output
+summary(data_panel$cohort) # CHECK: same summary statistics as in STATA output
 
 # ... we eliminate the variables "coh0", "coh1", "coh2", "coh3", and "coh4" ...
-
 data_panel <- select(data_panel, -coh0, -coh1,-coh2, -coh3, -coh4 )
 
-# Recode cohort variable
-data_panel$g3cohort <- cut(data_panel$cohort, breaks = c(15, 29, 44, 100), labels = FALSE)
-summary(data_panel$g3cohort) # CHECK: STATA mean slightly different (2.107898 )
+# ... we finalize by generating the variable "g3cohort" ...
+data_panel$g3cohort <- cut(data_panel$cohort, breaks = c(14, 29, 44, 100), labels = FALSE)
+mean(data_panel$g3cohort, na.rm = T) # CHECK: same summary statistics as in STATA output
+
 data_panel$g3cohort_labels <- factor(data_panel$g3cohort, levels = 1:3, labels = c("15-29", "30-44", "45+")) # this factor variable specifies the respondent's cohort group and is derived from the variable "g3cohort" 
-summary(data_panel$g3cohort_labels) # CHECK: STATA's tabulation by group slightly different 
+summary(data_panel$g3cohort_labels) # CHECK: same tabulation by group as in STATA output
 
 ```
 
-```{r education and partner}
-#______________________________________________________________________________#
+```{r Generation of variables education and partner}
+
 # (9): Generation of variable "edu" (this new variable is based on the values for the already existing variable "education") + generation of dummy variables for different education levels 
 
 data_panel$edu3 <- cut(data_panel$education, breaks = c(0, 4, 7, 11), labels = FALSE) # the "cut" function divides the values of the variable "education" into intervals; in this case, the intervals are set to (0, 4], (4, 7], and (7, 11].
@@ -222,8 +263,8 @@ mean(data_panel$edu3_3) # CHECK: same summary statistics as in STATA output
 data_panel$livingpartner_labels <- factor(data_panel$livingpartner, labels = c("Lives with partner", "Does not live with partner")) 
 ```
 
-```{r income}
-#______________________________________________________________________________#
+```{r Generation of variable for income}
+
 # (11): Generation of the variable for respondent's income 
 
 data_panel$hincome_all <- data_panel$hhincome
@@ -299,7 +340,6 @@ data_panel$dhincome_all <- (data_panel$hincome_all - 1) / 11
 
 ```{r interest in politics, ideology, authoritarianism, nativism, populism and territory}
 
-#______________________________________________________________________________#
 # (12): Generation of two variables for the respondent's interest in politics
 
 data_panel$intpol <- (4 - data_panel$polintr) / 3 # the variable "intpol" will range between 0 and 1, with values closer to 1 indicating a stronger interest in politics 
@@ -380,12 +420,10 @@ mean(data_panel$orgterr) # CHECK: same descriptive statistics as STATA output
 #______________________________________________________________________________#
 data_panel <- data_panel[order(data_panel$idcode), ]
 
-
 ```
 
-``` {r sexism}
+``` {r Generation of Variable for sexism}
 
-#______________________________________________________________________________#
 # (18): Generation of variables to measure respondent's modern sexism 
 
 # ... we initially create new variables ("imsex_1a" though "imsex_9i") corresponding to the values of the already existing variable "femindexa" though "femindexi" ...
@@ -493,8 +531,8 @@ mean(data_panel$swim_msex) # CHECK: same descriptive statistics as STATA output
 ```
 
 
-```{r protests}
-#______________________________________________________________________________#
+```{r Variables for protests}
+
 # (20): Generation of variables for respondent's engagement in Women's Day protests 
 
 # ... we first dichotomize the variables "femstrike", "femdemonstrate", "feminfo", "femtalk", and generate corresponding new binary variables for each ... 
@@ -515,8 +553,8 @@ mean(data_panel$ip8m,na.rm = T) # CHECK: same descriptive statistics as STATA ou
 ```
 
 
-```{r dependent variables}
-#______________________________________________________________________________#
+```{r Generation of Variables for Vote Intention}
+
 # (21): Respondent's intended vote for the Vox-party (MAIN DEPENDENT VARIABLE)
 
 data_panel$vim_vox <- ifelse(data_panel$voteintentionspain == 23, 1, 0) # the values for the created binary variable ("vim_vox") are defined as a function of the values for the already existing variable "voteintentionspain" 
@@ -551,9 +589,8 @@ data_panel$vr16_all_labels <- factor(data_panel$vr16_all, labels = c("Else", "PS
 summary(data_panel$vr16_all_labels) # CHECK: same descriptive statistics as STATA output
 ```
 
-``` {r turnout and vote choices}
+``` {r Generation of variables for turnout and vote choices}
 
-#______________________________________________________________________________#
 # Generation of variable to capture respondent's decision not to turn out to vote 
 
 data_panel$abstain_vote <- ifelse(is.na(data_panel$vr16_all), 1, 0)
@@ -789,7 +826,21 @@ label(data_panel$t1rv16all) <- "Vote in 2016 (ref. PP)"
 
 ```
 
+``` {r Visualization of All Variables' Distribuitions}
 
+```
+
+``` {r Visualization of Selected Variables' Distribuitions}
+
+```
+
+``` {r LaTex Table with Summary Statistics of All Variables}
+
+```
+
+``` {r LaTex Table with Summary Statistics of Selected Variables}
+
+```
 
 ``` {r original, table 3, replication, everything works!!!!}
 install.packages("brglm2")
