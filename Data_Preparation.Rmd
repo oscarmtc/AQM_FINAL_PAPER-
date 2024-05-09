@@ -64,6 +64,7 @@ summary(data) # Overview of the data
 This section of the file performs the following tasks:
      1. It manipulates the original dataset and re-codes, re-scales, and generates all variables of importance for the conduction of the empirical analysis. 
      2. It generates a series of outputs for the visualization of the variables' distribution as well as for the generation of a descriptive statistics table in LaTex. 
+     3. It integrates date from the Chapel Hill Expert Expert Survey Trend File 1999-2019 in order to assign labels to the parties according to their placement in the left-right continuum. 
 
 ``` {r Generation of variables idcode, time, nwaves, year, female, age}
 
@@ -89,7 +90,6 @@ summary(data$time_labels) # this is an additional factor variable created to ass
 
 # ... and we finaly set the dataset as panel data ...
 data_panel <- pdata.frame(data, index = c("idcode", "time"))
-
 # ... we also sort the dataset according to the variable "idcode" 
 data_panel <- data_panel[order(data_panel$idcode), ]
 
@@ -105,17 +105,20 @@ data_panel <- merge(data_panel, wave_counts, by = "idcode", all.x = TRUE) # ... 
 data_panel$nwaves <- data_panel$N 
 # ... and finally remove the temporarily created "N" column
 data_panel$N <- NULL
+mean(data_panel$nwaves) # CHECK: same descriptive statistics as STATA output 
 summary(data_panel$nwaves) # CHECK: same descriptive statistics as STATA output 
+#... we finalize by removing the generated reference data frames ...
+rm(wave_counts)
 
 #______________________________________________________________________________#
 # (5): Generation and assignments of values of variable "year"
 
 data_panel$year <- data_panel$wave # the values which the variable "year" takes depend on the wave number specified by "wave"
 data_panel$year[data_panel$year == 8] <- 2016 # ... this line assigns the value 2016 to the "year" variable in the dataset wherever the current value of "year" is equal to 8 ...
-data_panel$year[data_panel$year == 9] <- 2017 # ... 
-data_panel$year[data_panel$year == 10] <- 2018 # ... 
-data_panel$year[data_panel$year == 11] <- 2019 # ... 
-data_panel$year[data_panel$year == 12] <- 2020 # ... 
+data_panel$year[data_panel$year == 9] <- 2017 # ... "
+data_panel$year[data_panel$year == 10] <- 2018 # ... "
+data_panel$year[data_panel$year == 11] <- 2019 # ... "
+data_panel$year[data_panel$year == 12] <- 2020 # ... "
 mean(data_panel$year) # CHECK: same descriptive statistics as STATA output 
 
 #______________________________________________________________________________#
@@ -123,13 +126,22 @@ mean(data_panel$year) # CHECK: same descriptive statistics as STATA output
 
 data_panel$female <- ifelse(data_panel$sex == 2, 1, 0)
 summary(data_panel$female) # CHECK: same descriptive statistics as STATA output 
+mean(data_panel$female) # CHECK: same descriptive statistics as STATA output 
+
+data_panel$female_labels <- factor(data_panel$female, levels = 1:0, labels = c("Female", "Male")) # this factor variable specifies the respondent's binary gender
+summary(data_panel$female_labels) # CHECK: same summary statistics as STATA output 
 
 #______________________________________________________________________________#
 # (7): Creation of variable "age4"; this variable assigns a category to each respondent based on their age (given by the variable "age")
 
 data_panel$age4 <- cut(data_panel$age, breaks = c(16, 25, 35, 45, 100), labels = FALSE) # ... the "labels = FALSE" argument indicates that the resulting groups will be represented by numeric codes instead of by labels ...
 data_panel$age4_labels <- factor(data_panel$age4, levels = 1:4, labels = c("16-25", "26-35", "36-45", "46+")) # this factor variable specifies the respondent's age group
+
 summary(data_panel$age4) # CHECK: same summary statistics as STATA output 
+mean(data_panel$age4) # CHECK: same summary statistics as STATA output 
+
+summary(data_panel$age4_labels) # CHECK: same summary statistics as STATA output 
+
 ```
 
 ``` {r Generation of cohort variable}
@@ -233,21 +245,27 @@ mean(data_panel$g3cohort, na.rm = T) # CHECK: same summary statistics as in STAT
 data_panel$g3cohort_labels <- factor(data_panel$g3cohort, levels = 1:3, labels = c("15-29", "30-44", "45+")) # this factor variable specifies the respondent's cohort group and is derived from the variable "g3cohort" 
 summary(data_panel$g3cohort_labels) # CHECK: same tabulation by group as in STATA output
 
+#______________________________________________________________________________#
+#... we finalize by removing the generated reference data frames ...
+
+rm(reference1_STATA, reference2_STATA, reference3_STATA)
+
 ```
 
-```{r Generation of variables education and partner}
+```{r Generation of Variables for respondent's educational level and partner situation}
 
 # (9): Generation of variable "edu" (this new variable is based on the values for the already existing variable "education") + generation of dummy variables for different education levels 
 
 data_panel$edu3 <- cut(data_panel$education, breaks = c(0, 4, 7, 11), labels = FALSE) # the "cut" function divides the values of the variable "education" into intervals; in this case, the intervals are set to (0, 4], (4, 7], and (7, 11].
 data_panel$edu3_labels <- factor(data_panel$edu3, levels = c(1, 2, 3), labels = c("Lower secondary", "Upper secondary", "Tertiary")) # definition of labels for the three levels of education ...
 summary(data_panel$edu3_labels) # CHECK: STATA's tabulation by educational is the same
+mean(data_panel$edu3) # CHECK: STATA's tabulation by educational is the same
 
 # ... based on the previously generated "edu3_labels"-variable, we proceed to generate dummy variables for all three education labels in the data set ... 
 
 # ... a dummy variable for lower education ...
 data_panel$edu3_1 <- ifelse(data_panel$edu3_labels == "Lower secondary", 1, 0)
-summary(data_panel$edu3_1) # CHECK: same summary statistics as in STATA output 
+mean(data_panel$edu3_1) # CHECK: same summary statistics as in STATA output 
 
 # ... a dummy variable for upper secondary education ...
 data_panel$edu3_2 <- ifelse(data_panel$edu3_labels == "Upper secondary", 1, 0)
@@ -260,34 +278,33 @@ mean(data_panel$edu3_3) # CHECK: same summary statistics as in STATA output
 #______________________________________________________________________________#
 # (10): Specification of labels for the variable "livingpartner" according to its numeric values. 
 
-data_panel$livingpartner_labels <- factor(data_panel$livingpartner, labels = c("Lives with partner", "Does not live with partner")) 
+data_panel$livingpartner_labels <- factor(data_panel$livingpartner, labels = c("Does not live with partner","Lives with partner")) 
+
+summary(data_panel$livingpartner_labels) # CHECK: same summary statistics as in STATA output 
+mean(data_panel$livingpartner, na.rm = T) # CHECK: same summary statistics as in STATA output 
+summary(data_panel$livingpartner, na.rm = T) # CHECK: same summary statistics as in STATA output 
+
 ```
 
 ```{r Generation of variable for income}
 
 # (11): Generation of the variable for respondent's income 
 
-data_panel$hincome_all <- data_panel$hhincome
-  
-data_panel$hincome_all <- ifelse(data_panel$hincome_all==99, NA, data_panel$hincome_all)
-
-mean(data_panel$hincome_all,  na.rm = TRUE) # everything is cooool
-
+data_panel$hincome <- data_panel$hhincome
+data_panel$hincome <- ifelse(data_panel$hincome==99, NA, data_panel$hincome)
+mean(data_panel$hincome,  na.rm = TRUE) # CHECK: same summary statistics as in STATA output
 
 as.numeric(data_panel$year)
 
 class(data_panel$year)
 
 #firstly we need to create separate variables for each year
-
-data_panel$hincome_17 <- ifelse(data_panel$year == 2017, data_panel$hincome_all, NA)
-data_panel$hincome_18<- ifelse(data_panel$year == 2018, data_panel$hincome_all, NA)
-data_panel$hincome_19 <- ifelse(data_panel$year == 2019, data_panel$hincome_all, NA)
-data_panel$hincome_20 <- ifelse(data_panel$year == 2020, data_panel$hincome_all, NA)
+data_panel$hincome_17 <- ifelse(data_panel$year == 2017, data_panel$hincome, NA)
+data_panel$hincome_18<- ifelse(data_panel$year == 2018, data_panel$hincome, NA)
+data_panel$hincome_19 <- ifelse(data_panel$year == 2019, data_panel$hincome, NA)
+data_panel$hincome_20 <- ifelse(data_panel$year == 2020, data_panel$hincome, NA)
 
 #now we need to group everything by idcode
-       
-         
 data_panel <- data_panel %>%
   group_by(idcode) %>%
   mutate(
@@ -299,7 +316,6 @@ data_panel <- data_panel %>%
   ungroup()
 
 #here we put the values of subsequent years
-
 data_panel <- data_panel %>%
   mutate(
     hincome17all = ifelse(is.na(hincome17all), hincome18all, hincome17all),
@@ -316,7 +332,10 @@ data_panel <- data_panel %>%
     hincome20all = ifelse(is.na(hincome20all), hincome17all, hincome20all)
   )  
 
-mean(data_panel$hincome17all, na.rm = TRUE) #work for 17 (mean = 6.31945), 18 (mean = 6.378386), 19 (mean = 6.484415), 20 ( mean = 6.48741). i compared with STATA_DATA
+mean(data_panel$hincome17all, na.rm = TRUE) # CHECK: same summary statistics as in STATA output
+mean(data_panel$hincome18all, na.rm = TRUE) # CHECK: same summary statistics as in STATA output
+mean(data_panel$hincome19all, na.rm = TRUE) # CHECK: same summary statistics as in STATA output
+mean(data_panel$hincome20all, na.rm = TRUE) # CHECK: same summary statistics as in STATA output
 
 #create variable hincome_all
 data_panel <- data_panel %>%
@@ -328,13 +347,21 @@ data_panel <- data_panel %>%
   ) %>%
   select(-hincome_17, -hincome_18, -hincome_19, -hincome_20) 
 
-mean(data_panel$hincome_all, na.rm=TRUE) # similar to mean in Stata_Data (6.417858)
+mean(data_panel$hincome_all, na.rm=TRUE) # CHECK: same summary statistics as in STATA output
 
-# Recode hincome_all to x3hincall
+# ... generation of variable "x3hincall" based on the already existing one "hincome_all" ...
 data_panel$x3hincall <- cut(data_panel$hincome_all, breaks = c(0, 5, 8, 12), labels = FALSE, include.lowest = TRUE)
+mean(data_panel$x3hincall, na.rm = T) # CHECK: same summary statistics as in STATA output
+summary(data_panel$x3hincall) # CHECK: same summary statistics as in STATA output
 
-# Generate dhincome_all
+# ... we then generate a factor variable assigning income categories based on the numeric value of "x3hincall" ...
+data_panel$x3hincall_labels <- factor(data_panel$x3hincall, labels = c("Low","Mddle", "High")) 
+summary(data_panel$x3hincall_labels) # CHECK: same summary statistics as in STATA output
+
+# ... we conclude with the generation of the variable "dhincome_all" ...
 data_panel$dhincome_all <- (data_panel$hincome_all - 1) / 11
+mean(data_panel$dhincome_all, na.rm = T) # CHECK: same summary statistics as in STATA output
+summary(data_panel$dhincome_all) # CHECK: same summary statistics as in STATA output
 
 ```
 
