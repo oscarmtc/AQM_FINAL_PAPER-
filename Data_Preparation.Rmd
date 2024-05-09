@@ -962,7 +962,7 @@ summary(data_panel$abstain_vote_labels)
 
 ``` {r Merge Party Ideological Positions from the Chapel Hill Experts Survey}
 
-CH_Data <- read_stata("Chapen Hill Expert Survey")
+CH_Data <- read_stata("Chapel Hill Expert Survey")
 
 ```
 
