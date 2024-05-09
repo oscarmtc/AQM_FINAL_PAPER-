@@ -46,16 +46,11 @@ sapply(p_needed, require, character.only = TRUE)
 
 ```
 
-
 ``` {r Load the main data source}
 
 data <- fread("spanish_political_attitudes_dataset_2017_to_2020.csv")
 
 # in order to use the "fread" function we first have to download the "data.table" package. This function is mainly employed for reading data from external files into R (in this case, the main data in in a csv format) in the form of data tables. It is especially useful when it comes to reading large datasets. 
-
-dim(data) # we inspect the dimensions of the data: it has a total of 7850 observations (each observation corresponds to a panelist) and 37 variables. 
-
-summary(data) # Overview of the data 
 
 ```
 
@@ -141,6 +136,10 @@ summary(data_panel$age4) # CHECK: same summary statistics as STATA output
 mean(data_panel$age4) # CHECK: same summary statistics as STATA output 
 
 summary(data_panel$age4_labels) # CHECK: same summary statistics as STATA output 
+
+#______________________________________________________________________________#
+# (8): We also remove the initial data frame "data" (since it will not be used anymore and with the goal of making the overview of the working environment as parsimonious as possible) ...
+rm(data)
 
 ```
 
@@ -251,7 +250,7 @@ summary(data_panel$g3cohort_labels) # CHECK: same tabulation by group as in STAT
 #______________________________________________________________________________#
 #... we finalize by removing the generated reference data frames ...
 
-rm(reference1_STATA, reference2_STATA, reference3_STATA)
+rm(reference1_STATA, reference2_STATA, reference3_STATA, STATA_REF)
 
 ```
 
@@ -375,7 +374,7 @@ summary(data_panel$dhincome_all) # CHECK: same summary statistics as in STATA ou
 data_panel$intpol <- (4 - data_panel$polintr) / 3 # the variable "intpol" will range between 0 and 1, with values closer to 1 indicating a stronger interest in politics 
 mean (data_panel$intpol) # CHECK: same descriptive statistics as STATA output 
 
-data_panel$dintpol <- ifelse(data$polintr %in% c(1, 2), 1, 0) # second created variable -> "dintpol; some notes regarding the code used: 
+data_panel$dintpol <- ifelse(data_panel$polintr %in% c(1, 2), 1, 0) # second created variable -> "dintpol; some notes regarding the code used: 
     # data$polintr %in% c(1, 2) -> This condition checks if each value in the "polintr" variable is either 1 or 2
     # If the condition is TRUE (i.e., if the value in "polintr" is 1 or 2), "dintpol" is assigned a value of 1; on the other hand, if the condition is FALSE (i.e., if the value for "polintr" is neither 1 nor 2), "dintpol" is coded as 0.
 data_panel$dintpol_labels <- factor(data_panel$dintpol, labels = c("Hardly or not at all", "Quite or very")) 
@@ -560,7 +559,6 @@ data_panel$swim_msex <- (data_panel$swim_msex - 1) / 6
 mean(data_panel$swim_msex) # CHECK: same descriptive statistics as STATA output 
 
 ```
-
 
 ```{r Variables for Respomdents' Participation in Protests}
 
@@ -756,8 +754,19 @@ t1dintpol_labels <- c("0" = "Low", "1" = "High")
 t1ideo5_labels <- c("1" = "Far left", "2" = "Left", "3" = "Center", "4" = "Right", "5" = "Far right")
     attr(data_panel$t1ideo5, "labels") <- t1ideo5_labels
     
-```
+#______________________________________________________________________________#
+#... we finalize by removing the generated reference data frames ...
 
+rm(filtered_data, 
+   filtered_data_2, 
+   sorted_data, 
+   sorted_data_2, 
+   t2ip8m_data, 
+   t2partner_data,
+   subset_data
+   )
+    
+```
 
 ```{r Generation of Lagged and Change Variables}
 #______________________________________________________________________________#
@@ -879,13 +888,13 @@ rm(list = c("reference5a_STATA",
             "reference5e_STATA", 
             "reference5f_STATA", 
             "reference5g_STATA", 
-            "reference5h_STATA")
+            "reference5h_STATA",
+            "STATA_REF2")
    )
 
 #..............................................................................#
 
 ```
-
 
 ```{r Generation of Variables for Positive and Negative (lagged) change in sexism (for both "extended" and "original" modern sexism)}
 
@@ -943,7 +952,7 @@ This section builds on the data preparation from the previous part. New variable
 ``` {r Generation of Variables for 2016 Turnout and a more fine-grained Variable for Vote Choice}
 
 # Generation of variable to capture respondent's decision not to turn out to vote 
-data_panel$abstain_vote <- ifelse(is.na(data_panel$vr16_all), 1, 0)
+data_panel$abstain_vote <- ifelse(is.na(data_panel$rv16all), 1, 0)
 summary(data_panel$abstain_vote)
 
 data_panel$abstain_vote_labels <- factor(data_panel$abstain_vote, labels = c("Respondent did cast a vote", "Respondent did not cast a vote"))
@@ -951,15 +960,11 @@ summary(data_panel$abstain_vote_labels)
 
 ```
 
-
 ``` {r Merge Party Ideological Positions from the Chapel Hill Experts Survey}
 
-
-
-
+CH_Data <- read_stata("Chapen Hill Expert Survey")
 
 ```
-
 
 ``` {r Visualization of Selected Variables' Distribuitions}
 
