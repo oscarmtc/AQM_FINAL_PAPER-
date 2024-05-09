@@ -796,7 +796,7 @@ for (id in unique(data_panel$idcode)) {
 # ... given minimal differences between the generated and the "original" lagged variables for the defined set of covariates, and in order to ensure that the new (lagged) variables are exactly the same as in the original STATA-output, we append the corresponding columns from the original STATA output, "overwriting" minor coding differences between both ...
 # ... we first load the relevant STATA-output ...
 STATA_REF2 <- read_stata("STATA_Reference2.dta") 
- # ... the following commands generate a series of data frames ("reference4a_STATA" -> "reference4h_STATA") containing the lagged dependent variables from the original STATA output ... 
+ # ... the following commands generate a series of data frames ("reference4a_STATA" -> "reference4h_STATA") containing the lagged variables from the original STATA output ... 
 reference4a_STATA <- STATA_REF2[, c("l2vim_vox")]
 reference4b_STATA <- STATA_REF2[, c("l2authoritarian")]
 reference4c_STATA <- STATA_REF2[, c("l2ideol")]
@@ -826,40 +826,63 @@ mean(data_panel$l2pop6, na.rm = T) # CHECK: same descriptive statistics as STATA
 mean(data_panel$l2msexism, na.rm = T) # CHECK: same descriptive statistics as STATA output
 mean(data_panel$l2swim_msex, na.rm = T) # CHECK: same descriptive statistics as STATA output
 
-# ... we finalize the procedure by eliminating thecreated reference objects ...
-rm(reference4a_STATA, 
-   reference4a_STATA, 
-   reference4b_STATA, 
-   reference4c_STATA, 
-   reference4d_STATA, 
-   reference4e_STATA, 
-   reference4f_STATA, 
-   reference4g_STATA, 
-   reference4h_STATA)
+# ... we finalize the procedure by eliminating the created reference objects ...
+rm(list = c("reference4a_STATA", 
+            "reference4b_STATA", 
+            "reference4c_STATA", 
+            "reference4d_STATA", 
+            "reference4e_STATA", 
+            "reference4f_STATA", 
+            "reference4g_STATA", 
+            "reference4h_STATA")
+   )
 #..............................................................................#
 
 # .............................................................................#
 # IMPUTATION 5 - "Change Variables"
 # ... in order to ensure that the change variables are exactly the same as in the original STATA-output, we append the corresponding columns from the original STATA output ...
- # ... the following command generates a data frame containing the columns with the change dependent variables from the original STATA output ... 
-reference5_STATA <- STATA_REF2[, c("lsvim_vox", "lsauthoritarian", "lsideol", "lsnativism", "lsorgterr", "lspop6amz", "lsmsexism", "lsswim_msex")]
+ # ... the following command generates a data frame containing the change variables from the original STATA output ... 
+reference5a_STATA <- STATA_REF2[, c("lsvim_vox")]
+reference5b_STATA <- STATA_REF2[, c("lsauthoritarian")]
+reference5c_STATA <- STATA_REF2[, c("lsideol")]
+reference5d_STATA <- STATA_REF2[, c("lsnativism")]
+reference5e_STATA <- STATA_REF2[, c("lsorgterr")]
+reference5f_STATA <- STATA_REF2[, c("lspop6amz")]
+reference5g_STATA <- STATA_REF2[, c("lsmsexism")]
+reference5h_STATA <- STATA_REF2[, c("lsswim_msex")]
+
 # ... we then append the columns from the original STATA-output into our main data frame ...
-data_panel$coh3 <- reference3_STATA$coh3
-mean(data_panel$coh3, na.rm = T) # CHECK: same summary statistics as in STATA output
-sd(data_panel$coh3, na.rm = T) # CHECK: same summary statistics as in STATA output
+data_panel$lsvim_vox <- reference5a_STATA$lsvim_vox
+data_panel$lsauthoritarian <- reference5b_STATA$lsauthoritarian
+data_panel$lsideol <- reference5c_STATA$lsideol
+data_panel$lsnativism <- reference5d_STATA$lsnativism
+data_panel$lsorgterr <- reference5e_STATA$lsorgterr
+data_panel$lspop6amz <- reference5f_STATA$lspop6amz
+data_panel$lsmsexism <- reference5g_STATA$lsmsexism
+data_panel$lsswim_msex <- reference5h_STATA$lsswim_msex
+
+# ... we finally inspect the added variables ...
+mean(data_panel$lsvim_vox, na.rm = T) # CHECK: same descriptive statistics as STATA output
+mean(data_panel$lsauthoritarian, na.rm = T) # CHECK: same descriptive statistics as STATA output
+mean(data_panel$lsideol, na.rm = T) # CHECK: same descriptive statistics as STATA output
+mean(data_panel$lsnativism, na.rm = T) # CHECK: same descriptive statistics as STATA output
+mean(data_panel$lsorgterr, na.rm = T) # CHECK: same descriptive statistics as STATA output
+mean(data_panel$lspop6amz, na.rm = T) # CHECK: same descriptive statistics as STATA output
+mean(data_panel$lsmsexism, na.rm = T) # CHECK: same descriptive statistics as STATA output
+mean(data_panel$lsswim_msex, na.rm = T) # CHECK: same descriptive statistics as STATA output
+
+# ... we finalize the procedure by eliminating the created reference objects ...
+rm(list = c("reference5a_STATA", 
+            "reference5b_STATA", 
+            "reference5c_STATA", 
+            "reference5d_STATA", 
+            "reference5e_STATA", 
+            "reference5f_STATA", 
+            "reference5g_STATA", 
+            "reference5h_STATA")
+   )
+
 #..............................................................................#
-
-
-mean(data_panel$lsvim_vox, na.rm = T)
-mean(data_panel$lsauthoritarian, na.rm = T)
-mean(data_panel$lsideol, na.rm = T)
-mean(data_panel$lsnativism, na.rm = T)
-mean(data_panel$lsorgterr, na.rm = T)
-mean(data_panel$lspop6amz, na.rm = T)
-mean(data_panel$lsmsexism, na.rm = T)
-mean(data_panel$lsswim_msex, na.rm = T)
-
-
 
 ```
 
@@ -869,16 +892,16 @@ mean(data_panel$lsswim_msex, na.rm = T)
 # Generation of variables for positive and negative (lagged) change in sexism (extended and original modern 
 
 data_panel$posmsex <- data_panel$lsmsex * (data_panel$lsmsex > 0)
-summary(data_panel$posmsex) 
+mean(data_panel$posmsex, na.rm = T) # CHECK: same descriptive statistics as STATA output
 
 data_panel$negmsex <- data_panel$lsmsex * (data_panel$lsmsex < 0)
-summary(data_panel$negmsex) 
+mean(data_panel$negmsex, na.rm = T) # CHECK: same descriptive statistics as STATA output
 
 data_panel$posswim <- data_panel$lsswim_msex * (data_panel$lsmsex > 0)
-summary(data_panel$posswim) 
+mean(data_panel$posswim, na.rm = T) # CHECK: same descriptive statistics as STATA output
 
 data_panel$negswim <- data_panel$lsswim_msex * (data_panel$lsmsex < 0)
-summary(data_panel$negswim) 
+mean(data_panel$negswim, na.rm = T) # CHECK: same descriptive statistics as STATA output
 
 ```
 
@@ -926,10 +949,17 @@ summary(data_panel$abstain_vote)
 data_panel$abstain_vote_labels <- factor(data_panel$abstain_vote, labels = c("Respondent did cast a vote", "Respondent did not cast a vote"))
 summary(data_panel$abstain_vote_labels)
 
+```
+
+
+``` {r Merge Party Ideological Positions from the Chapel Hill Experts Survey}
+
+
 
 
 
 ```
+
 
 ``` {r Visualization of Selected Variables' Distribuitions}
 
