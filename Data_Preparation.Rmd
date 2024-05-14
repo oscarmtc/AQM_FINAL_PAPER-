@@ -960,29 +960,348 @@ summary(data_panel$abstain_vote_labels)
 
 ```
 
-``` {r Merge Party Ideological Positions from the Chapel Hill Experts Survey}
+##Analysis Part 1 : Replication and Reproduction of the Paper's Original Results
 
-CH_Data <- read_stata("Chapel Hill Expert Survey")
+This initial section of the statistical analysis has the goal of reproducing the original model specification presented in the paper. For this part, no modifications (either in the operationalization of key concepts or in the exact specification of the models are conducted). 
+This initial section consists of three main sub-sections (I., II., and III.): 
+      I. Develops the log-likelihood function and corresponding optimization to find the relevant parameters ... 
+          I.1 As in the original paper, we develop a series of logistic regression models.
+          I.2 We additionally estimate the same models using probit regression models. 
+      II. Relies on the build-in functions and commands to ensure the correctness of the initial point estimates (coefficients) and of the uncertainty around them. 
+      III. Presents the results of the estimation in a suitable and well-formatted table. 
+
+
+``` {r Definition of Logit-Log-Likelihood Function}
+
+LL_logit1 <- function(theta, y, X) {
+
+    beta <- theta[1:ncol(X)]
+    # definition of linear predictor mu ...
+    mu <- X %*% beta
+    # definition of logit-link function ...
+    p <- 1/(1 + exp(-mu)) 
+    # we define the log-likelihood function ...
+    ll <- y * log(p) + (1 - y) * log(1 - p)
+    ll <- sum(ll)
+    return(ll)
+}
+
+
+
+
+################################################################################
+
+LL_logit1_penalized <- function(theta, y, X, lambda) {
+    beta <- theta[1:ncol(X)]
+    # definition of linear predictor mu ...
+    mu <- X %*% beta
+    # definition of logit-link function ...
+    p <- 1/(1 + exp(-mu)) 
+    # we define the log-likelihood function ...
+    ll <- y * log(p) + (1 - y) * log(1 - p)
+    ll <- sum(ll)
+    # Add L2 penalty term
+    penalty <- lambda * sum(beta^2)
+    penalized_ll <- ll - penalty
+    return(penalized_ll)
+}
+
+################################################################################
+
+
+
 
 ```
 
-``` {r Visualization of Selected Variables' Distribuitions}
+``` {r Definition of Dependent and Independent Variables}
+
+# (A) We then proceed to define the set of dependent and independent variables; we apply a separate procedure for each of the four models presented in the original paper ...
+
+# .............................................................................#
+# ............................... (A.1) - MODEL 1 ..............................
+# .............................................................................#
+
+# ... we define a vector containing the names of the independent variables (as stored in the main data frame) that will be used for the estimation of the model.
+independent_variables <- c("female",
+                           "age",
+                           "edu3_2",
+                           "edu3_3",
+                           "dhincome_all",
+                           "livingpartner",
+                           "intpol",
+                           "l2vim_vox",
+                           "l2authoritarian",
+                           "l2ideol",
+                           "l2nativism",
+                           "l2orgterr",
+                           "l2pop6amz",
+                           "l2msexism",
+                           "lsvim_vox",
+                           "lsauthoritarian",
+                           "lsideol",
+                           "lsnativism",
+                           "lsorgterr",
+                           "lspop6amz",
+                           "lsmsexism"
+                           )
+
+# ... and proceed to remove missing values for the specified independent variables
+rep_model1 <- subset(data_panel, year == 2019) # we first create a subset of the main data frame containing only observations for which the value of "year" is 2019. 
+for (var in independent_variables) {
+  rep_model1 <- rep_model1[complete.cases(rep_model1[, var]), ]
+}
+
+# ... we first define the dependent variable (intended vote for Vox at time "t" - vim_vox)
+Y_rm1 <- rep_model1$vim_vox
+Y_rm1 <- as.numeric(Y_rm1) # we store the y-vector as a numeric vector
+
+# ... and proceed to define the set of independent variables
+independent_variables_m1 <- rep_model1[, independent_variables]
+X_rm1 <- cbind(1, independent_variables_m1)
+X_rm1 <- as.matrix(sapply(X_rm1, as.numeric)) # we make sure that the matrix X is indeed saved as a matrix
+dim(X_rm1)
+
+################################################################################
+
+install.packages("glmnet")
+library(glmnet)
+
+
+# Perform cross-validation
+cv_model <- cv.glmnet(X_rm1, Y_rm1, alpha = 0, nfolds = 10)
+
+# Plot the cross-validation curve
+plot(cv_model)
+
+# Get the lambda value with the lowest cross-validated error
+best_lambda <- cv_model$lambda.min
+
+
+################################################################################
+
+# .............................................................................#
+# ............................... (A.2) - MODEL 2 ..............................
+# .............................................................................#
+
+
+# .............................................................................#
+# ............................... (A.3) - MODEL 3 ..............................
+# .............................................................................#
+
+
+# .............................................................................#
+# ............................... (A.4) - MODEL 4 ..............................
+# .............................................................................#
+
+
+
 
 ```
 
-``` {r LaTex Table with Summary Statistics of All Variables}
+``` {r Optimization of Logit-Log-Likelihood Function}
+
+# .............................................................................#
+# ................................... MODEL 1 ..................................
+# .............................................................................#
+
+# ... we initiate by defining the starting values (one for each covariate plus one for the intercept) ...
+startvalues1__rm1 <- rep(0,22)
+
+## ... and implement an initial optimization ...
+res1_logit_rm1 <- optim(par = startvalues1__rm1,
+             fn = LL_logit1_penalized,
+             y = Y_rm1,
+             X = X_rm1,
+             lambda = best_lambda,
+             control = list(fnscale = -1),
+             hessian = TRUE,
+             method = "BFGS"
+             )
+
+# ... we subsequently conduct a second optimization of the Logit-Log-Likelihood function; the starting values are now set to the rounded values obtained as a result of the first optimization.
+
+startvalues2__rm1 <- round(res1_logit_rm1$par,10)
+
+res2_logit_rm1 <- optim(par= startvalues2__rm1,
+             fn = LL_logit1_penalized,
+             y = Y_rm1,
+             X = X_rm1,
+             lambda = best_lambda,
+             control=list(parscale=abs(res1_logit_rm1$par), fnscale = -1),
+             hessian = TRUE,
+             method = "BFGS"
+             )
+
+# ... we return the point estimates and store these in an object called ...
+point_estimates_rm1 <- res2_logit_rm1$par[1:22]
+
+# ... We proceed with the estimation of the standard errors ...
+SE_rm1 <- sqrt(diag(solve(-res2_logit_rm1$hessian)))
+
+# ... we furthermore include the calculation of the corresponding p-values (for a better evaluation of the significance level of the coefficients) ...
+P_Values_rm1 <- 2 * (1 - pnorm(abs(point_estimates_rm1 / SE_rm1)))
+
+# ... we additionally extract the number of observations ...
+N_rm1 <- length(res2_logit_rm1$Y_rm1)
+
+
+################################################################################
+################################################################################
+
+startvalues1__rm1 <- rep(0,22)
+
+## ... and implement an initial optimization ...
+res1_logit_rm1 <- optim(par = startvalues1__rm1,
+             fn = LL_logit1,
+             y = Y_rm1,
+             X = X_rm1,
+             control = list(fnscale = -1),
+             hessian = TRUE,
+             method = "BFGS"
+             )
+
+# ... we subsequently conduct a second optimization of the Logit-Log-Likelihood function; the starting values are now set to the rounded values obtained as a result of the first optimization.
+
+startvalues2__rm1 <- round(res1_logit_rm1$par,10)
+
+res2_logit_rm1 <- optim(par= startvalues2__rm1,
+             fn = LL_logit1,
+             y = Y_rm1,
+             X = X_rm1,
+             control=list(parscale=abs(res1_logit_rm1$par), fnscale = -1),
+             hessian = TRUE,
+             method = "BFGS"
+             )
+
+# ... we return the point estimates and store these in an object called ...
+point_estimates_rm1 <- res2_logit_rm1$par[1:22]
+
+# ... We proceed with the estimation of the standard errors ...
+SE_rm1 <- sqrt(diag(solve(-res2_logit_rm1$hessian)))
+
+# ... we furthermore include the calculation of the corresponding p-values (for a better evaluation of the significance level of the coefficients) ...
+P_Values_rm1 <- 2 * (1 - pnorm(abs(point_estimates_rm1 / SE_rm1)))
+
+# ... we additionally extract the number of observations ...
+N_rm1 <- length(res2_logit_rm1$Y_rm1)
+
+
+
+# .............................................................................#
+# ................................... MODEL 2 ..................................
+# .............................................................................#
+
+
+
+# .............................................................................#
+# ................................... MODEL 3 ..................................
+# .............................................................................#
+
+
+
+# .............................................................................#
+# ................................... MODEL 4 ..................................
+# .............................................................................#
 
 ```
 
-``` {r LaTex Table with Summary Statistics of Selected Variables}
+```{r Viualization of Estimation Results (Models 1 - 4) }
+
+library(knitr)
+
+# .............................................................................#
+# ................................... MODEL 1 ..................................
+# .............................................................................#
+
+# We first define the point estimates, standard errors, and p-values
+results_rm1 <- data.frame(
+  Coefficients = c("Intercept",
+                   "Female",
+                   "Age",
+                   "High school / Vocational",
+                   "College",
+                   "Income",
+                   "Lives with partner",
+                   "Interest in politics",
+                   "Vox intention (t-2)",
+                   "Authoritarianism (t-2)",
+                   "Ideological identification (t-2)",
+                   "Nativism (t-2)",
+                   "Territorial preference (t-2)",
+                   "Populism (t-2)",
+                   "Sexism (t-2)",
+                   "Vox intention (t−2 minus t−1)",
+                   "Authoritarianism (t−2 minus t−1)",
+                   "Ideological identification (t−2 minus t−1)",
+                   "Nativism (t−2 minus t−1)",
+                   "Territorial preference (t−2 minus t−1)",
+                   "Populism (t−2 minus t−1)",
+                   "Sexism (t−2 minus t−1)"
+                   ),
+  
+  Point_Estimates = point_estimates_rm1,
+  Standard_Errors = SE_rm1,
+  P_Values = P_Values_rm1)
+
+# Print formatted table
+kable(results_rm1, align = "c", digits = 7, caption = "Results Replication Model 1",
+      col.names = c("Variables", "Point Estimates", "Standard Errors", "P-Values"),
+      add_header_above = list(c("", "Estimates" = 2, "Statistics" = 2)))
+
+
+# .............................................................................#
+# ................................... MODEL 2 ..................................
+# .............................................................................#
+
+
+
+# .............................................................................#
+# ................................... MODEL 3 ..................................
+# .............................................................................#
+
+
+
+# .............................................................................#
+# ................................... MODEL 4 ..................................
+# .............................................................................#
+
+
+
 
 ```
+
+
+
 
 ``` {r original, table 3, replication, everything works!!!!}
+
 install.packages("brglm2")
 library(brglm2)
 
 t3m1 <- glm(vim_vox ~ female + age + edu3_2 + edu3_3 + dhincome_all + livingpartner + intpol + l2vim_vox + l2authoritarian + l2ideol + l2nativism + l2orgterr + l2pop6amz + l2msexism + lsvim_vox + lsauthoritarian + lsideol + lsnativism + lsorgterr + lspop6amz + lsmsexism, family = binomial(logit), method = "brglmFit",  data = STATA_DATA %>% filter(year == 2019))
+
+"female",
+"age",
+"edu3_2",
+"edu3_3",
+"dhincome_all",
+"livingpartner",
+"intpol",
+"l2vim_vox",
+"l2authoritarian",
+"l2ideol",
+"l2nativism",
+"l2orgterr",
+"l2pop6amz",
+"l2msexism",
+"lsvim_vox",
+"lsauthoritarian",
+"lsideol",
+"lsnativism",
+"lsorgterr",
+"lspop6amz",
+"lsmsexism
+
 
 
 ## Column 2 (model 2, 2020)
@@ -995,5 +1314,14 @@ t3m3 <- update(t3m1, ~. - lsmsexism + posmsex + negmsex)
 t3m4 <- update(t3m2, ~. - lsmsexism + posmsex + negmsex)
 
 stargazer(t3m1, t3m2, t3m3, t3m4, type = "text", dep.var.caption = "", dep.var.labels.include = F, column.labels = c("2019", "2020", "2019", "2020"), keep.stat = "n", star.char = c("+", "*", "**"), star.cutoffs = c(0.1, 0.05, 0.01),  notes = c("+ p<0.1; * p<0.05; ** p<0.01"), covariate.labels = c("Female", "Age", "Upper secondary", "Tertiary", "Income", "Lives with partner", "Interest in politics", "Vox intention (t-2)", "Authoritarianism (t-2)", "Ideological identification (t-2)", "Nativism (t-2)", "Territorial preference (t-2)", "Populism (t-2)", "Sexism (t-2)", "Vox intention (t-1 minus t-2)", "Authoritarianism (t-1 minus t-2)", "Ideological identification (t-1 minus t-2)", "Nativism (t-1 minus t-2)", "Territorial preference (t-1 minus t-2)", "Populism (t-1 minus t-2)", "Sexism (t-1 minus t-2)", "Increase in sexism (t-1 minus t-2)", "Decrease in sexism (t-1 minus t-2)"), notes.append = F, no.space = T, title = "Table 3. Effect of prior change in attitudes and vote intention on intended vote for Vox")
+
+
 ```
+"
+##Analysis Part 2 : Expansion - Identification of Gender-induced Differences 
+
+
+
+
+
 
