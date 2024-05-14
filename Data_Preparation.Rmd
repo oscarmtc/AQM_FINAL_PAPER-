@@ -969,7 +969,6 @@ This initial part has the following sub-sections:
                   Part 1.2: Defines the dependent and independent variables for the replication of Table 1 (Models 1 and 2)
                   Part 1.3: Optimization of the corresponding Log-Likelihood Functions given the defined inputs (dependent and independent variables)
                   Part 1.4: Display and Visualization of the Regression Results
-                  Part 1.5: Comparison of the results with the in-built command for logistic regression estimation
 
 ``` {r Part 1.1: Definition of Logit-Log-Likelihood Function}
 
@@ -1225,52 +1224,43 @@ kable(results_rm2_T1, align = "c", digits = 7, caption = "Results Replication Mo
 output_1 <- cbind(point_estimates_rm1_T1, SE_rm1_T1)
 colnames(output_1) <- c('Coefficients - 2019', 'SE')
 rownames(output_1) <- c("Intercept",
-                        "Commodity Dependence",
-                        "Squared Commodity Dependence",
-                        "Male Secondary Schooling",
-                        "GDP Growth",
-                        "Peace Duration",
-                        "Geographic Dispersion",
-                        "Population",
-                        "Social Fractionalization ",
-                        "Ethnic Dominance"
-                        )
+                        "Female",
+                        "Age",
+                        "High school / Vocational",
+                        "College",
+                        "Income",
+                        "Lives with partner",
+                        "Interest in politics",
+                        "Authoritarianism",
+                        "Ideological identification",
+                        "Nativism",
+                        "Territorial preference",
+                        "Populism",
+                        "Sexism")
 
-out2 <- cbind(point_estimates_rm2_T1, SE_rm2_T1)
-colnames(out2) <- c('Logit Standard Errors', 'Scobit Standard Errors')
-rownames(out2) <- c("Intercept",
-                   "Commodity Dependence",
-                   "Squared Commodity Dependence",
-                   "Male Secondary Schooling",
-                   "GDP Growth",
-                   "Peace Duration",
-                   "Geographic Dispersion",
-                   "Population",
-                   "Social Fractionalization ",
-                   "Ethnic Dominance"
-                   )
+output_2 <- cbind(point_estimates_rm2_T1, SE_rm2_T1)
+colnames(output_2) <- c('Coefficients - 2020', 'SE')
+rownames(output_2) <- c("Intercept",
+                        "Female",
+                        "Age",
+                        "High school / Vocational",
+                        "College",
+                        "Income",
+                        "Lives with partner",
+                        "Interest in politics",
+                        "Authoritarianism",
+                        "Ideological identification",
+                        "Nativism",
+                        "Territorial preference",
+                        "Populism",
+                        "Sexism")
 
-out3 <- cbind(P_Values_logit, P_Values_scobit)
-colnames(out3) <- c('Logit p-Values', 'Scobit p-Values')
-rownames(out3) <- c("Intercept",
-                   "Commodity Dependence",
-                   "Squared Commodity Dependence",
-                   "Male Secondary Schooling",
-                   "GDP Growth",
-                   "Peace Duration",
-                   "Geographic Dispersion",
-                   "Population",
-                   "Social Fractionalization ",
-                   "Ethnic Dominance"
-                   )
-
-unified_table <- cbind(out1, out2, out3)
+unified_table <- cbind(output_1, output_2)
 
 kable(unified_table,  digits = 6, align = "ccrl",
       booktabs = T,
-      caption = "Comparison of the Logit and Scobit Results for the Estimated Model") %>%
+      caption = "Predictors of Intention to Vote for Vox in 2019 and 2020") %>%
   kable_styling(full_width = FALSE)
-
 
 ```
 
