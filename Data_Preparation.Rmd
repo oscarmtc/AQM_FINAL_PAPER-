@@ -1685,156 +1685,316 @@ kable(unified_table,  digits = 3, align = "ccrl",
 
 ```
 
+##Analysis Part 3: Replication Of Main Table 4 Using Penalized Maximum Likelihood Estimation (PML)
 
+Note on PML: Penalties are applied to large parameter values with the goal of preventing overfitting; this is accomplish by introducing a "penalty-term" in the log-likelihood function.
 
+``` {r Part 3.1: Definition of Penalized-Log-Likelihood Function}
 
+# ... We initiate by installing and loading the "brglm2" package ... 
+install.packages("brglm2")
+library(brglm2)
 
+PML <- function(y, X, initial_values) {
+    fit <- brglmFit(y = y, x = X, family = binomial(), start = initial_values)
+    return(fit)
+}
 
 
+PEN_LL_logit_brglmFit <- function(theta, y, X) {
+    fit <- PML(y, X, theta)  # Fit logistic regression using brglmFit
+    mu <- predict(fit, type = "response")  # Predicted probabilities
+    ll <- y * log(mu) + (1 - y) * log(1 - mu)  # Log-likelihood
+    ll <- sum(ll)
+    return(ll)
+}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-##Analysis Part 3: Replication and Reproduction of the Paper's Original Results
-
-This initial section of the statistical analysis has the goal of reproducing the original model specification presented in the paper. For this part, no modifications (either in the operationalization of key concepts or in the exact specification of the models are conducted). 
-This initial section consists of three main sub-sections (I., II., and III.): 
-      I. Develops the log-likelihood function and corresponding optimization to find the relevant parameters ... 
-          I.1 As in the original paper, we develop a series of logistic regression models.
-          I.2 We additionally estimate the same models using probit regression models. 
-      II. Relies on the build-in functions and commands to ensure the correctness of the initial point estimates (coefficients) and of the uncertainty around them. 
-      III. Presents the results of the estimation in a suitable and well-formatted table. 
+```
 
 ``` {r Definition of Dependent and Independent Variables}
 
-# (A) We then proceed to define the set of dependent and independent variables; we apply a separate procedure for each of the four models presented in the original paper ...
+library(readr)
+data_rep_T3 <- fread("data_table_3.csv")
 
 # .............................................................................#
-# ............................... (A.1) - MODEL 1 ..............................
+# ................................ T3 - MODEL 1 ...............................#
 # .............................................................................#
 
-# ... we define a vector containing the names of the independent variables (as stored in the main data frame) that will be used for the estimation of the model.
-independent_variables <- c("female",
-                           "age",
-                           "edu3_2",
-                           "edu3_3",
-                           "dhincome_all",
-                           "livingpartner",
-                           "intpol",
-                           "l2vim_vox",
-                           "l2authoritarian",
-                           "l2ideol",
-                           "l2nativism",
-                           "l2orgterr",
-                           "l2pop6amz",
-                           "l2msexism",
-                           "lsvim_vox",
-                           "lsauthoritarian",
-                           "lsideol",
-                           "lsnativism",
-                           "lsorgterr",
-                           "lspop6amz",
-                           "lsmsexism"
-                           )
+# ... we define a vector containing the names of all the variables (as stored in the main data frame) that will be used for the estimation of the model ...
 
-# we first create a subset of the main data frame containing only observations for which the value of "year" is 2019. 
-subset_data <- data_panel
+variables_re_m1T3  <- c("female",
+                        "age",
+                        "edu3_2",
+                        "edu3_3",
+                        "dhincome_all",
+                        "livingpartner",
+                        "intpol",
+                        "l2vim_vox",
+                        "l2authoritarian",
+                        "l2ideol",
+                        "l2nativism",
+                        "l2orgterr",
+                        "l2pop6amz",
+                        "l2msexism",
+                        "lsvim_vox",
+                        "lsauthoritarian",
+                        "lsideol",
+                        "lsnativism",
+                        "lsorgterr",
+                        "lspop6amz",
+                        "lsmsexism",
+                        "vim_vox",
+                        "posmsex",
+                        "negmsex",
+                        "year"
+                        )
 
-rep_model1 <- na.omit(subset_data[, c(independent_variables, "vim_vox")])
+# ... we then generate a data subset ("data_panel5") containing the independent variables as defined by the vector "variables_re_T2", in addition to the dependent variable "vim_vox" ...
+data_panel5 <- na.omit(data_panel[, c(variables_re_m1T3)])
 
-rep_model1 <- subset(rep_model1, year == 2019) 
+# ... and subsequently create a subset of the data frame "data_panel2" containing only observations for which the value of "year" is 2019 ...
+rep_m1_T3 <- subset(data_panel5,year == 2019) 
 
-
-# ... and proceed to remove missing values for the specified independent variables
-rep_model1 <- na.omit(rep_model1[, c(independent_variables, "vim_vox")])
-
-# ... we first define the dependent variable (intended vote for Vox at time "t" - vim_vox)
-Y_rm1 <- rep_model1$vim_vox
-Y_rm1 <- as.numeric(Y_rm1) # we store the y-vector as a numeric vector
+# ... we first define the dependent variable (intended vote for Vox at time "t" - "vim_vox") ...
+rep_m1_T3$vim_vox <- as.numeric(rep_m1_T3$vim_vox) # we make sure that the DV is numeric 
+Y_rm1_T3 <- rep_m1_T3$vim_vox
+Y_rm1_T3 <- as.numeric(Y_rm1_T3) # we store the y-vector as a numeric vector
 
 # ... and proceed to define the set of independent variables
-independent_variables_m1 <- rep_model1[, independent_variables]
-X_rm1 <- cbind(1, independent_variables_m1)
-X_rm1 <- as.matrix(sapply(X_rm1, as.numeric)) # we make sure that the matrix X is indeed saved as a matrix
-dim(X_rm1)
+independent_variables_rm1_T3  <- c("female",
+                                   "age",
+                                   "edu3_2",
+                                   "edu3_3",
+                                   "dhincome_all",
+                                   "livingpartner",
+                                   "intpol",
+                                   "l2vim_vox",
+                                   "l2authoritarian",
+                                   "l2ideol",
+                                   "l2nativism",
+                                   "l2orgterr",
+                                   "l2pop6amz",
+                                   "l2msexism",
+                                   "lsvim_vox",
+                                   "lsauthoritarian",
+                                   "lsideol",
+                                   "lsnativism",
+                                   "lsorgterr",
+                                   "lspop6amz",
+                                   "lsmsexism"
+                                   )
+
+independent_variables_m1 <- rep_m1_T3[, independent_variables_rm1_T3]
+X_rm1_T3 <- cbind(1, independent_variables_m1)
+X_rm1_T3 <- as.matrix(sapply(X_rm1_T3, as.numeric)) # we make sure that the matrix X is indeed saved as a matrix
 
 # .............................................................................#
-# ............................... (A.2) - MODEL 2 ..............................
+# ................................ T3 - MODEL 2 ...............................#
 # .............................................................................#
 
+# ... we define a vector containing the names of all the variables (as stored in the main data frame) that will be used for the estimation of the model ...
+variables_re_m2T3  <- c("female",
+                        "age",
+                        "edu3_2",
+                        "edu3_3",
+                        "dhincome_all",
+                        "livingpartner",
+                        "intpol",
+                        "l2vim_vox",
+                        "l2authoritarian",
+                        "l2ideol",
+                        "l2nativism",
+                        "l2orgterr",
+                        "l2pop6amz",
+                        "l2msexism",
+                        "lsvim_vox",
+                        "lsauthoritarian",
+                        "lsideol",
+                        "lsnativism",
+                        "lsorgterr",
+                        "lspop6amz",
+                        "lsmsexism",
+                        "vim_vox",
+                        "year")
+
+# ... we then generate a data subset ("data_panel6") containing the independent variables as defined by the vector "variables_re_T2", in addition to the dependent variable "vim_vox" ...
+data_panel6 <- na.omit(data_panel[, c(variables_re_m2T3)])
+
+# ... and subsequently create a subset of the data frame "data_panel2" containing only observations for which the value of "year" is 2020 ...
+rep_m2_T3 <- subset(data_panel6,year == 2020) 
+
+# ... we first define the dependent variable (intended vote for Vox at time "t" - "vim_vox") ...
+rep_m2_T3$vim_vox <- as.numeric(rep_m2_T3$vim_vox) # we make sure that the DV is numeric 
+Y_rm2_T3 <- rep_m2_T3$vim_vox
+Y_rm2_T3 <- as.numeric(Y_rm2_T3) # we store the y-vector as a numeric vector
+
+# ... and proceed to define the set of independent variables
+independent_variables_rm2_T3  <- c("female",
+                                   "age",
+                                   "edu3_2",
+                                   "edu3_3",
+                                   "dhincome_all",
+                                   "livingpartner",
+                                   "intpol",
+                                   "l2vim_vox",
+                                   "l2authoritarian",
+                                   "l2ideol",
+                                   "l2nativism",
+                                   "l2orgterr",
+                                   "l2pop6amz",
+                                   "l2msexism",
+                                   "lsvim_vox",
+                                   "lsauthoritarian",
+                                   "lsideol",
+                                   "lsnativism",
+                                   "lsorgterr",
+                                   "lspop6amz",
+                                   "lsmsexism"
+                                   )
+
+independent_variables_m2 <- rep_m2_T3[, independent_variables_rm2_T3]
+X_rm2_T3 <- cbind(1, independent_variables_m2)
+X_rm2_T3 <- as.matrix(sapply(X_rm2_T3, as.numeric)) # we make sure that the matrix X is indeed saved as a matrix
 
 # .............................................................................#
-# ............................... (A.3) - MODEL 3 ..............................
+# ................................ T3 - MODEL 3 ...............................#
 # .............................................................................#
 
+# ... we define a vector containing the names of all the variables (as stored in the main data frame) that will be used for the estimation of the model ...
+variables_re_m3T3  <- c("female",
+                        "age",
+                        "edu3_2",
+                        "edu3_3",
+                        "dhincome_all",
+                        "livingpartner",
+                        "intpol",
+                        "l2vim_vox",
+                        "l2authoritarian",
+                        "l2ideol",
+                        "l2nativism",
+                        "l2orgterr",
+                        "l2pop6amz",
+                        "l2msexism",
+                        "lsvim_vox",
+                        "lsauthoritarian",
+                        "lsideol",
+                        "lsnativism",
+                        "lsorgterr",
+                        "lspop6amz",
+                        "posmsex",
+                        "negmsex",
+                        "vim_vox",
+                        "year")
+
+# ... we then generate a data subset ("data_panel7") containing the independent variables as defined by the vector "variables_re_T2", in addition to the dependent variable "vim_vox" ...
+data_panel7 <- na.omit(data_panel[, c(variables_re_m3T3)])
+
+# ... and subsequently create a subset of the data frame "data_panel2" containing only observations for which the value of "year" is 2019 ...
+rep_m3_T3 <- subset(data_panel7,year == 2019) 
+
+# ... we first define the dependent variable (intended vote for Vox at time "t" - "vim_vox") ...
+rep_m3_T3$vim_vox <- as.numeric(rep_m3_T3$vim_vox) # we make sure that the DV is numeric 
+Y_rm3_T3 <- rep_m3_T3$vim_vox
+Y_rm3_T3 <- as.numeric(Y_rm3_T3) # we store the y-vector as a numeric vector
+
+# ... and proceed to define the set of independent variables
+independent_variables_rm3_T3  <- c("female",
+                                   "age",
+                                   "edu3_2",
+                                   "edu3_3",
+                                   "dhincome_all",
+                                   "livingpartner",
+                                   "intpol",
+                                   "l2vim_vox",
+                                   "l2authoritarian",
+                                   "l2ideol",
+                                   "l2nativism",
+                                   "l2orgterr",
+                                   "l2pop6amz",
+                                   "l2msexism",
+                                   "lsvim_vox",
+                                   "lsauthoritarian",
+                                   "lsideol",
+                                   "lsnativism",
+                                   "lsorgterr",
+                                   "lspop6amz",
+                                   "posmsex",
+                                   "negmsex"
+                                   )
+
+independent_variables_m3 <- rep_m3_T3[, independent_variables_rm3_T3]
+X_rm3_T3 <- cbind(1, independent_variables_m3)
+X_rm3_T3 <- as.matrix(sapply(X_rm3_T3, as.numeric)) # we make sure that the matrix X is indeed saved as a matrix
 
 # .............................................................................#
-# ............................... (A.4) - MODEL 4 ..............................
+# ................................ T3 - MODEL 4 ...............................#
 # .............................................................................#
 
+# ... we define a vector containing the names of all the variables (as stored in the main data frame) that will be used for the estimation of the model ...
+variables_re_m4T3  <- c("female",
+                        "age",
+                        "edu3_2",
+                        "edu3_3",
+                        "dhincome_all",
+                        "livingpartner",
+                        "intpol",
+                        "l2vim_vox",
+                        "l2authoritarian",
+                        "l2ideol",
+                        "l2nativism",
+                        "l2orgterr",
+                        "l2pop6amz",
+                        "l2msexism",
+                        "lsvim_vox",
+                        "lsauthoritarian",
+                        "lsideol",
+                        "lsnativism",
+                        "lsorgterr",
+                        "lspop6amz",
+                        "posmsex",
+                        "negmsex",
+                        "vim_vox",
+                        "year")
 
+# ... we then generate a data subset ("data_panel8") containing the independent variables as defined by the vector "variables_re_T2", in addition to the dependent variable "vim_vox" ...
+data_panel8 <- na.omit(data_panel[, c(variables_re_m4T3)])
 
+# ... and subsequently create a subset of the data frame "data_panel2" containing only observations for which the value of "year" is 2020 ...
+rep_m4_T3 <- subset(data_panel8,year == 2020) 
+
+# ... we first define the dependent variable (intended vote for Vox at time "t" - "vim_vox") ...
+rep_m4_T3$vim_vox <- as.numeric(rep_m4_T3$vim_vox) # we make sure that the DV is numeric 
+Y_rm4_T3 <- rep_m4_T3$vim_vox
+Y_rm4_T3 <- as.numeric(Y_rm4_T3) # we store the y-vector as a numeric vector
+
+# ... and proceed to define the set of independent variables
+independent_variables_rm4_T3  <- c("female",
+                                   "age",
+                                   "edu3_2",
+                                   "edu3_3",
+                                   "dhincome_all",
+                                   "livingpartner",
+                                   "intpol",
+                                   "l2vim_vox",
+                                   "l2authoritarian",
+                                   "l2ideol",
+                                   "l2nativism",
+                                   "l2orgterr",
+                                   "l2pop6amz",
+                                   "l2msexism",
+                                   "lsvim_vox",
+                                   "lsauthoritarian",
+                                   "lsideol",
+                                   "lsnativism",
+                                   "lsorgterr",
+                                   "lspop6amz",
+                                   "posmsex",
+                                   "negmsex"
+                                   )
+
+independent_variables_m4 <- rep_m4_T3[, independent_variables_rm4_T3]
+X_rm4_T3 <- cbind(1, independent_variables_m4)
+X_rm4_T3 <- as.matrix(sapply(X_rm4_T3, as.numeric)) # we make sure that the matrix X is indeed saved as a matrix
 
 ```
 
@@ -1845,60 +2005,144 @@ dim(X_rm1)
 # .............................................................................#
 
 # ... we initiate by defining the starting values (one for each covariate plus one for the intercept) ...
-startvalues1__rm1 <- rep(0,22)
-
+startvalues1_rm1_T4 <- rep(0,22)
 ## ... and implement an initial optimization ...
-res1_logit_rm1 <- optim(par = startvalues1__rm1,
-             fn = LL_logit1,
-             y = Y_rm1,
-             X = X_rm1,
+res1_rm1_T4 <- optim(par = startvalues1_rm1_T4,
+             fn = PEN_LL_logit_brglmFit,
+             y = Y_rm1_T3,
+             X = X_rm1_T3,
              control = list(fnscale = -1),
              hessian = TRUE,
              method = "BFGS"
              )
 
-# ... we subsequently conduct a second optimization of the Logit-Log-Likelihood function; the starting values are now set to the rounded values obtained as a result of the first optimization.
-
-startvalues2__rm1 <- round(res1_logit_rm1$par,10)
-
-res2_logit_rm1 <- optim(par= startvalues2__rm1,
-             fn = LL_logit1,
-             y = Y_rm1,
-             X = X_rm1,
-             control=list(parscale=abs(res1_logit_rm1$par), fnscale = -1),
+# ... we subsequently conduct a second optimization ...
+startvalues2_rm1_T4 <- round(res1_rm1_T4$par,10)
+res2_rm1_T4 <- optim(par= startvalues2_rm1_T4,
+             fn = LL_logit,
+             y = Y_rm1_T3,
+             X = X_rm1_T3,
+             control=list(parscale=abs(res1_rm1_T4$par), fnscale = -1),
              hessian = TRUE,
              method = "BFGS"
              )
 
 # ... we return the point estimates and store these in an object called ...
-point_estimates_rm1 <- res2_logit_rm1$par[1:22]
-
+point_estimates_rm1_T4 <- res1_rm1_T4$par[1:22]
 # ... We proceed with the estimation of the standard errors ...
-SE_rm1 <- sqrt(diag(solve(-res2_logit_rm1$hessian)))
-
+SE_rm1_T4 <- sqrt(diag(solve(-res1_rm1_T4$hessian)))
 # ... we furthermore include the calculation of the corresponding p-values (for a better evaluation of the significance level of the coefficients) ...
-P_Values_rm1 <- 2 * (1 - pnorm(abs(point_estimates_rm1 / SE_rm1)))
-
+P_Values_rm1_T4 <- 2 * (1 - pnorm(abs(point_estimates_rm1_T4 / SE_rm1_T4)))
 # ... we additionally extract the number of observations ...
-N_rm1 <- length(res2_logit_rm1$Y_rm1)
-
-
+N_rm1_T4 <- length(Y_rm1_T3)
 
 # .............................................................................#
 # ................................... MODEL 2 ..................................
 # .............................................................................#
 
+# ... we initiate by defining the starting values (one for each covariate plus one for the intercept) ...
+startvalues1_rm2_T4 <- rep(0,22)
+## ... and implement an initial optimization ...
+res1_rm2_T4 <- optim(par = startvalues1_rm2_T4,
+             fn = LL_logit,
+             y = Y_rm2_T3,
+             X = X_rm2_T3,
+             control = list(fnscale = -1),
+             hessian = TRUE,
+             method = "BFGS"
+             )
 
+# ... we subsequently conduct a second optimization ...
+startvalues2_rm2_T4 <- round(res1_rm2_T4$par,10)
+res2_rm2_T4 <- optim(par= startvalues2_rm2_T4,
+             fn = LL_logit,
+             y = Y_rm2_T3,
+             X = X_rm2_T3,
+             control=list(parscale=abs(res1_rm2_T4$par), fnscale = -1),
+             hessian = TRUE,
+             method = "BFGS"
+             )
+
+# ... we return the point estimates and store these in an object called ...
+point_estimates_rm2_T4 <- res2_rm2_T4$par[1:22]
+# ... We proceed with the estimation of the standard errors ...
+SE_rm2_T4 <- sqrt(diag(solve(-res2_rm2_T4$hessian)))
+# ... we furthermore include the calculation of the corresponding p-values (for a better evaluation of the significance level of the coefficients) ...
+P_Values_rm2_T4 <- 2 * (1 - pnorm(abs(point_estimates_rm2_T4 / SE_rm2_T4)))
+# ... we additionally extract the number of observations ...
+N_rm2_T4 <- length(Y_rm2_T3)
 
 # .............................................................................#
 # ................................... MODEL 3 ..................................
 # .............................................................................#
 
+# ... we initiate by defining the starting values (one for each covariate plus one for the intercept) ...
+startvalues1_rm3_T4 <- rep(0,23)
+## ... and implement an initial optimization ...
+res1_rm3_T4 <- optim(par = startvalues1_rm3_T4,
+             fn = LL_logit,
+             y = Y_rm3_T3,
+             X = X_rm3_T3,
+             control = list(fnscale = -1),
+             hessian = TRUE,
+             method = "BFGS"
+             )
 
+# ... we subsequently conduct a second optimization ...
+startvalues2_rm3_T4 <- round(res1_rm3_T4$par,10)
+res2_rm3_T4 <- optim(par= startvalues2_rm3_T4,
+             fn = LL_logit,
+             y = Y_rm3_T3,
+             X = X_rm3_T3,
+             control=list(parscale=abs(res1_rm3_T4$par), fnscale = -1),
+             hessian = TRUE,
+             method = "BFGS"
+             )
+
+# ... we return the point estimates and store these in an object called ...
+point_estimates_rm3_T4 <- res2_rm3_T4$par[1:23]
+# ... We proceed with the estimation of the standard errors ...
+SE_rm3_T4 <- sqrt(diag(solve(-res2_rm3_T4$hessian)))
+# ... we furthermore include the calculation of the corresponding p-values (for a better evaluation of the significance level of the coefficients) ...
+P_Values_rm3_T4 <- 2 * (1 - pnorm(abs(point_estimates_rm3_T4 / SE_rm3_T4)))
+# ... we additionally extract the number of observations ...
+N_rm3_T4 <- length(Y_rm3_T3)
 
 # .............................................................................#
 # ................................... MODEL 4 ..................................
 # .............................................................................#
+
+# ... we initiate by defining the starting values (one for each covariate plus one for the intercept) ...
+startvalues1_rm4_T4 <- rep(0,23)
+## ... and implement an initial optimization ...
+res1_rm4_T4 <- optim(par = startvalues1_rm4_T4,
+             fn = LL_logit,
+             y = Y_rm4_T3,
+             X = X_rm4_T3,
+             control = list(fnscale = -1),
+             hessian = TRUE,
+             method = "BFGS"
+             )
+
+# ... we subsequently conduct a second optimization ...
+startvalues2_rm4_T4 <- round(res1_rm4_T4$par,10)
+res2_rm4_T4 <- optim(par= startvalues2_rm4_T4,
+             fn = LL_logit,
+             y = Y_rm4_T3,
+             X = X_rm4_T3,
+             control=list(parscale=abs(res1_rm4_T4$par), fnscale = -1),
+             hessian = TRUE,
+             method = "BFGS"
+             )
+
+# ... we return the point estimates and store these in an object called ...
+point_estimates_rm4_T4 <- res2_rm4_T4$par[1:23]
+# ... We proceed with the estimation of the standard errors ...
+SE_rm4_T4 <- sqrt(diag(solve(-res2_rm4_T4$hessian)))
+# ... we furthermore include the calculation of the corresponding p-values (for a better evaluation of the significance level of the coefficients) ...
+P_Values_rm4_T4 <- 2 * (1 - pnorm(abs(point_estimates_rm4_T4 / SE_rm4_T4)))
+# ... we additionally extract the number of observations ...
+N_rm4_T4 <- length(Y_rm4_T3)
 
 ```
 
@@ -1911,7 +2155,7 @@ library(knitr)
 # .............................................................................#
 
 # We first define the point estimates, standard errors, and p-values
-results_rm1 <- data.frame(
+results_rm1_T3 <- data.frame(
   Coefficients = c("Intercept",
                    "Female",
                    "Age",
@@ -1936,30 +2180,252 @@ results_rm1 <- data.frame(
                    "Sexism (t−2 minus t−1)"
                    ),
   
-  Point_Estimates = point_estimates_rm1,
-  Standard_Errors = SE_rm1,
-  P_Values = P_Values_rm1,
-  Observations = N_rm1 )
+  Point_Estimates = point_estimates_rm1_T4,
+  Standard_Errors = SE_rm1_T4,
+  P_Values = P_Values_rm1_T4,
+  Observations = N_rm1_T4 )
 
 # Print formatted table
-kable(results_rm1, align = "c", digits = 7, caption = "Results Replication Model 1",
+kable(results_rm1_T3, align = "c", digits = 3, caption = "Results Replication Model 1",
       col.names = c("Variables", "Point Estimates", "Standard Errors", "P-Values", "N"),
       add_header_above = list(c("", "Estimates" = 2, "Statistics" = 2)))
-
 
 # .............................................................................#
 # ................................... MODEL 2 ..................................
 # .............................................................................#
 
+# We first define the point estimates, standard errors, and p-values
+results_rm2_T3 <- data.frame(
+  Coefficients = c("Intercept",
+                   "Female",
+                   "Age",
+                   "High school / Vocational",
+                   "College",
+                   "Income",
+                   "Lives with partner",
+                   "Interest in politics",
+                   "Vox intention (t-2)",
+                   "Authoritarianism (t-2)",
+                   "Ideological identification (t-2)",
+                   "Nativism (t-2)",
+                   "Territorial preference (t-2)",
+                   "Populism (t-2)",
+                   "Sexism (t-2)",
+                   "Vox intention (t−2 minus t−1)",
+                   "Authoritarianism (t−2 minus t−1)",
+                   "Ideological identification (t−2 minus t−1)",
+                   "Nativism (t−2 minus t−1)",
+                   "Territorial preference (t−2 minus t−1)",
+                   "Populism (t−2 minus t−1)",
+                   "Sexism (t−2 minus t−1)"
+                   ),
+  
+  Point_Estimates = point_estimates_rm2_T4,
+  Standard_Errors = SE_rm2_T4,
+  P_Values = P_Values_rm2_T4,
+  Observations = N_rm2_T4 )
+
+# Print formatted table
+kable(results_rm2_T3, align = "c", digits = 3, caption = "Results Replication Model 2",
+      col.names = c("Variables", "Point Estimates", "Standard Errors", "P-Values", "N"),
+      add_header_above = list(c("", "Estimates" = 2, "Statistics" = 2)))
 
 # .............................................................................#
 # ................................... MODEL 3 ..................................
 # .............................................................................#
 
+# We first define the point estimates, standard errors, and p-values
+results_rm3_T3 <- data.frame(
+  Coefficients = c("Intercept",
+                   "Female",
+                   "Age",
+                   "High school / Vocational",
+                   "College",
+                   "Income",
+                   "Lives with partner",
+                   "Interest in politics",
+                   "Vox intention (t-2)",
+                   "Authoritarianism (t-2)",
+                   "Ideological identification (t-2)",
+                   "Nativism (t-2)",
+                   "Territorial preference (t-2)",
+                   "Populism (t-2)",
+                   "Sexism (t-2)",
+                   "Vox intention (t−2 minus t−1)",
+                   "Authoritarianism (t−2 minus t−1)",
+                   "Ideological identification (t−2 minus t−1)",
+                   "Nativism (t−2 minus t−1)",
+                   "Territorial preference (t−2 minus t−1)",
+                   "Populism (t−2 minus t−1)",
+                   "Increase in sexism",
+                   "Decrease in sexism"
+                   ),
+  
+  Point_Estimates = point_estimates_rm3_T4,
+  Standard_Errors = SE_rm3_T4,
+  P_Values = P_Values_rm3_T4,
+  Observations = N_rm3_T4 )
+
+# Print formatted table
+kable(results_rm3_T3, align = "c", digits = 3, caption = "Results Replication Model 3",
+      col.names = c("Variables", "Point Estimates", "Standard Errors", "P-Values", "N"),
+      add_header_above = list(c("", "Estimates" = 2, "Statistics" = 2)))
 
 # .............................................................................#
 # ................................... MODEL 4 ..................................
 # .............................................................................#
+
+# We first define the point estimates, standard errors, and p-values
+results_rm4_T3 <- data.frame(
+  Coefficients = c("Intercept",
+                   "Female",
+                   "Age",
+                   "High school / Vocational",
+                   "College",
+                   "Income",
+                   "Lives with partner",
+                   "Interest in politics",
+                   "Vox intention (t-2)",
+                   "Authoritarianism (t-2)",
+                   "Ideological identification (t-2)",
+                   "Nativism (t-2)",
+                   "Territorial preference (t-2)",
+                   "Populism (t-2)",
+                   "Sexism (t-2)",
+                   "Vox intention (t−2 minus t−1)",
+                   "Authoritarianism (t−2 minus t−1)",
+                   "Ideological identification (t−2 minus t−1)",
+                   "Nativism (t−2 minus t−1)",
+                   "Territorial preference (t−2 minus t−1)",
+                   "Populism (t−2 minus t−1)",
+                   "Increase in sexism",
+                   "Decrease in sexism"
+                   ),
+  
+  Point_Estimates = point_estimates_rm4_T4,
+  Standard_Errors = SE_rm4_T4,
+  P_Values = P_Values_rm4_T4,
+  Observations = N_rm4_T4 )
+
+# Print formatted table
+kable(results_rm4_T3, align = "c", digits = 3, caption = "Results Replication Model 4",
+      col.names = c("Variables", "Point Estimates", "Standard Errors", "P-Values", "N"),
+      add_header_above = list(c("", "Estimates" = 2, "Statistics" = 2)))
+
+# .............................................................................#
+# ...................... Joint Display MODELS 1, 2, 3 & 4 .....................#
+# .............................................................................#
+
+output_1 <- cbind(point_estimates_rm1_T4, SE_rm1_T4)
+colnames(output_1) <- c('Coefficients - 2019', 'SE')
+rownames(output_1) <-  c("Intercept",
+                         "Female",
+                         "Age",
+                         "High school / Vocational",
+                         "College",
+                         "Income",
+                         "Lives with partner",
+                         "Interest in politics",
+                         "Vox intention (t-2)",
+                         "Authoritarianism (t-2)",
+                         "Ideological identification (t-2)",
+                         "Nativism (t-2)",
+                         "Territorial preference (t-2)",
+                         "Populism (t-2)",
+                         "Sexism (t-2)",
+                         "Vox intention (t−2 minus t−1)",
+                         "Authoritarianism (t−2 minus t−1)",
+                         "Ideological identification (t−2 minus t−1)",
+                         "Nativism (t−2 minus t−1)",
+                         "Territorial preference (t−2 minus t−1)",
+                         "Populism (t−2 minus t−1)",
+                         "Sexism (t−2 minus t−1)"
+                         )
+
+output_2 <- cbind(point_estimates_rm2_T4, SE_rm2_T4)
+colnames(output_2) <- c('Coefficients - 2020', 'SE')
+rownames(output_2) <-  c("Intercept",
+                         "Female",
+                         "Age",
+                         "High school / Vocational",
+                         "College",
+                         "Income",
+                         "Lives with partner",
+                         "Interest in politics",
+                         "Vox intention (t-2)",
+                         "Authoritarianism (t-2)",
+                         "Ideological identification (t-2)",
+                         "Nativism (t-2)",
+                         "Territorial preference (t-2)",
+                         "Populism (t-2)",
+                         "Sexism (t-2)",
+                         "Vox intention (t−2 minus t−1)",
+                         "Authoritarianism (t−2 minus t−1)",
+                         "Ideological identification (t−2 minus t−1)",
+                         "Nativism (t−2 minus t−1)",
+                         "Territorial preference (t−2 minus t−1)",
+                         "Populism (t−2 minus t−1)",
+                         "Sexism (t−2 minus t−1)"
+                         )
+
+output_3 <- cbind(point_estimates_rm3_T4, SE_rm3_T4)
+colnames(output_3) <- c('Coefficients - 2019', 'SE')
+rownames(output_3) <-  c("Intercept",
+                         "Female",
+                         "Age",
+                         "High school / Vocational",
+                         "College",
+                         "Income",
+                         "Lives with partner",
+                         "Interest in politics",
+                         "Vox intention (t-2)",
+                         "Authoritarianism (t-2)",
+                         "Ideological identification (t-2)",
+                         "Nativism (t-2)",
+                         "Territorial preference (t-2)",
+                         "Populism (t-2)",
+                         "Sexism (t-2)",
+                         "Vox intention (t−2 minus t−1)",
+                         "Authoritarianism (t−2 minus t−1)",
+                         "Ideological identification (t−2 minus t−1)",
+                         "Nativism (t−2 minus t−1)",
+                         "Territorial preference (t−2 minus t−1)",
+                         "Populism (t−2 minus t−1)",
+                         "Increase in sexism",
+                         "Decrease in sexism")
+
+output_4 <- cbind(point_estimates_rm4_T4, SE_rm4_T4)
+colnames(output_4) <- c('Coefficients - 2020', 'SE')
+rownames(output_4) <-  c("Intercept",
+                         "Female",
+                         "Age",
+                         "High school / Vocational",
+                         "College",
+                         "Income",
+                         "Lives with partner",
+                         "Interest in politics",
+                         "Vox intention (t-2)",
+                         "Authoritarianism (t-2)",
+                         "Ideological identification (t-2)",
+                         "Nativism (t-2)",
+                         "Territorial preference (t-2)",
+                         "Populism (t-2)",
+                         "Sexism (t-2)",
+                         "Vox intention (t−2 minus t−1)",
+                         "Authoritarianism (t−2 minus t−1)",
+                         "Ideological identification (t−2 minus t−1)",
+                         "Nativism (t−2 minus t−1)",
+                         "Territorial preference (t−2 minus t−1)",
+                         "Populism (t−2 minus t−1)",
+                         "Increase in sexism",
+                         "Decrease in sexism")
+
+unified_table <- cbind(output_1, output_2, output_3, output_4)
+
+kable(unified_table,  digits = 3, align = "ccrl",
+      booktabs = T,
+      caption = " Effect of Prior Change in Attitudes and Vote Intention on Intended Vote for Vox") %>%
+  kable_styling(full_width = FALSE)
 
 
 
@@ -1969,16 +2435,16 @@ kable(results_rm1, align = "c", digits = 7, caption = "Results Replication Model
 
 
 
-``` {r original, table 3, replication, everything works!!!!}
+``` {r Replication of Main Table Using R's built-in GLM Commands}
 
 install.packages("brglm2")
 library(brglm2)
 
-t3m1 <- glm(vim_vox ~ female + age + edu3_2 + edu3_3 + dhincome_all + livingpartner + intpol + l2vim_vox + l2authoritarian + l2ideol + l2nativism + l2orgterr + l2pop6amz + l2msexism + lsvim_vox + lsauthoritarian + lsideol + lsnativism + lsorgterr + lspop6amz + lsmsexism, family = binomial(logit), method = "brglmFit",  data = data_panel %>% filter(year == 2019))
+t3m1 <- glm(vim_vox ~ female + age + edu3_2 + edu3_3 + dhincome_all + livingpartner + intpol + l2vim_vox + l2authoritarian + l2ideol + l2nativism + l2orgterr + l2pop6amz + l2msexism + lsvim_vox + lsauthoritarian + lsideol + lsnativism + lsorgterr + lspop6amz + lsmsexism, family = binomial(logit), method = "brglmFit",  data = data_rep_T3 %>% filter(year == 2019))
 
 
 ## Column 2 (model 2, 2020)
-t3m2 <- glm(vim_vox ~ female + age + edu3_2 + edu3_3 + dhincome_all + livingpartner + intpol + l2vim_vox + l2authoritarian + l2ideol + l2nativism + l2orgterr + l2pop6amz + l2msexism + lsvim_vox + lsauthoritarian + lsideol + lsnativism + lsorgterr + lspop6amz + lsmsexism, family = binomial(logit), method = "brglmFit", data = data_panel %>% filter(year == 2020))
+t3m2 <- glm(vim_vox ~ female + age + edu3_2 + edu3_3 + dhincome_all + livingpartner + intpol + l2vim_vox + l2authoritarian + l2ideol + l2nativism + l2orgterr + l2pop6amz + l2msexism + lsvim_vox + lsauthoritarian + lsideol + lsnativism + lsorgterr + lspop6amz + lsmsexism, family = binomial(logit), method = "brglmFit", data = data_rep_T3 %>% filter(year == 2020))
 
 ## Column 3 (model 3, 2019)
 t3m3 <- update(t3m1, ~. - lsmsexism + posmsex + negmsex)
@@ -1988,10 +2454,8 @@ t3m4 <- update(t3m2, ~. - lsmsexism + posmsex + negmsex)
 
 stargazer(t3m1, t3m2, t3m3, t3m4, type = "text", dep.var.caption = "", dep.var.labels.include = F, column.labels = c("2019", "2020", "2019", "2020"), keep.stat = "n", star.char = c("+", "*", "**"), star.cutoffs = c(0.1, 0.05, 0.01),  notes = c("+ p<0.1; * p<0.05; ** p<0.01"), covariate.labels = c("Female", "Age", "Upper secondary", "Tertiary", "Income", "Lives with partner", "Interest in politics", "Vox intention (t-2)", "Authoritarianism (t-2)", "Ideological identification (t-2)", "Nativism (t-2)", "Territorial preference (t-2)", "Populism (t-2)", "Sexism (t-2)", "Vox intention (t-1 minus t-2)", "Authoritarianism (t-1 minus t-2)", "Ideological identification (t-1 minus t-2)", "Nativism (t-1 minus t-2)", "Territorial preference (t-1 minus t-2)", "Populism (t-1 minus t-2)", "Sexism (t-1 minus t-2)", "Increase in sexism (t-1 minus t-2)", "Decrease in sexism (t-1 minus t-2)"), notes.append = F, no.space = T, title = "Table 3. Effect of prior change in attitudes and vote intention on intended vote for Vox")
 
-
 ```
 "
-##Analysis Part 2 : Expansion - Identification of Gender-induced Differences 
 
 
 
