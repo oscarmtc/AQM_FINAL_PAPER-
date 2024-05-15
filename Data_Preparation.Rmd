@@ -998,7 +998,7 @@ LL_logit <- function(theta, y, X) {
 
 # ... we define a vector containing the names of all the variables (as stored in the main data frame) that will be used for the estimation of the model ...
 
-variables_re_T2  <- c("female",                 # IV  ...  NOTE: IV > Independent Variable  
+variables_re_T1  <- c("female",                 # IV  ...  NOTE: IV > Independent Variable  
                       "age",                    # IV
                       "edu3_2",                 # IV
                       "edu3_3",                 # IV
@@ -1015,7 +1015,7 @@ variables_re_T2  <- c("female",                 # IV  ...  NOTE: IV > Independen
                       "year")
 
 # ... we then generate a data subset ("data_panel2") containing the independent variables as defined by the vector "variables_re_T2", in addition to the dependent variable "vim_vox" ...
-data_panel2 <- na.omit(data_panel[, c(variables_re_T2, "vim_vox")])
+data_panel2 <- na.omit(data_panel[, c(variables_re_T1, "vim_vox")])
 
 # ... and subsequently create a subset of the data frame "data_panel2" containing only observations for which the value of "year" is 2019 ...
 rep_m1_T1 <- subset(data_panel2,year == 2019) 
@@ -1258,7 +1258,7 @@ rownames(output_2) <- c("Intercept",
 
 unified_table <- cbind(output_1, output_2)
 
-kable(unified_table,  digits = 6, align = "ccrl",
+kable(unified_table,  digits = 3, align = "ccrl",
       booktabs = T,
       caption = "Predictors of Intention to Vote for Vox in 2019 and 2020") %>%
   kable_styling(full_width = FALSE)
@@ -1282,27 +1282,65 @@ This part has the following sub-sections:
 # .............................. MODEL 1 (2019) .............................. #
 # .............................................................................#
 
+#______________________________________________________________________________#
+
+# IMPUTATION 5 - "Lagged Variables by one Period (t-1) for 2019"
+
+# ... We first have to implement an additional data-preparation procedure and generate lagged variables (lagged by one period) for the following covariates: "vim_vox", "authoritarian", "ideol", "nativism", "orgterr", "pop6amz", "msexism" ...
+# ... in order to ensure that the lagged variables are exactly the same as in the original STATA-output, we append the corresponding columns from the original STATA output ...
+ # ... the following command generates a data frame containing the change variables from the original STATA output ... 
+# ... we first load the relevant STATA-output ...
+STATA_REF3 <- read_stata("STATA_Reference3.dta") 
+ # ... the following commands generate a series of data frames ("reference6a_STATA" -> "reference4h_STATA") containing the relevant lagged variables from the original STATA output ... 
+reference6a_STATA <- STATA_REF3[, c("l_vim_vox")]
+reference6b_STATA <- STATA_REF3[, c("l_authoritarian")]
+reference6c_STATA <- STATA_REF3[, c("l_ideol")]
+reference6d_STATA <- STATA_REF3[, c("l_nativism")]
+reference6e_STATA <- STATA_REF3[, c("l_orgterr")]
+reference6f_STATA <- STATA_REF3[, c("l_pop6")]
+reference6g_STATA <- STATA_REF3[, c("l_msex")]
+
+# ... we then append the columns from the original STATA-output into our main data frame ...
+data_panel$lm1_vim_vox <- reference6a_STATA$l_vim_vox
+data_panel$lm1_authoritarian <- reference6b_STATA$l_authoritarian
+data_panel$lm1_ideol <- reference6c_STATA$l_ideol
+data_panel$lm1_nativism <- reference6d_STATA$l_nativism
+data_panel$lm1_orgterr <- reference6e_STATA$l_orgterr
+data_panel$lm1_pop6amz <- reference6f_STATA$l_pop6
+data_panel$lm1_msexism <- reference6g_STATA$l_msex
+
+# ... we finally inspect the added variables ...
+mean(data_panel$lm1_vim_vox, na.rm = T) # CHECK: same descriptive statistics as STATA output
+mean(data_panel$lm1_authoritarian, na.rm = T) # CHECK: same descriptive statistics as STATA output
+mean(data_panel$lm1_ideol, na.rm = T) # CHECK: same descriptive statistics as STATA output
+mean(data_panel$lm1_nativism, na.rm = T) # CHECK: same descriptive statistics as STATA output
+mean(data_panel$lm1_orgterr, na.rm = T) # CHECK: same descriptive statistics as STATA output
+mean(data_panel$lm1_pop6amz, na.rm = T) # CHECK: same descriptive statistics as STATA output
+mean(data_panel$lm1_msexism, na.rm = T) # CHECK: same descriptive statistics as STATA output
+
+#______________________________________________________________________________#
+
 # ... we define a vector containing the names of all the variables (as stored in the main data frame) that will be used for the estimation of the model ...
 
-variables_re_T3  <- c("female",                 # IV  ...  NOTE: IV > Independent Variable  
-                      "age",                    # IV
-                      "edu3_2",                 # IV
-                      "edu3_3",                 # IV
-                      "dhincome_all",           # IV
-                      "livingpartner",          # IV
-                      "intpol",                 # IV
-                      "l2vim_vox",              # IV
-                      "l2authoritarian",        # IV
-                      "l2ideol",                # IV
-                      "l2nativism",             # IV
-                      "l2orgterr",              # IV
-                      "l2pop6amz",              # IV
-                      "l2msexism",              # IV
-                      "vim_vox",
-                      "year")
+variables_re_m1T2  <- c("female",               # IV  ...  NOTE: IV > Independent Variable  
+                        "age",                  # IV
+                        "edu3_2",               # IV
+                        "edu3_3",               # IV
+                        "dhincome_all",         # IV
+                        "livingpartner",        # IV
+                        "intpol",               # IV
+                        "lm1_vim_vox",          # IV
+                        "lm1_authoritarian",    # IV
+                        "lm1_ideol",            # IV
+                        "lm1_nativism",         # IV
+                        "lm1_orgterr",          # IV
+                        "lm1_pop6amz",          # IV
+                        "lm1_msexism",          # IV
+                        "vim_vox",
+                        "year")
 
 # ... we then generate a data subset ("data_panel3") containing the independent variables as defined by the vector "variables_re_T3", in addition to the dependent variable "vim_vox" ...
-data_panel3 <- na.omit(data_panel[, c(variables_re_T3, "vim_vox")])
+data_panel3 <- na.omit(data_panel[, c(variables_re_m1T2)])
 
 # ... and subsequently create a subset of the data frame "data_panel3" containing only observations for which the value of "year" is 2019 ...
 rep_m1_T2 <- subset(data_panel3, year == 2019) 
@@ -1320,13 +1358,13 @@ independent_variables_rm1_T2  <- c("female",
                                    "dhincome_all",           
                                    "livingpartner",          
                                    "intpol",                 
-                                   "l2vim_vox",            
-                                   "l2authoritarian",        
-                                   "l2ideol",                
-                                   "l2nativism",             
-                                   "l2orgterr",              
-                                   "l2pop6amz",              
-                                   "l2msexism")
+                                   "lm1_vim_vox",            
+                                   "lm1_authoritarian",        
+                                   "lm1_ideol",                
+                                   "lm1_nativism",             
+                                   "lm1_orgterr",              
+                                   "lm1_pop6amz",              
+                                   "lm1_msexism")
 
 independent_variables_m1 <- rep_m1_T2[, independent_variables_rm1_T2]
 X_rm1_T2 <- cbind(1, independent_variables_m1)
@@ -1336,16 +1374,107 @@ X_rm1_T2 <- as.matrix(sapply(X_rm1_T2, as.numeric)) # we make sure that the matr
 # .............................. MODEL 2 (2020) .............................. #
 # .............................................................................#
 
-# ... as above, we create a subset of the data frame "data_panel3" containing only observations for which the value of "year" is 2020 ...
-rep_m2_T2 <- subset(data_panel3,year == 2020) 
+#______________________________________________________________________________#
+
+# IMPUTATION 6 - "Lagged Variables by one Period (t-1) for 2020"
+
+# ... We first have to implement an additional data-preparation procedure and generate lagged variables (lagged by one period) for the following covariates: "vim_vox", "authoritarian", "ideol", "nativism", "orgterr", "pop6amz", "msexism" ...
+# ... in order to ensure that the lagged variables are exactly the same as in the original STATA-output, we append the corresponding columns from the original STATA output ...
+ # ... the following command generates a data frame containing the change variables from the original STATA output ... 
+ # ... the following commands generate a series of data frames ("reference6a_STATA" -> "reference4h_STATA") containing the relevant lagged variables from the original STATA output ... 
+reference7a_STATA <- STATA_REF3[, c("l_2020_vim_vox")]
+reference7b_STATA <- STATA_REF3[, c("l_2020_authoritarian")]
+reference7c_STATA <- STATA_REF3[, c("l_2020_ideol")]
+reference7d_STATA <- STATA_REF3[, c("l_2020_nativism")]
+reference7e_STATA <- STATA_REF3[, c("l_2020_orgterr")]
+reference7f_STATA <- STATA_REF3[, c("l_2020_pop6")]
+reference7g_STATA <- STATA_REF3[, c("l_2020_msex")]
+
+# ... we then append the columns from the original STATA-output into our main data frame ...
+data_panel$lm2_vim_vox <- reference7a_STATA$l_2020_vim_vox
+data_panel$lm2_authoritarian <- reference7b_STATA$l_2020_authoritarian
+data_panel$lm2_ideol <- reference7c_STATA$l_2020_ideol
+data_panel$lm2_nativism <- reference7d_STATA$l_2020_nativism
+data_panel$lm2_orgterr <- reference7e_STATA$l_2020_orgterr
+data_panel$lm2_pop6amz <- reference7f_STATA$l_2020_pop6
+data_panel$lm2_msexism <- reference7g_STATA$l_2020_msex
+
+# ... we finally inspect the added variables ...
+mean(data_panel$lm2_vim_vox, na.rm = T) # CHECK: same descriptive statistics as STATA output
+mean(data_panel$lm2_authoritarian, na.rm = T) # CHECK: same descriptive statistics as STATA output
+mean(data_panel$lm2_ideol, na.rm = T) # CHECK: same descriptive statistics as STATA output
+mean(data_panel$lm2_nativism, na.rm = T) # CHECK: same descriptive statistics as STATA output
+mean(data_panel$lm2_orgterr, na.rm = T) # CHECK: same descriptive statistics as STATA output
+mean(data_panel$lm2_pop6amz, na.rm = T) # CHECK: same descriptive statistics as STATA output
+mean(data_panel$lm2_msexism, na.rm = T) # CHECK: same descriptive statistics as STATA output
+
+# ... we finalize the procedure by eliminating the created reference objects ...
+rm(list = c("reference6a_STATA", 
+            "reference6b_STATA", 
+            "reference6c_STATA", 
+            "reference6d_STATA", 
+            "reference6e_STATA", 
+            "reference6f_STATA", 
+            "reference6g_STATA", 
+            "reference7a_STATA", 
+            "reference7b_STATA", 
+            "reference7c_STATA", 
+            "reference7d_STATA", 
+            "reference7e_STATA", 
+            "reference7f_STATA", 
+            "reference7g_STATA",
+            "STATA_REF3")
+   )
+
+#______________________________________________________________________________#
+
+# ... we define a vector containing the names of all the variables (as stored in the main data frame) that will be used for the estimation of the model ...
+
+variables_re_m2T2  <- c("female",               # IV  ...  NOTE: IV > Independent Variable  
+                        "age",                  # IV
+                        "edu3_2",               # IV
+                        "edu3_3",               # IV
+                        "dhincome_all",         # IV
+                        "livingpartner",        # IV
+                        "intpol",               # IV
+                        "lm2_vim_vox",          # IV
+                        "lm2_authoritarian",    # IV
+                        "lm2_ideol",            # IV
+                        "lm2_nativism",         # IV
+                        "lm2_orgterr",          # IV
+                        "lm2_pop6amz",          # IV
+                        "lm2_msexism",          # IV
+                        "vim_vox",
+                        "year")
+
+# ... we then generate a data subset ("data_panel3") containing the independent variables as defined by the vector "variables_re_T3", in addition to the dependent variable "vim_vox" ...
+data_panel4 <- na.omit(data_panel[, c(variables_re_m2T2)])
+
+# ... and subsequently create a subset of the data frame "data_panel3" containing only observations for which the value of "year" is 2019 ...
+rep_m2_T2 <- subset(data_panel4, year == 2020) 
 
 # ... we then define the dependent variable (intended vote for Vox at time "t" - "vim_vox") ...
 rep_m2_T2$vim_vox <- as.numeric(rep_m2_T2$vim_vox) # we make sure that the DV is numeric 
 Y_rm2_T2 <- rep_m2_T2$vim_vox
 Y_rm2_T2 <- as.numeric(Y_rm2_T2) # we store the y-vector as a numeric vector
 
-# ... and proceed to define the set of independent variables (we use the same vector as for model 1, but only modify its name) ...
-independent_variables_rm2_T2  <- independent_variables_rm1_T2
+# ... and proceed to define the set of independent variables 
+independent_variables_rm2_T2  <- c("female",                 
+                                   "age",                    
+                                   "edu3_2",                 
+                                   "edu3_3",                 
+                                   "dhincome_all",           
+                                   "livingpartner",          
+                                   "intpol",                 
+                                   "lm2_vim_vox",            
+                                   "lm2_authoritarian",        
+                                   "lm2_ideol",                
+                                   "lm2_nativism",             
+                                   "lm2_orgterr",              
+                                   "lm2_pop6amz",              
+                                   "lm2_msexism")
+
+
 independent_variables_m2 <- rep_m2_T2[, independent_variables_rm2_T2]
 X_rm2_T2 <- cbind(1, independent_variables_m2)
 X_rm2_T2 <- as.matrix(sapply(X_rm2_T2, as.numeric)) # we make sure that the matrix X is indeed saved as a matrix
@@ -1480,7 +1609,7 @@ kable(results_rm1_T2, align = "c", digits = 7, caption = "Results Replication Mo
 # .............................................................................#
 
 # We first define the point estimates, standard errors, and p-values
-results_rm2_T1 <- data.frame(
+results_rm2_T2 <- data.frame(
   Coefficients = c("Intercept",
                    "Female",
                    "Age",
@@ -1489,29 +1618,29 @@ results_rm2_T1 <- data.frame(
                    "Income",
                    "Lives with partner",
                    "Interest in politics",
-                   "Authoritarianism",
-                   "Ideological identification",
-                   "Nativism",
-                   "Territorial preference",
-                   "Populism",
-                   "Sexism" ),
-  
-  Point_Estimates = point_estimates_rm2_T1,
-  Standard_Errors = SE_rm2_T1,
-  P_Values = P_Values_rm2_T1,
-  Observations = N_rm2_T1 )
+                   "Vox intention (Prior)",
+                   "Authoritarianism (Prior)",
+                   "Ideological identification (Prior)",
+                   "Nativism (Prior)",
+                   "Territorial preference (Prior)",
+                   "Populism (Prior)",
+                   "Sexism (Prior)") ,
+
+  Point_Estimates = point_estimates_rm2_T2,
+  Standard_Errors = SE_rm2_T2,
+  P_Values = P_Values_rm2_T2,
+  Observations = N_rm2_T2 )
 
 # Print formatted table
-kable(results_rm2_T1, align = "c", digits = 7, caption = "Results Replication Model 1 (Table 1)",
+kable(results_rm2_T2, align = "c", digits = 7, caption = "Results Replication Model 2 (Table 2)",
       col.names = c("Variables", "Point Estimates", "Standard Errors", "P-Values", "N"),
       add_header_above = list(c("", "Estimates" = 2, "Statistics" = 2)))
-
 
 # .............................................................................#
 # ......................... Joint Display MODEL 1 & 2 .........................#
 # .............................................................................#
 
-output_1 <- cbind(point_estimates_rm1_T1, SE_rm1_T1)
+output_1 <- cbind(point_estimates_rm1_T2, SE_rm1_T2)
 colnames(output_1) <- c('Coefficients - 2019', 'SE')
 rownames(output_1) <- c("Intercept",
                         "Female",
@@ -1521,14 +1650,15 @@ rownames(output_1) <- c("Intercept",
                         "Income",
                         "Lives with partner",
                         "Interest in politics",
-                        "Authoritarianism",
-                        "Ideological identification",
-                        "Nativism",
-                        "Territorial preference",
-                        "Populism",
-                        "Sexism")
+                        "Vox intention (Prior)",
+                        "Authoritarianism (Prior)",
+                        "Ideological identification (Prior)",
+                        "Nativism (Prior)",
+                        "Territorial preference (Prior)",
+                        "Populism (Prior)",
+                        "Sexism (Prior)")
 
-output_2 <- cbind(point_estimates_rm2_T1, SE_rm2_T1)
+output_2 <- cbind(point_estimates_rm2_T2, SE_rm2_T2)
 colnames(output_2) <- c('Coefficients - 2020', 'SE')
 rownames(output_2) <- c("Intercept",
                         "Female",
@@ -1538,18 +1668,19 @@ rownames(output_2) <- c("Intercept",
                         "Income",
                         "Lives with partner",
                         "Interest in politics",
-                        "Authoritarianism",
-                        "Ideological identification",
-                        "Nativism",
-                        "Territorial preference",
-                        "Populism",
-                        "Sexism")
+                        "Vox intention (Prior)",
+                        "Authoritarianism (Prior)",
+                        "Ideological identification (Prior)",
+                        "Nativism (Prior)",
+                        "Territorial preference (Prior)",
+                        "Populism (Prior)",
+                        "Sexism (Prior)")
 
 unified_table <- cbind(output_1, output_2)
 
-kable(unified_table,  digits = 6, align = "ccrl",
+kable(unified_table,  digits = 3, align = "ccrl",
       booktabs = T,
-      caption = "Predictors of Intention to Vote for Vox in 2019 and 2020") %>%
+      caption = "Effect of Prior Attitudes on Intended Vote for Vox") %>%
   kable_styling(full_width = FALSE)
 
 ```
