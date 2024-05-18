@@ -1861,10 +1861,14 @@ m3_T3 <- update(m1_T3, ~. - lsmsexism + posmsex + negmsex)
 ## ... and finalize with Modl 4 ...
 m4_T3 <- update(m2_T3, ~. - lsmsexism + posmsex + negmsex)
 
+```
+
+``` {r Part 3.2: Display and Visualization of the Regression Results}
+
 stargazer(m1_T3, m2_T3, m3_T3, m4_T3, type = "text", dep.var.caption = "", dep.var.labels.include = F, column.labels = c("2019", "2020", "2019", "2020"), keep.stat = "n", star.char = c("+", "*", "**"), star.cutoffs = c(0.1, 0.05, 0.01),  notes = c("+ p<0.1; * p<0.05; ** p<0.01"), covariate.labels = c("Female", "Age", "Upper secondary", "Tertiary", "Income", "Lives with partner", "Interest in politics", "Vox intention (t-2)", "Authoritarianism (t-2)", "Ideological identification (t-2)", "Nativism (t-2)", "Territorial preference (t-2)", "Populism (t-2)", "Sexism (t-2)", "Vox intention (t-1 minus t-2)", "Authoritarianism (t-1 minus t-2)", "Ideological identification (t-1 minus t-2)", "Nativism (t-1 minus t-2)", "Territorial preference (t-1 minus t-2)", "Populism (t-1 minus t-2)", "Sexism (t-1 minus t-2)", "Increase in sexism (t-1 minus t-2)", "Decrease in sexism (t-1 minus t-2)"), notes.append = F, no.space = T, title = "Table 3. Effect of prior change in attitudes and vote intention on intended vote for Vox")
 
-
-
+#______________________________________________________________________________#
+# ... this last section generates the La-Tex corresponding to Table 1 ...
 Replication_Table_3 <- capture.output(
   stargazer(m1_T3, m2_T3, m3_T3, m4_T3,
             type = "latex",
@@ -1885,6 +1889,12 @@ Replication_Table_3 <- capture.output(
 cat(Replication_Table_3)
 
 ```
+
+
+
+
+
+
 
 ##Analysis Part 4: 
 
