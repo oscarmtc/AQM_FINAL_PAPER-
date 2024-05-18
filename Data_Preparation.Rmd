@@ -20,7 +20,7 @@ This file contains the code for the replication of the analysis presented in the
 
 ### Package-Setup & Data Download 
 
-This first two chunks do not form part of the analysis. The first series of code lines has the purpose of defining the packages that will be required throughout the entire data preparation and analysis. The second chunk downloads the main data source and stors in in an object labeled "data". 
+This first two chunks do not form part of the analysis. The first series of code lines has the purpose of defining the packages that will be required throughout the entire data preparation and analysis. The second chunk downloads the main data source and stores it in an object labeled "data". 
 
 ```{r Initial Setup & Download of Required Packages, include=FALSE} 
 
@@ -983,29 +983,35 @@ data_panel$intention_novote <- ifelse(data_panel$voteintentionspain_redef %in% n
 
 ```
 
-##Analysis Part 1 : Replication of the Paper's Original Results (Tables 1)
+## Replication of the Paper's Original Results 
 
-This initial part of the analysis has the purpose of replicating Table 1 of the original paper. Even though they will not be part of our contribution, presenting this table will allow us to assess the following aspects: 
+This section has the main purpose of replicating the original findings of the presented in the paper "Sexism and the far-right vote: The individual dynamics of gender backlash". Even though the original results will not form part of our contribution, the replication of these will allow us to assess the following aspects: 
                  1. Inspect the correctness of the conducted data preparation 
                  2. Ensure the functionality of the written log-likelihood functions 
-                 
+
+This part consists of two sub-sections. The first sub-section replicates the paper's original findings reported in Table 1. The second sub-section replicates the paper's Table 2. 
+
+### Replication of the Paper's Original Results: Table 1
+
 This initial part has the following sub-sections: 
-                  Part 1.1: Defines the Log-Likelihood Functions that will be used to estimate the models
-                  Part 1.2: Defines the dependent and independent variables for the replication of Table 1 (Models 1 and 2)
-                  Part 1.3: Optimization of the corresponding Log-Likelihood Functions given the defined inputs (dependent and independent variables)
-                  Part 1.4: Display and Visualization of the Regression Results
+    - Part 1.1: Defines the Log-Likelihood Function that will be used to estimate the models
+    - Part 1.2: Defines the dependent and independent variables for the replication of Table 1 (Models 1 and 2)
+    - Part 1.3: Optimization of the corresponding Log-Likelihood Functions given the defined inputs (dependent and independent variables)
+    - Part 1.4: Display and Visualization of the Regression Results
 
 ``` {r Part 1.1: Definition of Logit-Log-Likelihood Function}
 
-# It is important to note that this same Log-Likelihood Function will be used in both Analysis Part 1 and Analysis Part 2. 
-LL_logit <- function(theta, y, X) {
+# It is important to note that this same Log-Likelihood Function will be used in the replication of Table 1 as well as in that of Table 2. 
+
+# ... we then define the Log-Likelihood function, which will be named "LL_logit" ...
+LL_logit <- function(theta, y, X) {            # definition of the function's inputs 
 
     beta <- theta[1:ncol(X)]
-    # definition of linear predictor mu ...
+    # definition of linear predictor "mu" ...
     mu <- X %*% beta
     # definition of logit-link function ...
     p <- 1/(1 + exp(-mu)) 
-    # we define the log-likelihood function ...
+    # we conclude by defining the log-likelihood function ...
     ll <- y * log(p) + (1 - y) * log(1 - p)
     ll <- sum(ll)
     return(ll)
@@ -1015,7 +1021,7 @@ LL_logit <- function(theta, y, X) {
 
 ``` {r Part 1.2: Definition of Dependent and Independent Variables}
 
-# We define the set of dependent and independent variables; we apply a separate procedure for each of the four models presented in the original paper ...
+# We define the set of dependent and independent variables needed to replicate Table 1's findings; we apply a separate procedure for each of the two models ...
 
 # .............................................................................#
 # .............................. MODEL 1 (2019) .............................. #
@@ -1023,23 +1029,23 @@ LL_logit <- function(theta, y, X) {
 
 # ... we define a vector containing the names of all the variables (as stored in the main data frame) that will be used for the estimation of the model ...
 
-variables_re_T1  <- c("female",                 # IV  ...  NOTE: IV > Independent Variable  
-                      "age",                    # IV
-                      "edu3_2",                 # IV
-                      "edu3_3",                 # IV
-                      "dhincome_all",           # IV
-                      "livingpartner",          # IV
-                      "intpol",                 # IV
-                      "authoritarian",          # IV
-                      "ideol",                  # IV
-                      "nativism",               # IV
-                      "orgterr",                # IV
-                      "pop6amz",                # IV
-                      "msexism",                # IV
+variables_re_T1  <- c("female",                  
+                      "age",                    
+                      "edu3_2",                 
+                      "edu3_3",                 
+                      "dhincome_all",           
+                      "livingpartner",          
+                      "intpol",                 
+                      "authoritarian",          
+                      "ideol",                  
+                      "nativism",               
+                      "orgterr",                
+                      "pop6amz",                
+                      "msexism",                
                       "vim_vox",
                       "year")
 
-# ... we then generate a data subset ("data_panel2") containing the independent variables as defined by the vector "variables_re_T2", in addition to the dependent variable "vim_vox" ...
+# ... we then generate a data subset ("data_panel2") containing the independent variables as defined by the vector "variables_re_T1", in addition to the dependent variable "vim_vox" ...
 data_panel2 <- na.omit(data_panel[, c(variables_re_T1, "vim_vox")])
 
 # ... and subsequently create a subset of the data frame "data_panel2" containing only observations for which the value of "year" is 2019 ...
@@ -1048,9 +1054,9 @@ rep_m1_T1 <- subset(data_panel2,year == 2019)
 # ... we first define the dependent variable (intended vote for Vox at time "t" - "vim_vox") ...
 rep_m1_T1$vim_vox <- as.numeric(rep_m1_T1$vim_vox) # we make sure that the DV is numeric 
 Y_rm1_T1 <- rep_m1_T1$vim_vox
-Y_rm1_T1 <- as.numeric(Y_rm1_T1) # we store the y-vector as a numeric vector
+Y_rm1_T1 <- as.numeric(Y_rm1_T1) # we store the resulting Y-vector as a numeric vector
 
-# ... and proceed to define the set of independent variables
+# ... and proceed to define the set of independent variables ...
 independent_variables_rm1_T1  <- c("female",
                                    "age",
                                    "edu3_2",
@@ -1074,10 +1080,10 @@ X_rm1_T1 <- as.matrix(sapply(X_rm1_T1, as.numeric)) # we make sure that the matr
 # .............................. MODEL 2 (2020) .............................. #
 # .............................................................................#
 
-# ... as above, we create a subset of the data frame "data_panel2" containing only observations for which the value of "year" is 2020 ...
+# ... repeating the same procedure from above, we create a subset of the data frame "data_panel2" containing only observations for which the value of "year" is 2020 ...
 rep_m2_T1 <- subset(data_panel2,year == 2020) 
 
-# ... we then define the dependent variable (intended vote for Vox at time "t" - "vim_vox") ...
+# ... we then define the dependent variable (intended vote for Vox) ...
 rep_m2_T1$vim_vox <- as.numeric(rep_m2_T1$vim_vox) # we make sure that the DV is numeric 
 Y_rm2_T1 <- rep_m2_T1$vim_vox
 Y_rm2_T1 <- as.numeric(Y_rm2_T1) # we store the y-vector as a numeric vector
@@ -1092,14 +1098,16 @@ X_rm2_T1 <- as.matrix(sapply(X_rm2_T1, as.numeric)) # we make sure that the matr
 
 ``` {r Part 1.3: Optimization of Logit-Log-Likelihood Function}
 
+# Using the Log-Likelihood Function we defined earlier, we now proceed to conduct the appropriate optimization procedures using the y-Vectors and Covariate matrices generated in the previous steps. The results will correspond to the value of the parameters that maximize the value of the Log-Likelihood function and are thus more likely to have produced the given data. 
+
 # .............................................................................#
 # ................................... MODEL 1 ..................................
 # .............................................................................#
 
 # ... we initiate by defining the starting values (one for each covariate plus one for the intercept) ...
-startvalues1_rm1_T1 <- rep(0,14)
+startvalues1_rm1_T1 <- rep(0,14) # Covariates + Intercept yields a total of 14 parameter 
 
-## ... and implement an initial optimization ...
+# ... and implement an initial optimization ...
 res1_rm1_T1 <- optim(par = startvalues1_rm1_T1,
              fn = LL_logit,
              y = Y_rm1_T1,
@@ -1109,9 +1117,10 @@ res1_rm1_T1 <- optim(par = startvalues1_rm1_T1,
              method = "BFGS"
              )
 
-# ... we subsequently conduct a second optimization of the Logit-Log-Likelihood function; the starting values are now set to the rounded values obtained as a result of the first optimization.
-startvalues2_rm1_T1 <- round(res1_rm1_T1$par,10)
+# ... we subsequently conduct a second optimization of the Logit-Log-Likelihood function; the starting values are now set to the rounded values obtained as a result of the first optimization. The purpose of this second optimization is to ensure that the parameters yielded are indeed maximizing the Log-Likelihood function ...
+startvalues2_rm1_T1 <- round(res1_rm1_T1$par,10) # ... we define the starting values ...
 
+# ... and implement an initial optimization ...
 res2_rm1_T1 <- optim(par= startvalues2_rm1_T1,
              fn = LL_logit,
              y = Y_rm1_T1,
@@ -1121,23 +1130,25 @@ res2_rm1_T1 <- optim(par= startvalues2_rm1_T1,
              method = "BFGS"
              )
 
-# ... we return the point estimates and store these in an object ...
+# ... having conducted the second optimization, we return the point estimates and store these in an object ...
 point_estimates_rm1_T1 <- res2_rm1_T1$par[1:14]
 
-# ... We proceed with the estimation of the standard errors ...
+# ... we proceed with the estimation of the standard errors ...
 SE_rm1_T1 <- sqrt(diag(solve(-res2_rm1_T1$hessian)))
 
-# ... we furthermore include the calculation of the corresponding p-values (for a better evaluation of the significance level of the coefficients) ...
+# ... and furthermore include the calculation of the corresponding p-values (for a better evaluation of the significance level of the obtained coefficients) ...
 P_Values_rm1_T1 <- 2 * (1 - pnorm(abs(point_estimates_rm1_T1 / SE_rm1_T1)))
 
-# ... we additionally extract the number of observations ...
+# ... we additionally extract the number of observations for the model...
 N_rm1_T1 <- length(Y_rm1_T1)
 
 # .............................................................................#
 # ................................... MODEL 2 ..................................
 # .............................................................................#
 
-# ... we initiate by defining the starting values (one for each covariate plus one for the intercept) ...
+# ... for Model 2, the same procedure as for Model 1 is conducted. The only difference is that a different Y-vector and X-Matrix are used as inputs for the optimization of the Log-Likelihood function. 
+
+# ... we initiate by defining the starting values ...
 startvalues1_rm2_T1 <- rep(0,14)
 
 ## ... and implement an initial optimization ...
@@ -1150,9 +1161,10 @@ res1_rm2_T1 <- optim(par = startvalues1_rm2_T1,
              method = "BFGS"
              )
 
-# ... we subsequently conduct a second optimization of the Logit-Log-Likelihood function; the starting values are now set to the rounded values obtained as a result of the first optimization.
-startvalues2_rm2_T1 <- round(res1_rm2_T1$par,10)
+# ... we subsequently conduct a second optimization ...
+startvalues2_rm2_T1 <- round(res1_rm2_T1$par,10) # ... we define the starting values ...
 
+# ... and carry out the second optimization procedure ...
 res2_rm2_T1 <- optim(par= startvalues2_rm2_T1,
              fn = LL_logit,
              y = Y_rm2_T1,
@@ -1162,29 +1174,31 @@ res2_rm2_T1 <- optim(par= startvalues2_rm2_T1,
              method = "BFGS"
              )
 
-# ... we return the point estimates and store these in an object ...
+# ... we then return the point estimates...
 point_estimates_rm2_T1 <- res2_rm2_T1$par[1:14]
 
-# ... We proceed with the estimation of the standard errors ...
+# ... and also estimate the standard errors ...
 SE_rm2_T1 <- sqrt(diag(solve(-res2_rm2_T1$hessian)))
 
-# ... we furthermore include the calculation of the corresponding p-values (for a better evaluation of the significance level of the coefficients) ...
+# ... we furthermore include the calculation of the corresponding p-values ...
 P_Values_rm2_T1 <- 2 * (1 - pnorm(abs(point_estimates_rm2_T1 / SE_rm2_T1)))
 
-# ... we additionally extract the number of observations ...
+# ... and the number of observations ...
 N_rm2_T1 <- length(Y_rm2_T1)
 
 ```
 
 ```{r Part 1.4: Display and Visualization of Regression Results}
 
-library(knitr)
+# Having obtained the values for the parameters of interest, this part generates a nice-looking table to display the results of the two logistic regressions. Together, the two presented models constitute the final replication of Table 1. 
+
+library(knitr) # ... we need the "knitr" to be able to generate the tables ...
 
 # .............................................................................#
 # ................................... MODEL 1 ..................................
 # .............................................................................#
 
-# We first define the point estimates, standard errors, and p-values
+# ... we first define the point estimates, standard errors, and p-values for Model 1 ...
 results_rm1_T1 <- data.frame(
   Coefficients = c("Intercept",
                    "Female",
@@ -1206,16 +1220,25 @@ results_rm1_T1 <- data.frame(
   P_Values = P_Values_rm1_T1,
   Observations = N_rm1_T1 )
 
-# Print formatted table
-kable(results_rm1_T1, align = "c", digits = 7, caption = "Results Replication Model 1 (Table 1)",
+# ... we finally print the formatted table ...
+kable(results_rm1_T1, 
+      align = "c", 
+      digits = 3, 
+      caption = "Results Replication Model 1 (Table 1)", 
       col.names = c("Variables", "Point Estimates", "Standard Errors", "P-Values", "N"),
-      add_header_above = list(c("", "Estimates" = 2, "Statistics" = 2)))
+      add_header_above = list(c("", 
+                                "Estimates" = 2, 
+                                "Statistics" = 2
+                                )
+                              )
+      )
 
 # .............................................................................#
 # ................................... MODEL 2 ..................................
 # .............................................................................#
 
-# We first define the point estimates, standard errors, and p-values
+# ... we now proceed with generating a table to display the results for Model 2 ...
+# ... we first define the point estimates, standard errors, and p-values ...
 results_rm2_T1 <- data.frame(
   Coefficients = c("Intercept",
                    "Female",
@@ -1237,16 +1260,46 @@ results_rm2_T1 <- data.frame(
   P_Values = P_Values_rm2_T1,
   Observations = N_rm2_T1 )
 
-# Print formatted table
-kable(results_rm2_T1, align = "c", digits = 7, caption = "Results Replication Model 1 (Table 1)",
-      col.names = c("Variables", "Point Estimates", "Standard Errors", "P-Values", "N"),
-      add_header_above = list(c("", "Estimates" = 2, "Statistics" = 2)))
+# ... we then print the table ...
+kable(results_rm2_T1, 
+      align = "c", 
+      digits = 3, 
+      caption = "Results Replication Model 2 (Table 1)",
+      col.names = c("Variables", 
+                    "Point Estimates", 
+                    "Standard Errors", 
+                    "P-Values", 
+                    "N"),
+      add_header_above = list(c("", 
+                                "Estimates" = 2, 
+                                "Statistics" = 2
+                                )
+                              )
+      )
 
 # .............................................................................#
-# ......................... Joint Display MODEL 1 & 2 .........................#
+# ........................ Joint Display MODELS 1 & 2 .........................#
 # .............................................................................#
 
-output_1 <- cbind(point_estimates_rm1_T1, SE_rm1_T1)
+# ... we define a function to append significance stars based on the estimated P-values ...
+add_stars <- function(coef, pval) {
+  if (pval < 0.01) {
+    return(paste0(coef, "***"))
+  } else if (pval < 0.05) {
+    return(paste0(coef, "**"))
+  } else if (pval < 0.1) {
+    return(paste0(coef, "*"))
+  } else {
+    return(as.character(coef))
+  }
+}
+
+# ... we proceed to add the corresponding stars to coefficients ...
+Point_Estimates_rm1_T1_stars <- mapply(add_stars, round(point_estimates_rm1_T1, 3), P_Values_rm1_T1)
+Point_Estimates_rm2_T1_stars <- mapply(add_stars, round(point_estimates_rm2_T1, 3), P_Values_rm2_T1)
+
+# we thn combine point estimates with SE ...
+output_1 <- cbind(Point_Estimates_rm1_T1_stars, round(SE_rm1_T1, 3))
 colnames(output_1) <- c('Coefficients - 2019', 'SE')
 rownames(output_1) <- c("Intercept",
                         "Female",
@@ -1263,7 +1316,7 @@ rownames(output_1) <- c("Intercept",
                         "Populism",
                         "Sexism")
 
-output_2 <- cbind(point_estimates_rm2_T1, SE_rm2_T1)
+output_2 <- cbind(Point_Estimates_rm2_T1_stars, round(SE_rm2_T1, 3))
 colnames(output_2) <- c('Coefficients - 2020', 'SE')
 rownames(output_2) <- c("Intercept",
                         "Female",
@@ -1280,23 +1333,46 @@ rownames(output_2) <- c("Intercept",
                         "Populism",
                         "Sexism")
 
+# ... we then combine the two columns ...
 unified_table <- cbind(output_1, output_2)
 
-kable(unified_table,  digits = 3, align = "ccrl",
-      booktabs = T,
+# ... create a row for the number of observations for each model ...
+n_observations <- c(N_rm1_T1, "", N_rm2_T1, "")
+
+# ... and append the number of observations row to the unified table ...
+unified_table <- rbind(unified_table, "N" = n_observations)
+
+# ... we finalize by printing the generated table...
+kable(unified_table, 
+      digits = 3, 
+      align = "ccrl",
+      booktabs = TRUE,
       caption = "Predictors of Intention to Vote for Vox in 2019 and 2020") %>%
   kable_styling(full_width = FALSE)
 
+#______________________________________________________________________________#
+# ... this last section generates the La-Tex corresponding to Table 1 ...
+Replication_Table_1 <- kable(unified_table, 
+                             digits = 3, 
+                             align = "ccrl",
+                             booktabs = TRUE, 
+                             format = "latex",
+                             caption = "Predictors of Intention to Vote for Vox in 2019 and 2020") %>%
+  kable_styling(full_width = FALSE)
+
+# ... print the La-TeX code to the console ...
+cat(Replication_Table_1)
+
+#______________________________________________________________________________#
+
 ```
 
-##Analysis Part 2 : Replication of the Paper's Original Results (Tables 2)
+### Replication of the Paper's Original Results: Table 2
 
-As stated in Part 1, the goal of replicating the original paper's tables is to assess the correctness of the conducted data preparation and to ensure the functionality of the written log-likelihood functions.
-                 
-This part has the following sub-sections: 
-                  Part 2.1: Defines the dependent and independent variables for the replication of Table 2 (Models 1 and 2)
-                  Part 2.1: Optimization of the corresponding Log-Likelihood Functions given the defined inputs (dependent and independent variables)
-                  Part 2.3: Display and Visualization of the Regression Results
+This initial part has the following sub-sections: 
+    - Part 2.1: Defines the dependent and independent variables for the replication of Table 2 (Models 1 and 2)
+    - Part 2.2: Optimization of the corresponding Log-Likelihood Functions given the defined inputs (dependent and independent variables)
+    - Part 2.3: Display and Visualization of the Regression Results
 
 ``` {r Part 2.1: Definition of Dependent and Independent Variables}
 
@@ -1312,10 +1388,9 @@ This part has the following sub-sections:
 
 # ... We first have to implement an additional data-preparation procedure and generate lagged variables (lagged by one period) for the following covariates: "vim_vox", "authoritarian", "ideol", "nativism", "orgterr", "pop6amz", "msexism" ...
 # ... in order to ensure that the lagged variables are exactly the same as in the original STATA-output, we append the corresponding columns from the original STATA output ...
- # ... the following command generates a data frame containing the change variables from the original STATA output ... 
 # ... we first load the relevant STATA-output ...
 STATA_REF3 <- read_stata("STATA_Reference3.dta") 
- # ... the following commands generate a series of data frames ("reference6a_STATA" -> "reference4h_STATA") containing the relevant lagged variables from the original STATA output ... 
+ # ... the following commands generate a series of data frames ("reference6a_STATA" -> "reference6g_STATA") containing the relevant lagged variables from the original STATA output ... 
 reference6a_STATA <- STATA_REF3[, c("l_vim_vox")]
 reference6b_STATA <- STATA_REF3[, c("l_authoritarian")]
 reference6c_STATA <- STATA_REF3[, c("l_ideol")]
@@ -1341,40 +1416,38 @@ mean(data_panel$lm1_nativism, na.rm = T) # CHECK: same descriptive statistics as
 mean(data_panel$lm1_orgterr, na.rm = T) # CHECK: same descriptive statistics as STATA output
 mean(data_panel$lm1_pop6amz, na.rm = T) # CHECK: same descriptive statistics as STATA output
 mean(data_panel$lm1_msexism, na.rm = T) # CHECK: same descriptive statistics as STATA output
-
 #______________________________________________________________________________#
 
 # ... we define a vector containing the names of all the variables (as stored in the main data frame) that will be used for the estimation of the model ...
-
-variables_re_m1T2  <- c("female",               # IV  ...  NOTE: IV > Independent Variable  
-                        "age",                  # IV
-                        "edu3_2",               # IV
-                        "edu3_3",               # IV
-                        "dhincome_all",         # IV
-                        "livingpartner",        # IV
-                        "intpol",               # IV
-                        "lm1_vim_vox",          # IV
-                        "lm1_authoritarian",    # IV
-                        "lm1_ideol",            # IV
-                        "lm1_nativism",         # IV
-                        "lm1_orgterr",          # IV
-                        "lm1_pop6amz",          # IV
-                        "lm1_msexism",          # IV
+variables_re_m1T2  <- c("female",                
+                        "age",                  
+                        "edu3_2",               
+                        "edu3_3",               
+                        "dhincome_all",         
+                        "livingpartner",        
+                        "intpol",               
+                        "lm1_vim_vox",          
+                        "lm1_authoritarian",    
+                        "lm1_ideol",            
+                        "lm1_nativism",         
+                        "lm1_orgterr",          
+                        "lm1_pop6amz",          
+                        "lm1_msexism",          
                         "vim_vox",
                         "year")
 
-# ... we then generate a data subset ("data_panel3") containing the independent variables as defined by the vector "variables_re_T3", in addition to the dependent variable "vim_vox" ...
+# ... we then generate a data subset ("data_panel3") containing the independent variables as defined by the vector "variables_re_m1T2", in addition to the dependent variable "vim_vox" ...
 data_panel3 <- na.omit(data_panel[, c(variables_re_m1T2)])
 
 # ... and subsequently create a subset of the data frame "data_panel3" containing only observations for which the value of "year" is 2019 ...
 rep_m1_T2 <- subset(data_panel3, year == 2019) 
 
-# ... we first define the dependent variable (intended vote for Vox at time "t" - "vim_vox") ...
+# ... we first a vector containing the dependent variable ("vim_vox") ...
 rep_m1_T2$vim_vox <- as.numeric(rep_m1_T2$vim_vox) # we make sure that the DV is numeric 
 Y_rm1_T2 <- rep_m1_T2$vim_vox
 Y_rm1_T2 <- as.numeric(Y_rm1_T2) # we store the y-vector as a numeric vector
 
-# ... and proceed to define the set of independent variables
+# ... and proceed to define the set of independent variables...
 independent_variables_rm1_T2  <- c("female",                 
                                    "age",                    
                                    "edu3_2",                 
@@ -1404,8 +1477,7 @@ X_rm1_T2 <- as.matrix(sapply(X_rm1_T2, as.numeric)) # we make sure that the matr
 
 # ... We first have to implement an additional data-preparation procedure and generate lagged variables (lagged by one period) for the following covariates: "vim_vox", "authoritarian", "ideol", "nativism", "orgterr", "pop6amz", "msexism" ...
 # ... in order to ensure that the lagged variables are exactly the same as in the original STATA-output, we append the corresponding columns from the original STATA output ...
- # ... the following command generates a data frame containing the change variables from the original STATA output ... 
- # ... the following commands generate a series of data frames ("reference6a_STATA" -> "reference4h_STATA") containing the relevant lagged variables from the original STATA output ... 
+ # ... the following commands generate a series of data frames ("reference7a_STATA" -> "reference7g_STATA") containing the relevant lagged variables from the original STATA output ... 
 reference7a_STATA <- STATA_REF3[, c("l_2020_vim_vox")]
 reference7b_STATA <- STATA_REF3[, c("l_2020_authoritarian")]
 reference7c_STATA <- STATA_REF3[, c("l_2020_ideol")]
@@ -1432,7 +1504,7 @@ mean(data_panel$lm2_orgterr, na.rm = T) # CHECK: same descriptive statistics as 
 mean(data_panel$lm2_pop6amz, na.rm = T) # CHECK: same descriptive statistics as STATA output
 mean(data_panel$lm2_msexism, na.rm = T) # CHECK: same descriptive statistics as STATA output
 
-# ... we finalize the procedure by eliminating the created reference objects ...
+# ... we finalize the procedure by eliminating the created reference objects. The purpose of this step is to "clean" the working environmebt by getting rid of objects that will, not be used anymore ...
 rm(list = c("reference6a_STATA", 
             "reference6b_STATA", 
             "reference6c_STATA", 
@@ -1453,36 +1525,35 @@ rm(list = c("reference6a_STATA",
 #______________________________________________________________________________#
 
 # ... we define a vector containing the names of all the variables (as stored in the main data frame) that will be used for the estimation of the model ...
-
-variables_re_m2T2  <- c("female",               # IV  ...  NOTE: IV > Independent Variable  
-                        "age",                  # IV
-                        "edu3_2",               # IV
-                        "edu3_3",               # IV
-                        "dhincome_all",         # IV
-                        "livingpartner",        # IV
-                        "intpol",               # IV
-                        "lm2_vim_vox",          # IV
-                        "lm2_authoritarian",    # IV
-                        "lm2_ideol",            # IV
-                        "lm2_nativism",         # IV
-                        "lm2_orgterr",          # IV
-                        "lm2_pop6amz",          # IV
-                        "lm2_msexism",          # IV
+variables_re_m2T2  <- c("female",                 
+                        "age",                  
+                        "edu3_2",               
+                        "edu3_3",               
+                        "dhincome_all",         
+                        "livingpartner",        
+                        "intpol",               
+                        "lm2_vim_vox",          
+                        "lm2_authoritarian",    
+                        "lm2_ideol",            
+                        "lm2_nativism",         
+                        "lm2_orgterr",          
+                        "lm2_pop6amz",          
+                        "lm2_msexism",          
                         "vim_vox",
                         "year")
 
-# ... we then generate a data subset ("data_panel3") containing the independent variables as defined by the vector "variables_re_T3", in addition to the dependent variable "vim_vox" ...
+# ... we then generate a data subset ("data_panel4") containing the independent variables as defined by the vector "variables_re_m2T2", in addition to the dependent variable ...
 data_panel4 <- na.omit(data_panel[, c(variables_re_m2T2)])
 
-# ... and subsequently create a subset of the data frame "data_panel3" containing only observations for which the value of "year" is 2019 ...
+# ... and subsequently create a subset of the data frame "data_panel4" containing only observations for which the value of "year" is 2020 ...
 rep_m2_T2 <- subset(data_panel4, year == 2020) 
 
-# ... we then define the dependent variable (intended vote for Vox at time "t" - "vim_vox") ...
+# ... we then define the dependent variable ...
 rep_m2_T2$vim_vox <- as.numeric(rep_m2_T2$vim_vox) # we make sure that the DV is numeric 
 Y_rm2_T2 <- rep_m2_T2$vim_vox
 Y_rm2_T2 <- as.numeric(Y_rm2_T2) # we store the y-vector as a numeric vector
 
-# ... and proceed to define the set of independent variables 
+# ... and proceed to define the set of independent variables ...
 independent_variables_rm2_T2  <- c("female",                 
                                    "age",                    
                                    "edu3_2",                 
@@ -1506,6 +1577,8 @@ X_rm2_T2 <- as.matrix(sapply(X_rm2_T2, as.numeric)) # we make sure that the matr
 ```
 
 ``` {r Part 2.2: Optimization of Logit-Log-Likelihood Function}
+
+# Using the Log-Likelihood Function we defined earlier, we now proceed to conduct the appropriate optimization procedures using the y-Vectors and Covariate matrices generated in the previous steps. 
 
 # .............................................................................#
 # ................................... MODEL 1 ..................................
