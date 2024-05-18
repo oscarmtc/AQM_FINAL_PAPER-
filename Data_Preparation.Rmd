@@ -1,5 +1,5 @@
 ---
-title: "AQM Final Paper: Code for Replication and Extension of the Analysis"
+title: "AQM Final Paper: Code for Replication and Conduction of the Analysis"
 author: "Ekaterina Leevik, Oscar Martinez, Elizabeth Sites"
 date: ""
 output:
@@ -13,6 +13,14 @@ output:
     toc: no
 bibliography: 
 ---
+
+## Introduction 
+
+This file contains the code for the replication of the analysis presented in the written paper. All of the Tables and Graphs presented in the main sections of the paper, as well as the entire set of Materials presented in the Appendix can be generated using this code without need of additional manipulations. 
+
+### Package-Setup & Data Download 
+
+This first two chunks do not form part of the analysis. The first series of code lines has the purpose of defining the packages that will be required throughout the entire data preparation and analysis. The second chunk downloads the main data source and stors in in an object labeled "data". 
 
 ```{r Initial Setup & Download of Required Packages, include=FALSE} 
 
@@ -50,29 +58,28 @@ sapply(p_needed, require, character.only = TRUE)
 
 data <- fread("spanish_political_attitudes_dataset_2017_to_2020.csv")
 
-# in order to use the "fread" function we first have to download the "data.table" package. This function is mainly employed for reading data from external files into R (in this case, the main data in in a csv format) in the form of data tables. It is especially useful when it comes to reading large datasets. 
+# in order to use the "fread" function we first have to download the "data.table" package. This function ("fread") is mainly employed for reading data from external files into R (in this case, the main data in in a csv format) in the form of data tables. It is especially useful when it comes to reading large datasets. The STATA equivalent is the "import delimited" command. 
 
 ```
 
-##Data Preparation: Re-codeing, Re-scaling, and Generation of New variables
+## Data Preparation: Re-codeing, Re-scaling, and Generation of New variables
 
-This section of the file performs the following tasks:
-     1. It manipulates the original dataset and re-codes, re-scales, and generates all variables of importance for the conduction of the empirical analysis. 
+This section of the file corresponding to the process of preparing the data for the later analysis performs the following functions:
+     1. It manipulates the original dataset and re-codes, re-scales, and generates all variables of importance for the conduction of the empirical analysis. Different groups of variables are generated in the following code chunks. Each code chunk specifies in its title the variables that are being generated, recoded, or modified. 
      2. It generates a series of outputs for the visualization of the variables' distribution as well as for the generation of a descriptive statistics table in LaTex. 
-     3. It integrates date from the Chapel Hill Expert Expert Survey Trend File 1999-2019 in order to assign labels to the parties according to their placement in the left-right continuum. 
 
-``` {r Generation of Variables idcode, time, nwaves, year, female, age}
+``` {r Generation of Variables "idcode", "time", "nwaves", "year", "female", "age"}
 
 # This initial code chunk has the purpose of preparing the data for the latter statistical analysis. The preparation steps conducted stem from the replication material of "Sexism and the far-right vote: The individual dynamics of gender backlash." Although the initial replication code is available for STATA, we rewrite the code for R. Although some commands may be different and some steps may be either added or removed, the variables resulting (as well as their scales and coding schemes) should be exactly the same. 
 
 #______________________________________________________________________________#
-# (1): Generation of variable "idcode" 
+# (1): Generation of variable "idcode".
 
 data$idcode <- data$codpanelista2 
 mean(data$idcode) # CHECK: same descriptive statistics as STATA output 
 
 #______________________________________________________________________________#
-#  (2): Generation of the variable "time" 
+#  (2): Generation of the variable "time".
 
 data$time <- data$wave - 9
 data$time_labels <- factor(data$time, levels = 0:3, labels = c("2017", "2018", "2019", "2020"))
@@ -81,7 +88,7 @@ summary(data$time) # CHECK: same descriptive statistics as STATA output
 summary(data$time_labels) # this is an additional factor variable created to assign the specific years to the "time" variable" 
 
 #______________________________________________________________________________#
-#  (3): Set the data to the panel data-format and sort according to "idcode"
+#  (3): Set the data to the panel data-format and sort according to "idcode".
 
 # ... and we finaly set the dataset as panel data ...
 data_panel <- pdata.frame(data, index = c("idcode", "time"))
@@ -89,7 +96,7 @@ data_panel <- pdata.frame(data, index = c("idcode", "time"))
 data_panel <- data_panel[order(data_panel$idcode), ]
 
 #______________________________________________________________________________#
-# (4): Generation of variable "nwaves"; this variable will indicate the total number of waves completed by each respondent (referred to by the variable "idcode")
+# (4): Generation of variable "nwaves"; this variable will indicate the total number of waves completed by each respondent (referred to by the variable "idcode").
 
 # ... we first calculate the number of waves for each respondent ("idcode")
 wave_counts <- data[, .N, by = idcode] # ... this line computes the count of observations (rows) for each unique value of "idcode" in the dataset ...
@@ -106,7 +113,7 @@ summary(data_panel$nwaves) # CHECK: same descriptive statistics as STATA output
 rm(wave_counts)
 
 #______________________________________________________________________________#
-# (5): Generation and assignments of values of variable "year"
+# (5): Generation and assignments of values of variable "year".
 
 data_panel$year <- data_panel$wave # the values which the variable "year" takes depend on the wave number specified by "wave"
 data_panel$year[data_panel$year == 8] <- 2016 # ... this line assigns the value 2016 to the "year" variable in the dataset wherever the current value of "year" is equal to 8 ...
@@ -127,7 +134,7 @@ data_panel$female_labels <- factor(data_panel$female, levels = 1:0, labels = c("
 summary(data_panel$female_labels) # CHECK: same summary statistics as STATA output 
 
 #______________________________________________________________________________#
-# (7): Creation of variable "age4"; this variable assigns a category to each respondent based on their age (given by the variable "age")
+# (7): Creation of variable "age4"; this variable assigns a category to each respondent based on their age (given by the variable "age").
 
 data_panel$age4 <- cut(data_panel$age, breaks = c(16, 25, 35, 45, 100), labels = FALSE) # ... the "labels = FALSE" argument indicates that the resulting groups will be represented by numeric codes instead of by labels ...
 data_panel$age4_labels <- factor(data_panel$age4, levels = 1:4, labels = c("16-25", "26-35", "36-45", "46+")) # this factor variable specifies the respondent's age group
@@ -138,7 +145,7 @@ mean(data_panel$age4) # CHECK: same summary statistics as STATA output
 summary(data_panel$age4_labels) # CHECK: same summary statistics as STATA output 
 
 #______________________________________________________________________________#
-# (8): We also remove the initial data frame "data" (since it will not be used anymore and with the goal of making the overview of the working environment as parsimonious as possible) ...
+# (8): We also remove the initial data frame "data" since it will not be used anymore and with the goal of making the overview of the working environment as parsimonious as possible.
 rm(data)
 
 ```
@@ -148,7 +155,7 @@ rm(data)
 data_panel <- data_panel[order(data_panel$idcode), ]
 #______________________________________________________________________________#
 
-# Generation of the variables for different cohorts 
+# (1) Generation of the variables for different respondents' cohorts. 
 
 # ... we initiate with the creation of the variable "coh0" ...
 data_panel$coh0 <- ifelse(data_panel$wave == 9, data_panel$age, NA)
@@ -254,9 +261,9 @@ rm(reference1_STATA, reference2_STATA, reference3_STATA, STATA_REF)
 
 ```
 
-```{r Generation of Variables for respondent's educational level and partner situation}
+```{r Generation of Variables for Respondent's Educational Level and Partner Situation}
 
-# (1): Generation of variable "edu" (this new variable is based on the values for the already existing variable "education") + generation of dummy variables for different education levels 
+# (1): Generation of variable "edu" (this new variable is based on the values for the already existing variable "education") + generation of dummy variables for different education levels.
 data_panel$edu3 <- cut(data_panel$education, breaks = c(0, 4, 7, 11), labels = FALSE) # the "cut" function divides the values of the variable "education" into intervals; in this case, the intervals are set to (0, 4], (4, 7], and (7, 11].
 data_panel$edu3_labels <- factor(data_panel$edu3, levels = c(1, 2, 3), labels = c("Lower secondary", "Upper secondary", "Tertiary")) # definition of labels for the three levels of education ...
 summary(data_panel$edu3_labels) # CHECK: STATA's tabulation by educational is the same
@@ -289,7 +296,7 @@ summary(data_panel$livingpartner, na.rm = T) # CHECK: same summary statistics as
 
 ```{r Generation of Variable for Respondent's Income-Levels}
 
-# (11): Generation of the variable for respondent's income 
+# (11): Generation of the variables for respondent's income. 
 
 data_panel$hincome <- data_panel$hhincome
 data_panel$hincome <- ifelse(data_panel$hincome==99, NA, data_panel$hincome)
@@ -366,9 +373,9 @@ summary(data_panel$dhincome_all) # CHECK: same summary statistics as in STATA ou
 
 ```
 
-```{r Generation of Variables for Respondents' interest in politics, ideology, authoritarianism, nativism, populism, and territorial preferences}
+```{r Generation of Variables for Respondents' Interest in Politics, Ideology, Authoritarianism-level, Nativism, Populism, and Territorial Preferences}
 
-# (1): Generation of two variables for the respondent's interest in politics
+# (1): Generation of two variables for the respondent's interest in politics.
 
 data_panel$intpol <- (4 - data_panel$polintr) / 3 # the variable "intpol" will range between 0 and 1, with values closer to 1 indicating a stronger interest in politics 
 mean (data_panel$intpol) # CHECK: same descriptive statistics as STATA output 
@@ -380,7 +387,7 @@ data_panel$dintpol_labels <- factor(data_panel$dintpol, labels = c("Hardly or no
 summary(data_panel$dintpol_labels) # CHECK: same descriptive statistics as STATA output 
 
 #______________________________________________________________________________#
-# (2): Generation of two variables for the respondent's ideological identification
+# (2): Generation of two variables for the respondent's ideological identification.
 
 data_panel$ideol <- data_panel$lrself / 10 # the variable "ideol" will range between 0 and 1, with values closer to 1 indicating a right-leaned position ... 
 summary(data_panel$ideol) # CHECK: same descriptive statistics as STATA output 
@@ -396,7 +403,7 @@ data_panel$ideo5_labels <- factor(data_panel$ideo5, labels = c("Far left", "Cent
 summary(data_panel$ideo5_labels) # CHECK: same descriptive statistics as STATA output
 
 #______________________________________________________________________________#
-# (3): Generation of variables to measure respondent's level of authoritarianism 
+# (3): Generation of variables to measure respondent's level of authoritarianism. 
 
 data_panel$a_respect <- ifelse(data_panel$indeprespect == 2, 1, 0) # first created variable -> "a_respect" based the value of the already existing variable "indeprespect"
 mean(data_panel$a_respect) # CHECK: same descriptive statistics as STATA output 
@@ -414,7 +421,7 @@ data_panel$authoritarian <- rowMeans(data_panel[, c("a_respect", "a_manner", "a_
 mean(data_panel$authoritarian) # CHECK: same descriptive statistics as STATA output 
 
 #______________________________________________________________________________#
-# (4): Generation of variables to measure respondent's nativism
+# (4): Generation of variables to measure respondent's nativism. 
 
 data_panel$natveco <- (10 - data_panel$immigeco) / 10 # this creates a variable ranging from 0 to 1, where values closer to 1 refer to a more negative attitude towards immigrant's effect of the economy 
 mean(data_panel$natveco) # CHECK: same descriptive statistics as STATA output 
@@ -426,7 +433,7 @@ data_panel$nativism <- rowMeans(data_panel[, c("natveco", "natvcult")]) # third 
 mean(data_panel$nativism) # CHECK: same descriptive statistics as STATA output 
 
 #______________________________________________________________________________#
-# (5): Generation of variables to measure respondent's level of populism 
+# (5): Generation of variables to measure respondent's level of populism.  
 
 # ... creation of a vector containing all the relevant variables
 populism_vars <- c("populisma", "populismd", "populismf", "populismi", "populismj", "populismn")
@@ -440,7 +447,7 @@ data_panel$pop6amz <- rowMeans(data_panel[grep("^ip_pop", names(data_panel))])
 mean(data_panel$pop6amz) # CHECK: same descriptive statistics as STATA output 
 
 #______________________________________________________________________________#
-# (6): Generation of variables to measure territorial preferences 
+# (6): Generation of variables to measure territorial preferences.  
 
 data_panel$orgterr <- (data_panel$constpref - 1) / 4 # new variable "orgterr" based on the value of "constpref" is created, ranging between 0 and 1 ... 
 mean(data_panel$orgterr) # CHECK: same descriptive statistics as STATA output 
@@ -451,9 +458,9 @@ data_panel <- data_panel[order(data_panel$idcode), ]
 
 ```
 
-``` {r Generation of Variable for Respondents' level of sexism}
+``` {r Generation of Variable for Respondents' Level of Sexism}
 
-# (1): Generation of variables to measure respondent's modern sexism 
+# (1): Generation of variables to measure respondent's modern sexism. 
 
 # ... we initially create new variables ("imsex_1a" though "imsex_9i") corresponding to the values of the already existing variable "femindexa" though "femindexi" ...
 data_panel$imsex_1a <- data_panel$femindexa
@@ -547,7 +554,7 @@ data_panel$msexism <- (data_panel$msexism - 1) / 6
 mean(data_panel$msexism) # CHECK: same descriptive statistics as STATA output 
 
 #______________________________________________________________________________#
-# (2): Variable for modern sexism according to Swim et al. (1995)
+# (2): Variable for modern sexism according to Swim et al. (1995). 
 
 # ... we first calculate row mean of the variables imsex_1 through imsex_8 ... 
 data_panel$swim_msex <- rowMeans(data_panel[, c("imsex_1a", "imsex_2b", "imsex_3c", "imsex_4d", "imsex_5e", "imsex_6f", "imsex_7g", "imsex_8h" )])
@@ -559,12 +566,9 @@ mean(data_panel$swim_msex) # CHECK: same descriptive statistics as STATA output
 
 ```
 
-```{r Variables for Respomdents' Participation in Protests}
-
-# Generation of variables for respondent's engagement in Women's Day protests 
+```{r Variables for Respondents' Participation in Protests}
 
 # ... we first dichotomize the variables "femstrike", "femdemonstrate", "feminfo", "femtalk", and generate corresponding new binary variables for each ... 
-
 data_panel$p8m_strike <- ifelse(data_panel$femstrike == 1, 1, 0) # first variable created -> "p8m_strike"
 mean(data_panel$p8m_strike, na.rm = T) # CHECK: same descriptive statistics as STATA output 
 data_panel$p8m_demonst <- ifelse(data_panel$femdemonstrate == 1, 1, 0) # second variable created -> "p8m_demonst"
@@ -583,7 +587,7 @@ mean(data_panel$ip8m,na.rm = T) # CHECK: same descriptive statistics as STATA ou
 
 ```{r Generation of Dichotomous Variables for Vote Intentions: VOX & PP}
 
-# (1): Respondent's intended vote for the Vox-party 
+# (1): Respondent's intended vote for the Vox-party.  
 
 data_panel$vim_vox <- ifelse(data_panel$voteintentionspain == 23, 1, 0) # the values for the created binary variable ("vim_vox") are defined as a function of the values for the already existing variable "voteintentionspain" 
 mean(data_panel$vim_vox) # CHECK: same descriptive statistics as STATA output
@@ -594,7 +598,7 @@ data_panel$vim_vox_labels <- factor(data_panel$vim_vox, labels = c("Else", "Vox"
 summary(data_panel$vim_vox_labels) # CHECK: same descriptive statistics as STATA output
 
 #______________________________________________________________________________#
-# (2): Respondent's intended vote for the PP-party 
+# (2): Respondent's intended vote for the PP-party. 
 
 data_panel$vim_pp <- ifelse(data_panel$voteintentionspain == 2, 1, 0) # the values for the created binary variable ("vim_pp") are defined as a function of the values for the already existing variable "voteintentionspain" 
 mean(data_panel$vim_pp) # CHECK: same descriptive statistics as STATA output
@@ -607,7 +611,7 @@ summary(data_panel$vim_pp_labels) # CHECK: same descriptive statistics as STATA 
 
 ``` {r Generation of Variables for Respondents' 2016 Vote Choice}
 
-# Respondent's reported vote for the four largest parties in the 2016 election 
+# (1): Respondent's reported vote for the four largest parties in the 2016 election.  
 
 # Re-code 'vote2016' into 'vr16_all' variable
 data_panel$vr16_all <- ifelse(data_panel$vote2016 == 1, 1,
@@ -680,7 +684,7 @@ mean(data_panel$rv16all, na.rm = T) # CHECK: same descriptive statistics as STAT
 
 ```{r Generation of Time-invariant Variables}
 
-# Creation of time-invariant variables fixed at their 2017/2018 values - these generated variables are used in the multilevel growth-curve models 
+# Creation of time-invariant variables fixed at their 2017/2018 values - these generated variables are used in the multilevel growth-curve models. 
 
 # ... we define the variables that will be used ...
 selected_variables <- c("edu3", "x3hincall", "dintpol", "ideo5", "rv16all")
@@ -772,7 +776,7 @@ rm(filtered_data,
 data_panel <- data_panel[order(data_panel$idcode), ]
 #______________________________________________________________________________#
 
-# (1): Creation of lagged variables
+# (1): Creation of lagged variables. 
 
 # ... we first define a vector containing all the variables that will be used ...
 set_variables <- c("vim_vox", "authoritarian", "ideol", "nativism", "orgterr", "pop6amz", "msexism", "swim_msex")
@@ -846,6 +850,7 @@ rm(list = c("reference4a_STATA",
    )
 #..............................................................................#
 
+# (2): Creation of Change Variables. 
 # .............................................................................#
 # IMPUTATION 5 - "Change Variables"
 # ... in order to ensure that the change variables are exactly the same as in the original STATA-output, we append the corresponding columns from the original STATA output ...
@@ -897,7 +902,7 @@ rm(list = c("reference5a_STATA",
 
 ```{r Generation of Variables for Positive and Negative (lagged) change in sexism (for both "extended" and "original" modern sexism)}
 
-# Generation of variables for positive and negative (lagged) change in sexism (extended and original modern 
+# (1): Generation of variables for positive and negative (lagged) change in sexism (extended and original/modern).  
 
 data_panel$posmsex <- data_panel$lsmsex * (data_panel$lsmsex > 0)
 mean(data_panel$posmsex, na.rm = T) # CHECK: same descriptive statistics as STATA output
@@ -916,8 +921,6 @@ mean(data_panel$negswim, na.rm = T) # CHECK: same descriptive statistics as STAT
 ```{r Generation of Labels for Relevant Variables}
 
 # Assignment of labels to variables in the dataset 
-
-# Labeling of the variables
 label(data_panel$female) <- "Female"
 label(data_panel$age) <- "Age"
 label(data_panel$cohort) <- "Cohort"
@@ -944,18 +947,39 @@ label(data_panel$t1rv16all) <- "Vote in 2016 (ref. PP)"
 
 ```
 
-###Generation of Original Variables and Alternative Measurements
+``` {r Generation of Dummy Variables for Respondent's Vote Intention}
 
-This section builds on the data preparation from the previous part. New variables are generated and alternative operationalizations of key concepts are developed. All relevant (and new) variables for the developed data analysis are generated by the following code chunks. 
+# The generated dummy variables have the purpose of representing the respondent's vote alternatives in a trichotomous way. The conceptualized choice-scenario depicted by the generated variables is the following: 
+# - Respondent (does not intend) intends to vote for VOX  -> "intention_vox" equals (0) 1. 
+# - Respondent (does not intend) intends to vote for another party  -> "intention_other" equals (0) 1. 
+#    - Respondent (does not intend) intends to vote -> "intention_novote" equals (0) 1. 
 
-``` {r Generation of Variables for 2016 Turnout and a more fine-grained Variable for Vote Choice}
+#______________________________________________________________________________#
+# (1): We first start by generating a more "fined-grained" version of the variable "voteintentionspain", where respondents indicating that (i) they don't know for which party they would vote or (ii) they would not vote for any of the indicated parties are treated as missings. 
+# ... we first define the values in "voteintentionspain" that will be treated as missings; 54 for the answer "Don't know" and 55 for "None" ... 
+missing_values <- c(54, 55)
 
-# Generation of variable to capture respondent's decision not to turn out to vote 
-data_panel$abstain_vote <- ifelse(is.na(data_panel$rv16all), 1, 0)
-summary(data_panel$abstain_vote)
+# ... we then create a duplicate of the variable variable "voteintentionspain" where the values defined above are coded as missing values for the duplicate/new variable ...
+data_panel$voteintentionspain_redef <- ifelse(data_panel$voteintentionspain %in% missing_values, NA, data_panel$voteintentionspain)
 
-data_panel$abstain_vote_labels <- factor(data_panel$abstain_vote, labels = c("Respondent did cast a vote", "Respondent did not cast a vote"))
-summary(data_panel$abstain_vote_labels)
+#______________________________________________________________________________#
+# (1): Generation of Variable for Respondent's intended vote for the Vox-party - "intention_vox"
+data_panel$intention_vox <- ifelse(data_panel$voteintentionspain_redef == 23, 1, 0) # this variable is identical to the previously generated variable "vim_vox"
+
+#______________________________________________________________________________#
+# (2): Generation of Variable for Respondent's intended vote for other parties - "intention_other"
+data_panel$intention_other <- ifelse(data_panel$voteintentionspain_redef %in% c(23, 51, 52, 53), 0, 1)
+
+#______________________________________________________________________________#
+# (3): Generation of Variable for Respondent's intention not to vote - "intention_novote"
+
+# ... we finalize by defining the values of "voteintentionspain_redef" that indicate a respondent having the intention ob abstaining from casting a vote. More specifically, the values that will be grouped into the "intention not to vote" category are the following: 
+#      voteintentionspain_redef = 51  -> respondent intends to cast a blank vote         
+#      voteintentionspain_redef = 52  -> respondent intends to cast a null vote  
+#      voteintentionspain_redef = 53  -> respondent openly intends not to vote
+novote_values <- c(51, 52, 53)
+# ... we then proceed to generate the variable "intention_novote" ...
+data_panel$intention_novote <- ifelse(data_panel$voteintentionspain_redef %in% novote_values, 1,0)
 
 ```
 
@@ -2375,7 +2399,8 @@ independent_variables_m1E1  <- c("female",
                                  "edu3_3",                 
                                  "dhincome_all",           
                                  "livingpartner",          
-                                 "intpol",                 
+                                 "intpol",   
+                                 "lm1_vim_vox",          
                                  "lm1_authoritarian",        
                                  "lm1_ideol",                
                                  "lm1_nativism",             
@@ -2394,7 +2419,7 @@ X_m1E1 <- as.matrix(sapply(X_m1E1, as.numeric))
 ```{r  }
 
 # ... we initiate by defining the starting values (one for each covariate plus one for the intercept) ...
-startvalues1_m1E1 <- rep(0,15)
+startvalues1_m1E1 <- rep(0,16)
 
 ## ... and implement an initial optimization ...
 res1_m1E1 <- optim(par = startvalues1_m1E1,
@@ -2419,7 +2444,7 @@ res2_m1E1 <- optim(par= startvalues2_m1E1,
              )
 
 # ... we return the point estimates and store these in an object ...
-point_estimates_m1E1 <- res2_m1E1$par[1:15]
+point_estimates_m1E1 <- res2_m1E1$par[1:16]
 
 # ... We proceed with the estimation of the standard errors ...
 SE_m1E1 <- sqrt(diag(solve(-res2_m1E1$hessian)))
@@ -2444,13 +2469,14 @@ results_m1E1 <- data.frame(
                    "Income",
                    "Lives with partner",
                    "Interest in politics",
+                   "Intention to vote for VOX (Prior)",
                    "Authoritarianism (Prior)",
                    "Ideological identification (Prior)",
                    "Nativism (Prior)",
                    "Territorial preference (Prior)",
                    "Populism (Prior)",
                    "Sexism (Prior)",
-                   "Female x Sexism (Prior)") ,
+                   "Female x Prior Sexism") ,
   
   Point_Estimates = point_estimates_m1E1,
   Standard_Errors = SE_m1E1,
