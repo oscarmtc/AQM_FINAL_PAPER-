@@ -2597,6 +2597,14 @@ text(x = c(0.5, 0.5), y = c(0.25, 0.28), labels = c("Women", "Men"), cex = 0.7, 
 # Add distribution of actual observations
 rug(jitter(data_panel_m2E1$lm2_msexism[data_panel_m2E1$lm2_msexism <= 150], 0.1), ticksize = 0.02, lwd = 1)
 
+#_____________________________________________________________________________#
+# ... the following command lines save the generated plots into a single PDF-file ...
+dev.copy2pdf(file = ("Predicted_Probabilities.pdf"), 
+             family = "Times", 
+             width = 12, 
+             height=6)
+#_____________________________________________________________________________#
+
 ```
 
 ```{r Part 1.4.4: Estimation of First Differences}
@@ -2694,6 +2702,14 @@ lines(x = sexism_seq_m2E1,
 # vertical line at y = 0
 abline(h = 0, 
        lwd = 1)
+
+#_____________________________________________________________________________#
+# ... the following command lines save the generated plots into a single PDF-file ...
+dev.copy2pdf(file = ("First_Differences_AVA.pdf"), 
+             family = "Times", 
+             width = 12, 
+             height=6)
+#_____________________________________________________________________________#
 
 ```
 
