@@ -2927,13 +2927,12 @@ dev.copy2pdf(file = ("First_Differences_OVA_m2E1.pdf"),
 ### Analysis Part 1.2: Specification from Table 3
 
 The second part of the analysis consists of the following sub-section: 
-     1.2.1: We initiate by generating the interaction variables for each of the models. 
-     1.2.2: Estimation of the models including the generated interaction variables.
-     1.2.3: We display the results in a nice-formatted table (all four models).
+     1.2.1: We initiate by generating the interaction variables for each of the models
+     1.2.2: Estimation of the models including the generated interaction variables
+     1.2.3: We display the results in a nice-formatted table (all four models)
      1.2.4: Definition of Scenarios
-     
-     1.2.5: Estimation of Predicted Probabilities Using the Average Value Approach.
-     1.2.6: Estimation of First Differences.
+     1.2.5: Estimation of Predicted Probabilities Using the Average Value Approach
+     1.2.6: Estimation of First Differences
      1.2.7: Estimation of First Differences Using the Observed Value Approach
 
 ``` {r Part 1.2.1: Generation of Interaction Variables}
@@ -2960,6 +2959,7 @@ data_panel$int_m56E2 <- data_panel$female * data_panel$negmsex
 ``` {r Part 1.2.2: Estimation of the Models with Interaction Variables}
 
 library(brglm2) # we first require the package "brglm2" ...
+library(dplyr)
 
 # .............................................................................#
 # .................................. MODEL 1 ..................................#
@@ -3695,6 +3695,7 @@ scenario_m_m6E2 <- cbind(1,                                              # Inter
                          )   
 
 # ... having defined he scenarios, we proceed to implement the Simulation Function, specifying the appropriate inputs for each of the two scenarios specified above ...
+library(MASS)
 sim_women_m6E2 <- sim_function(coefs = coefficients_m6_E2, 
                               vcov = vcov_m6_E2, 
                               scenario = scenario_w_m6E2, 
@@ -3711,8 +3712,6 @@ sim_men_m6E2 <- sim_function(coefs = coefficients_m6_E2,
 
 
 ```{r 1.2.5: Estimation of Predicted Probabilities Using the Average Value Approach}
-
-par(mfrow = c(6, 1)) # This will allow us to display the predicted probabilities for the two models side by side ...
 
 # .............................................................................#
 # .................................. MODEL 1 ..................................#
@@ -3733,23 +3732,23 @@ plot(x = lsmsexism_seq_m12E2,
      cex.main = 0.7,
      xlab = "Prior Change in Individual Sexism",
      ylab = "Pr(Intention to Vote for VOX)", 
-     ylim = c(0, 0.6), 
+     ylim = c(0, 0.7), 
      cex.axis = 0.7, 
      cex.lab = 0.7,
      xaxt = "n")
-axis(1, at = seq(0, 1, by = 0.05), cex.axis = 0.7)
+axis(1, at = seq(min(lsmsexism_seq_m12E2), max(lsmsexism_seq_m12E2), length.out = 20), cex.axis = 0.7)
 
 # ... we add a background grid ...
 abline(h = seq(0, 1, by = 0.1), col = "grey90")
-abline(v = seq(0, 1, by = 0.1), col = "grey90")
+abline(v = seq(min(lsmsexism_seq_m12E2), max(lsmsexism_seq_m12E2), by = (max(lsmsexism_seq_m12E2) - min(lsmsexism_seq_m12E2)) / 10), col = "grey90")
 
 # ... and add confidence intervals as shaded areas ...
 polygon(c(lsmsexism_seq_m12E2, rev(lsmsexism_seq_m12E2)), c(upper_women_m1E2, rev(lower_women_m1E2)), col = rgb(1, 0, 0, 0.2), border = NA)
-polygon(c(lsmsexism_seq_m12E2v, rev(lsmsexism_seq_m12E2)), c(upper_men_m1E2, rev(lower_men_m1E2)), col = rgb(0, 0, 1, 0.2), border = NA)
+polygon(c(lsmsexism_seq_m12E2, rev(lsmsexism_seq_m12E2)), c(upper_men_m1E2, rev(lower_men_m1E2)), col = rgb(0, 0, 1, 0.2), border = NA)
 
 # Predicted probabilities for treatment and control group
-lines(x = sexism_seq_m1E2, y = apply(sim_women_m1E2, 2, mean), lwd = 2, col = "red")
-lines(x = sexism_seq_m1E2, y = apply(sim_men_m1E2, 2, mean), lwd = 2, col = "blue")
+lines(x = lsmsexism_seq_m12E2, y = apply(sim_women_m1E2, 2, mean), lwd = 2, col = "red")
+lines(x = lsmsexism_seq_m12E2, y = apply(sim_men_m1E2, 2, mean), lwd = 2, col = "blue")
 
 # Some annotations
 text(x = c(0.5, 0.5), y = c(0.25, 0.28), labels = c("Women", "Men"), cex = 0.7, pos = 4, col = c("red", "blue"))
@@ -3768,7 +3767,7 @@ lower_men_m2E2 <- apply(sim_men_m2E2, 2, function(x) quantile(x, probs = 0.025))
 upper_men_m2E2 <- apply(sim_men_m2E2, 2, function(x) quantile(x, probs = 0.975))
 
 # ... and then plot the estimated predicted probabilities using the confidence intervals we obtained above ...
-plot(x = sexism_seq_m2E2,
+plot(x = lsmsexism_seq_m12E2,
      y = apply(sim_women_m1E2, 2, mean),
      type = "n",
      lwd = 2,
@@ -3776,23 +3775,23 @@ plot(x = sexism_seq_m2E2,
      cex.main = 0.7,
      xlab = "Prior Change in Individual Sexism",
      ylab = "Pr(Intention to Vote for VOX)", 
-     ylim = c(0, 0.6), 
+     ylim = c(0, 0.7), 
      cex.axis = 0.7, 
      cex.lab = 0.7,
      xaxt = "n")
-axis(1, at = seq(0, 1, by = 0.05), cex.axis = 0.7)
+axis(1, at = seq(min(lsmsexism_seq_m12E2), max(lsmsexism_seq_m12E2), length.out = 20), cex.axis = 0.7)
 
 # ... we add a background grid ...
 abline(h = seq(0, 1, by = 0.1), col = "grey90")
-abline(v = seq(0, 1, by = 0.1), col = "grey90")
+abline(v = seq(min(lsmsexism_seq_m12E2), max(lsmsexism_seq_m12E2), by = (max(lsmsexism_seq_m12E2) - min(lsmsexism_seq_m12E2)) / 10), col = "grey90")
 
 # ... and add confidence intervals as shaded areas ...
-polygon(c(sexism_seq_m1E2, rev(sexism_seq_m1E2)), c(upper_women_m1E2, rev(lower_women_m1E2)), col = rgb(1, 0, 0, 0.2), border = NA)
-polygon(c(sexism_seq_m1E2, rev(sexism_seq_m1E2)), c(upper_men_m1E2, rev(lower_men_m1E2)), col = rgb(0, 0, 1, 0.2), border = NA)
+polygon(c(lsmsexism_seq_m12E2, rev(lsmsexism_seq_m12E2)), c(upper_women_m1E2, rev(lower_women_m1E2)), col = rgb(1, 0, 0, 0.2), border = NA)
+polygon(c(lsmsexism_seq_m12E2, rev(lsmsexism_seq_m12E2)), c(upper_men_m1E2, rev(lower_men_m1E2)), col = rgb(0, 0, 1, 0.2), border = NA)
 
 # Predicted probabilities for treatment and control group
-lines(x = sexism_seq_m1E2, y = apply(sim_women_m1E2, 2, mean), lwd = 2, col = "red")
-lines(x = sexism_seq_m1E2, y = apply(sim_men_m1E2, 2, mean), lwd = 2, col = "blue")
+lines(x = lsmsexism_seq_m12E2, y = apply(sim_women_m1E2, 2, mean), lwd = 2, col = "red")
+lines(x = lsmsexism_seq_m12E2, y = apply(sim_men_m1E2, 2, mean), lwd = 2, col = "blue")
 
 # Some annotations
 text(x = c(0.5, 0.5), y = c(0.25, 0.28), labels = c("Women", "Men"), cex = 0.7, pos = 4, col = c("red", "blue"))
@@ -3803,6 +3802,8 @@ rug(jitter(data_panel$lsmsexism[data_panel$lsmsexism <= 150], 0.1), ticksize = 0
 # .............................................................................#
 # .................................. MODEL 3 ..................................#
 # .............................................................................#
+
+par(mfrow = c(1, 2)) # This will allow us to display the Predicted Probabilities for Models 3 and 4 side by side ...
 
 # ... We initiate by calculating the confidence intervals as below ...
 lower_women_m3E2 <- apply(sim_women_m3E2, 2, function(x) quantile(x, probs = 0.025))
@@ -3819,7 +3820,7 @@ plot(x = posmsex_seq_m34E2,
      cex.main = 0.7,
      xlab = "Prior Increase in Individual Sexism",
      ylab = "Pr(Intention to Vote for VOX)", 
-     ylim = c(0, 0.6), 
+     ylim = c(0, 1), 
      cex.axis = 0.7, 
      cex.lab = 0.7,
      xaxt = "n")
@@ -3858,11 +3859,11 @@ plot(x = posmsex_seq_m34E2,
      y = apply(sim_women_m4E2, 2, mean),
      type = "n",
      lwd = 2,
-     main = "Predicted Probabiity of Intention to Vote for VOX (Year 2019)", 
+     main = "Predicted Probabiity of Intention to Vote for VOX (Year 2020)", 
      cex.main = 0.7,
      xlab = "Prior Increase in Individual Sexism",
      ylab = "Pr(Intention to Vote for VOX)", 
-     ylim = c(0, 0.6), 
+     ylim = c(0, 0.5), 
      cex.axis = 0.7, 
      cex.lab = 0.7,
      xaxt = "n")
@@ -3886,20 +3887,926 @@ text(x = c(0.5, 0.5), y = c(0.25, 0.28), labels = c("Women", "Men"), cex = 0.7, 
 # Add distribution of actual observations
 rug(jitter(data_panel$posmsex[data_panel$posmsex <= 150], 0.1), ticksize = 0.02, lwd = 1)
 
+#_____________________________________________________________________________#
+# ... the following command lines save the generated plots into a single PDF-file ...
+dev.copy2pdf(file = ("Predicted_Probabilities_m3m4E2.pdf"), 
+             family = "Times", 
+             width = 12, 
+             height=6)
+#_____________________________________________________________________________#
+
 # .............................................................................#
 # .................................. MODEL 5 ..................................#
 # .............................................................................#
 
+par(mfrow = c(1, 2)) # This will allow us to display the Predicted Probabilities for Models 3 and 4 side by side ...
+
+# ... We initiate by calculating the confidence intervals as below ...
+lower_women_m5E2 <- apply(sim_women_m5E2, 2, function(x) quantile(x, probs = 0.025))
+upper_women_m5E2 <- apply(sim_women_m5E2, 2, function(x) quantile(x, probs = 0.975))
+lower_men_m5E2 <- apply(sim_men_m5E2, 2, function(x) quantile(x, probs = 0.025))
+upper_men_m5E2 <- apply(sim_men_m5E2, 2, function(x) quantile(x, probs = 0.975))
+
+# ... and then plot the estimated predicted probabilities using the confidence intervals we obtained above ...
+plot(x = negmsex_seq_m56E2,
+     y = apply(sim_women_m5E2, 2, mean),
+     type = "n",
+     lwd = 2,
+     main = "Predicted Probabiity of Intention to Vote for VOX (Year 2019)", 
+     cex.main = 0.7,
+     xlab = "Prior Decrease in Individual Sexism",
+     ylab = "Pr(Intention to Vote for VOX)", 
+     ylim = c(0, 0.4), 
+     cex.axis = 0.7, 
+     cex.lab = 0.7,
+     xaxt = "n")
+axis(1, at = seq(min(negmsex_seq_m56E2), max(negmsex_seq_m56E2), length.out = 10), 
+     labels = round(seq(min(negmsex_seq_m56E2), max(negmsex_seq_m56E2), length.out = 10), 2), 
+     cex.axis = 0.7)
+
+# ... we add a background grid ...
+abline(h = seq(0, 1, by = 0.1), col = "grey90")
+abline(v = seq(min(negmsex_seq_m56E2), max(negmsex_seq_m56E2), by = (max(negmsex_seq_m56E2) - min(negmsex_seq_m56E2)) / 10), col = "grey90")
+
+# ... and add confidence intervals as shaded areas ...
+polygon(c(negmsex_seq_m56E2, rev(negmsex_seq_m56E2)), c(upper_women_m5E2, rev(lower_women_m5E2)), col = rgb(1, 0, 0, 0.2), border = NA)
+polygon(c(negmsex_seq_m56E2, rev(negmsex_seq_m56E2)), c(upper_men_m5E2, rev(lower_men_m5E2)), col = rgb(0, 0, 1, 0.2), border = NA)
+
+# Predicted probabilities for treatment and control group
+lines(x = negmsex_seq_m56E2, y = apply(sim_women_m5E2, 2, mean), lwd = 2, col = "red")
+lines(x = negmsex_seq_m56E2, y = apply(sim_men_m5E2, 2, mean), lwd = 2, col = "blue")
+
+# Some annotations
+text(x = -0.5, y = 0.35, labels = "Women", cex = 0.8, pos = 4, col = "red")
+text(x = -0.5, y = 0.32, labels = "Men", cex = 0.8, pos = 4, col = "blue")
+
+# Add distribution of actual observations
+rug(jitter(data_panel$negmsex[data_panel$negmsex <= 150], 0.1), ticksize = 0.02, lwd = 1)
 
 # .............................................................................#
 # .................................. MODEL 6 ..................................#
 # .............................................................................#
 
+# ... We initiate by calculating the confidence intervals as below ...
+lower_women_m6E2 <- apply(sim_women_m6E2, 2, function(x) quantile(x, probs = 0.025))
+upper_women_m6E2 <- apply(sim_women_m6E2, 2, function(x) quantile(x, probs = 0.975))
+lower_men_m6E2 <- apply(sim_men_m6E2, 2, function(x) quantile(x, probs = 0.025))
+upper_men_m6E2 <- apply(sim_men_m6E2, 2, function(x) quantile(x, probs = 0.975))
+
+# ... and then plot the estimated predicted probabilities using the confidence intervals we obtained above ...
+plot(x = negmsex_seq_m56E2,
+     y = apply(sim_women_m6E2, 2, mean),
+     type = "n",
+     lwd = 2,
+     main = "Predicted Probabiity of Intention to Vote for VOX (Year 2020)", 
+     cex.main = 0.7,
+     xlab = "Prior Decrease in Individual Sexism",
+     ylab = "Pr(Intention to Vote for VOX)", 
+     ylim = c(0, 0.5), 
+     cex.axis = 0.7, 
+     cex.lab = 0.7,
+     xaxt = "n")
+axis(1, at = seq(min(negmsex_seq_m56E2), max(negmsex_seq_m56E2), length.out = 10), 
+     labels = round(seq(min(negmsex_seq_m56E2), max(negmsex_seq_m56E2), length.out = 10), 2), 
+     cex.axis = 0.7)
+
+# ... we add a background grid ...
+abline(h = seq(0, 1, by = 0.1), col = "grey90")
+abline(v = seq(min(negmsex_seq_m56E2), max(negmsex_seq_m56E2), by = (max(negmsex_seq_m56E2) - min(negmsex_seq_m56E2)) / 10), col = "grey90")
+
+# ... and add confidence intervals as shaded areas ...
+polygon(c(negmsex_seq_m56E2, rev(negmsex_seq_m56E2)), c(upper_women_m6E2, rev(lower_women_m6E2)), col = rgb(1, 0, 0, 0.2), border = NA)
+polygon(c(negmsex_seq_m56E2, rev(negmsex_seq_m56E2)), c(upper_men_m6E2, rev(lower_men_m6E2)), col = rgb(0, 0, 1, 0.2), border = NA)
+
+# Predicted probabilities for treatment and control group
+lines(x = negmsex_seq_m56E2, y = apply(sim_women_m6E2, 2, mean), lwd = 2, col = "red")
+lines(x = negmsex_seq_m56E2, y = apply(sim_men_m6E2, 2, mean), lwd = 2, col = "blue")
+
+# Some annotations
+text(x = -0.5, y = 0.35, labels = "Women", cex = 0.8, pos = 4, col = "red")
+text(x = -0.5, y = 0.32, labels = "Men", cex = 0.8, pos = 4, col = "blue")
+
+# Add distribution of actual observations
+rug(jitter(data_panel$negmsex[data_panel$negmsex <= 150], 0.1), ticksize = 0.02, lwd = 1)
 
 #_____________________________________________________________________________#
 # ... the following command lines save the generated plots into a single PDF-file ...
-dev.copy2pdf(file = ("Predicted_Probabilities_E2.pdf"), 
+dev.copy2pdf(file = ("Predicted_Probabilities_m5m6E2.pdf"), 
              family = "Times", 
              width = 12, 
              height=6)
 #_____________________________________________________________________________#
+
+```
+
+```{r Part 1.2.6: Estimation of First Differences}
+
+# .............................................................................#
+# .................................. MODEL 3 ..................................#
+# .............................................................................#
+
+par(mfrow = c(1, 2)) # This will allow us to display the First Differences for the models 3 and 4 side by side ...
+
+# ... we initiate by estimating the first differences ...
+fd_m3E2 <- sim_women_m3E2 - sim_men_m3E2
+
+# ... we then generate the display plot ...
+plot(x = posmsex_seq_m34E2,
+     y = apply(fd_m3E2, 2, mean),
+     type = "n",
+     lwd = 2,
+     main = "First Difference Women - Men (2019)", 
+     cex.main = 0.7,
+     xlab = "Prior Increase in Individual Sexism",
+     ylab = "FD", 
+     ylim=c(-0.8, 0.6), 
+     cex.axis = 0.7, 
+     cex.lab = 0.7,
+     xaxt = "n")
+axis(1, at = seq(0, 150, by = 25),
+     cex.axis = 0.7)
+
+# Background Raster
+abline(h = seq(-0.4, 0.6, by = 0.2), 
+       col = "grey90")
+abline(v = seq(0, 150, by = 25), 
+       col = "grey90")
+
+# FD
+lines(x = posmsex_seq_m34E2,
+      y = apply(fd_m3E2, 2, mean),
+      lwd = 2)
+
+# Confidence Intervals
+lines(x = posmsex_seq_m34E2,
+      y = apply(fd_m3E2, 2, quantile, 0.025),
+      lty = "dashed")
+lines(x = posmsex_seq_m34E2,
+      y = apply(fd_m3E2, 2, quantile, 0.975),
+      lty = "dashed")
+
+# vertical line at y = 0
+abline(h = 0, 
+       lwd = 1)
+
+# .............................................................................#
+# .................................. MODEL 4 ..................................#
+# .............................................................................#
+
+# ... we initiate by estimating the first differences ...
+fd_m4E2 <- sim_women_m4E2 - sim_men_m4E2
+
+# ... we then generate the display plot ...
+plot(x = posmsex_seq_m34E2,
+     y = apply(fd_m4E2, 2, mean),
+     type = "n",
+     lwd = 2,
+     main = "First Difference Women - Men (2020)", 
+     cex.main = 0.7,
+     xlab = "Prior Increase in Individual Sexism",
+     ylab = "FD", 
+     ylim=c(-0.4, 0.4), 
+     cex.axis = 0.7, 
+     cex.lab = 0.7,
+     xaxt = "n")
+axis(1, at = seq(0, 150, by = 25),
+     cex.axis = 0.7)
+
+# Background Raster
+abline(h = seq(-0.4, 0.6, by = 0.2), 
+       col = "grey90")
+abline(v = seq(0, 150, by = 25), 
+       col = "grey90")
+
+# FD
+lines(x = posmsex_seq_m34E2,
+      y = apply(fd_m4E2, 2, mean),
+      lwd = 2)
+
+# Confidence Intervals
+lines(x = posmsex_seq_m34E2,
+      y = apply(fd_m4E2, 2, quantile, 0.025),
+      lty = "dashed")
+lines(x = posmsex_seq_m34E2,
+      y = apply(fd_m4E2, 2, quantile, 0.975),
+      lty = "dashed")
+
+# vertical line at y = 0
+abline(h = 0, 
+       lwd = 1)
+
+#_____________________________________________________________________________#
+# ... the following command lines save the generated plots into a single PDF-file ...
+dev.copy2pdf(file = ("First_Differences_AVA_m3m4E2.pdf"), 
+             family = "Times", 
+             width = 12, 
+             height=6)
+#_____________________________________________________________________________#
+
+# .............................................................................#
+# .................................. MODEL 5 ..................................#
+# .............................................................................#
+
+par(mfrow = c(1, 2)) # This will allow us to display the First Differences for the models 5 and 6 side by side ...
+
+# ... we initiate by estimating the first differences ...
+fd_m5E2 <- sim_women_m5E2 - sim_men_m5E2
+
+# ... we then generate the display plot ...
+plot(x = negmsex_seq_m56E2,
+     y = apply(fd_m5E2, 2, mean),
+     type = "n",
+     lwd = 2,
+     main = "First Difference Women - Men (2019)", 
+     cex.main = 0.7,
+     xlab = "Prior Decrease in Individual Sexism",
+     ylab = "FD", 
+     ylim=c(-0.4, 0.2), 
+     cex.axis = 0.7, 
+     cex.lab = 0.7,
+     xaxt = "n")
+axis(1, at = seq(0, 150, by = 25),
+     cex.axis = 0.7)
+
+# Background Raster
+abline(h = seq(-0.4, 0.6, by = 0.2), 
+       col = "grey90")
+abline(v = seq(0, 150, by = 25), 
+       col = "grey90")
+
+# FD
+lines(x = negmsex_seq_m56E2,
+      y = apply(fd_m5E2, 2, mean),
+      lwd = 2)
+
+# Confidence Intervals
+lines(x = negmsex_seq_m56E2,
+      y = apply(fd_m5E2, 2, quantile, 0.025),
+      lty = "dashed")
+lines(x = negmsex_seq_m56E2,
+      y = apply(fd_m5E2, 2, quantile, 0.975),
+      lty = "dashed")
+
+# vertical line at y = 0
+abline(h = 0, 
+       lwd = 1)
+
+# .............................................................................#
+# .................................. MODEL 6 ..................................#
+# .............................................................................#
+
+# ... we initiate by estimating the first differences ...
+fd_m6E2 <- sim_women_m6E2 - sim_men_m6E2
+
+# ... we then generate the display plot ...
+plot(x = negmsex_seq_m56E2,
+     y = apply(fd_m6E2, 2, mean),
+     type = "n",
+     lwd = 2,
+     main = "First Difference Women - Men (2020)", 
+     cex.main = 0.7,
+     xlab = "Prior Decrease in Individual Sexism",
+     ylab = "FD", 
+     ylim=c(-0.4, 0.4), 
+     cex.axis = 0.7, 
+     cex.lab = 0.7,
+     xaxt = "n")
+axis(1, at = seq(0, 150, by = 25),
+     cex.axis = 0.7)
+
+# Background Raster
+abline(h = seq(-0.4, 0.6, by = 0.2), 
+       col = "grey90")
+abline(v = seq(0, 150, by = 25), 
+       col = "grey90")
+
+# FD
+lines(x = negmsex_seq_m56E2,
+      y = apply(fd_m6E2, 2, mean),
+      lwd = 2)
+
+# Confidence Intervals
+lines(x = negmsex_seq_m56E2,
+      y = apply(fd_m6E2, 2, quantile, 0.025),
+      lty = "dashed")
+lines(x = negmsex_seq_m56E2,
+      y = apply(fd_m6E2, 2, quantile, 0.975),
+      lty = "dashed")
+
+# vertical line at y = 0
+abline(h = 0, 
+       lwd = 1)
+
+#_____________________________________________________________________________#
+# ... the following command lines save the generated plots into a single PDF-file ...
+dev.copy2pdf(file = ("First_Differences_AVA_m5m6E2.pdf"), 
+             family = "Times", 
+             width = 12, 
+             height=6)
+#_____________________________________________________________________________#
+
+```
+
+```{r Part 1.2.7: Generation of Model Matrices for OVA}
+
+# Before estimating the First Differences using the Observed Value Approach (OVA), we first have to generate the matrices containing the independent variables + the intercept for each of the models under consideration ...
+
+# We first generate two temporary data subsets ...
+# ... one to include only rows where year == 2019 ...
+data_panel_2019 <- data_panel %>% filter(year == 2019)
+# ... and the second to only include rows where year == 2020 ...
+data_panel_2020 <- data_panel %>% filter(year == 2020)
+
+# .............................................................................#
+# .................................. MODEL 3 ..................................#
+# .............................................................................#
+
+# ... we define the specification used in the corresponding model ...
+formula_m3_E2 <- affirmative_vox ~ 
+                 female +                     
+                 age +                        
+                 edu3_2 +                     
+                 edu3_3 +                     
+                 dhincome_all +               
+                 livingpartner +              
+                 intpol +                     
+                 l2vim_vox +                  
+                 l2authoritarian +            
+                 l2ideol +                    
+                 l2nativism +                 
+                 l2orgterr +                  
+                 l2pop6amz +                  
+                 l2msexism +                  
+                 lsvim_vox +                  
+                 lsauthoritarian +            
+                 lsideol +                    
+                 lsnativism +                 
+                 lsorgterr +                  
+                 lspop6amz +                  
+                 posmsex +                    
+                 int_m34E2 +                   
+                 negmsex
+
+# Create the design matrix
+X_m3E2 <- model.matrix(formula_m3_E2, data = data_panel_2019)
+X_m3E2 <- as.matrix(X_m3E2)
+
+# .............................................................................#
+# .................................. MODEL 4 ..................................#
+# .............................................................................#
+
+# ... we define the specification used in the corresponding model ...
+formula_m4_E2 <- affirmative_vox ~ 
+                 female +                      
+                 age +                        
+                 edu3_2 +                     
+                 edu3_3 +                     
+                 dhincome_all +               
+                 livingpartner +              
+                 intpol +                     
+                 l2vim_vox +                  
+                 l2authoritarian +            
+                 l2ideol +                    
+                 l2nativism +                 
+                 l2orgterr +                  
+                 l2pop6amz +                  
+                 l2msexism +                  
+                 lsvim_vox +                  
+                 lsauthoritarian +            
+                 lsideol +                    
+                 lsnativism +                 
+                 lsorgterr +                  
+                 lspop6amz +                  
+                 posmsex +                    
+                 int_m34E2 +                   
+                 negmsex    
+
+# Create the design matrix
+X_m4E2 <- model.matrix(formula_m4_E2, data = data_panel_2020)
+X_m4E2 <- as.matrix(X_m4E2)
+
+# .............................................................................#
+# .................................. MODEL 5 ..................................#
+# .............................................................................#
+
+# ... we define the specification used in the corresponding model ...
+formula_m5_E2 <- affirmative_vox ~ 
+                 female +                     
+                 age +                        
+                 edu3_2 +                     
+                 edu3_3 +                     
+                 dhincome_all +               
+                 livingpartner +              
+                 intpol +                     
+                 l2vim_vox +                  
+                 l2authoritarian +            
+                 l2ideol +                    
+                 l2nativism +                 
+                 l2orgterr +                  
+                 l2pop6amz +                  
+                 l2msexism +                  
+                 lsvim_vox +                  
+                 lsauthoritarian +            
+                 lsideol +                    
+                 lsnativism +                 
+                 lsorgterr +                  
+                 lspop6amz +                  
+                 posmsex +                     
+                 negmsex+                     
+                 int_m56E2
+
+# Create the design matrix
+X_m5E2 <- model.matrix(formula_m5_E2, data = data_panel_2019)
+X_m5E2 <- as.matrix(X_m5E2)
+
+# .............................................................................#
+# .................................. MODEL 6 ..................................#
+# .............................................................................#
+
+# ... we define the specification used in the corresponding model ...
+formula_m6_E2 <- affirmative_vox ~ 
+                  female +                      
+               age +                        
+               edu3_2 +                     
+               edu3_3 +                     
+               dhincome_all +               
+               livingpartner +              
+               intpol +                     
+               l2vim_vox +                  
+               l2authoritarian +            
+               l2ideol +                    
+               l2nativism +                 
+               l2orgterr +                  
+               l2pop6amz +                  
+               l2msexism +                  
+               lsvim_vox +                  
+               lsauthoritarian +            
+               lsideol +                    
+               lsnativism +                 
+               lsorgterr +                  
+               lspop6amz +                  
+               posmsex +                     
+               negmsex+                     
+               int_m56E2    
+
+# Create the design matrix
+X_m6E2 <- model.matrix(formula_m6_E2, data = data_panel_2020)
+X_m6E2 <- as.matrix(X_m6E2)
+
+```
+
+```{r Part 1.2.8: Estimation of First Differences Using the Observed Value Approach}
+
+# .............................................................................#
+# .................................. MODEL 3 ..................................#
+# .............................................................................#
+
+# ... we generate a 3D array with as many rows as there are observations (nrow(X)), as many columns as there are covariates in the X-matrix (ncol(X)), and a depth of 2 for each of the two scenarios that will be taken into account ...
+cases_m3E2 <- array(NA, c(dim(X_m3E2), 2))  
+
+# assign X values to all dimensions of cases 
+# ie we get two identical layers of X matrices  
+cases_m3E2[, ,] <- X_m3E2
+
+# select the columns to adjust for simulation 
+sel1_m3E2 <- which(colnames(X_m3E2) == "female")
+sel2_m3E2 <- which(colnames(X_m3E2) == "int_m34E2")
+
+# assign 0 to "female" column in layer 1
+cases_m3E2[, sel1_m3E2, 1] <- 0
+# assign 1 to female column in layer 2
+cases_m3E2[, sel1_m3E2, 2] <- 1
+
+# assign 0 to interaction ("int_m34E2") column in layer 1
+cases_m3E2[, sel2_m3E2, 1] <- 0*X_m3E2[, "female"]
+# assign "female" value to interaction column in layer 2
+cases_m3E2[, sel2_m3E2, 2] <- 1*X_m3E2[, "female"]
+
+# Loop over the matrices.
+val_m3E2 <- matrix(NA, nrow = n_simulations, ncol = 2)
+
+# for each layer in cases (third dimension)
+for(i in 1:2) {
+  ev_m3E2 <- sim_function(coefs = coefficients_m3_E2 ,
+                          vcov = vcov_m3_E2 ,
+                          response_function = response_function,
+                          stochastic_component = stochastic_component,
+                          scenario = cases_m3E2[,,i],
+                          predicted_values = F
+                          )$ev
+  
+  tmp_val_m3E2 <- apply(ev_m3E2, 1, mean)
+  val_m3E2[, i] <- tmp_val_m3E2
+}
+
+# ... we then estimate the first differences and store these in an object called "fd_m1E1" ...
+fd_m3E2 <- val_m3E2[, 1] - val_m3E2[, 2]
+
+# ... we then proceed to generate the plots for a better visualization of the results ...
+par(mfrow = c(1, 2)) # This will allow us to display the First Differences for the two models side by side ...
+
+# ... we first plot the histogram ...
+hist(
+  fd_m3E2,
+  breaks = 20,
+  main = "Histogram of Simulated First Differences (2019)",
+  xlab = "First Difference",
+  las = 1,
+  col = "lightblue",
+  border = "white"
+)
+
+# Add a line for the mean of the first differences
+abline(v = mean(fd_m3E2), 
+       col = "black",
+       lwd = 2)
+
+# Add dashed lines for the 2.5% and 97.5% quantiles
+abline(v = quantile(fd_m3E2, c(0.025, 0.975)),
+       col = "black",
+       lty = "dashed",
+       lwd = 2)
+
+# Optionally, add text annotations for the mean and quantiles
+text(mean(fd_m3E2), par("usr")[4] * 0.9, labels = paste("Mean:", round(mean(fd_m3E2), 3)), col = "black", pos = 4)
+text(quantile(fd_m3E2, 0.025), par("usr")[4] * 0.8, labels = paste("2.5%:", round(quantile(fd_m3E2, 0.025), 3)), col = "black", pos = 4)
+text(quantile(fd_m3E2, 0.975), par("usr")[4] * 0.8, labels = paste("97.5%:", round(quantile(fd_m3E2, 0.975), 3)), col = "black", pos = 4)
+
+# ... and we then generate a density plot ...
+plot(
+  density(fd_m3E2),
+  main = "Density Plot of Simulated First Differences (2019)",
+  xlab = "First Difference",
+  ylab = "Density",
+  las = 1,
+  col = "lightblue",
+  lwd = 2
+)
+
+# Add a line for the mean of the first differences
+abline(v = mean(fd_m3E2), 
+       col = "black",
+       lwd = 2)
+
+# Add dashed lines for the 2.5% and 97.5% quantiles
+abline(v = quantile(fd_m3E2, c(0.025, 0.975)),
+       col = "black",
+       lty = "dashed",
+       lwd = 2)
+
+# Optionally, add text annotations for the mean and quantiles
+text(mean(fd_m3E2), par("usr")[4] * 0.9, labels = paste("Mean:", round(mean(fd_m3E2), 3)), col = "black", pos = 4)
+text(quantile(fd_m3E2, 0.025), par("usr")[4] * 0.8, labels = paste("2.5%:", round(quantile(fd_m3E2, 0.025), 3)), col = "black", pos = 4)
+text(quantile(fd_m3E2, 0.975), par("usr")[4] * 0.8, labels = paste("97.5%:", round(quantile(fd_m3E2, 0.975), 3)), col = "black", pos = 4)
+
+#_____________________________________________________________________________#
+# ... the following command lines save the generated plots into a single PDF-file ...
+dev.copy2pdf(file = ("First_Differences_OVA_m3_E2.pdf"), 
+             family = "Times", 
+             width = 12, 
+             height=6)
+#_____________________________________________________________________________#
+
+# .............................................................................#
+# .................................. MODEL 4 ..................................#
+# .............................................................................#
+
+# ... we generate a 3D array with as many rows as there are observations (nrow(X)), as many columns as there are covariates in the X-matrix (ncol(X)), and a depth of 2 for each of the two scenarios that will be taken into account ...
+cases_m4E2 <- array(NA, c(dim(X_m4E2), 2))  
+
+# assign X values to all dimensions of cases 
+# ie we get two identical layers of X matrices  
+cases_m4E2[, ,] <- X_m4E2
+
+# select the columns to adjust for simulation 
+sel1_m4E2 <- which(colnames(X_m4E2) == "female")
+sel2_m4E2 <- which(colnames(X_m4E2) == "int_m34E2")
+
+# assign 0 to "female" column in layer 1
+cases_m4E2[, sel1_m4E2, 1] <- 0
+# assign 1 to female column in layer 2
+cases_m4E2[, sel1_m4E2, 2] <- 1
+
+# assign 0 to interaction ("int_m34E2") column in layer 1
+cases_m4E2[, sel2_m4E2, 1] <- 0*X_m4E2[, "female"]
+# assign "female" value to interaction column in layer 2
+cases_m4E2[, sel2_m4E2, 2] <- 1*X_m4E2[, "female"]
+
+# Loop over the matrices.
+val_m4E2 <- matrix(NA, nrow = n_simulations, ncol = 2)
+
+# for each layer in cases (third dimension)
+for(i in 1:2) {
+  ev_m4E2 <- sim_function(coefs = coefficients_m4_E2 ,
+                          vcov = vcov_m4_E2 ,
+                          response_function = response_function,
+                          stochastic_component = stochastic_component,
+                          scenario = cases_m4E2[,,i],
+                          predicted_values = F
+                          )$ev
+  
+  tmp_val_m4E2 <- apply(ev_m4E2, 1, mean)
+  val_m4E2[, i] <- tmp_val_m4E2
+}
+
+# ... we then estimate the first differences and store these in an object called "fd_m4E2" ...
+fd_m4E2 <- val_m4E2[, 1] - val_m4E2[, 2]
+
+# ... we then proceed to generate the plots for a better visualization of the results ...
+par(mfrow = c(1, 2)) # This will allow us to display the First Differences for the two models side by side ...
+
+# ... we first plot the histogram ...
+hist(
+  fd_m4E2,
+  breaks = 20,
+  main = "Histogram of Simulated First Differences (2020)",
+  xlab = "First Difference",
+  las = 1,
+  col = "lightblue",
+  border = "white"
+)
+
+# Add a line for the mean of the first differences
+abline(v = mean(fd_m4E2), 
+       col = "black",
+       lwd = 2)
+
+# Add dashed lines for the 2.5% and 97.5% quantiles
+abline(v = quantile(fd_m4E2, c(0.025, 0.975)),
+       col = "black",
+       lty = "dashed",
+       lwd = 2)
+
+# Optionally, add text annotations for the mean and quantiles
+text(mean(fd_m4E2), par("usr")[4] * 0.9, labels = paste("Mean:", round(mean(fd_m4E2), 3)), col = "black", pos = 4)
+text(quantile(fd_m4E2, 0.025), par("usr")[4] * 0.8, labels = paste("2.5%:", round(quantile(fd_m4E2, 0.025), 3)), col = "black", pos = 4)
+text(quantile(fd_m4E2, 0.975), par("usr")[4] * 0.8, labels = paste("97.5%:", round(quantile(fd_m4E2, 0.975), 3)), col = "black", pos = 4)
+
+# ... and we then generate a density plot ...
+plot(
+  density(fd_m4E2),
+  main = "Density Plot of Simulated First Differences (2020)",
+  xlab = "First Difference",
+  ylab = "Density",
+  las = 1,
+  col = "lightblue",
+  lwd = 2
+)
+
+# Add a line for the mean of the first differences
+abline(v = mean(fd_m4E2), 
+       col = "black",
+       lwd = 2)
+
+# Add dashed lines for the 2.5% and 97.5% quantiles
+abline(v = quantile(fd_m4E2, c(0.025, 0.975)),
+       col = "black",
+       lty = "dashed",
+       lwd = 2)
+
+# Optionally, add text annotations for the mean and quantiles
+text(mean(fd_m4E2), par("usr")[4] * 0.9, labels = paste("Mean:", round(mean(fd_m4E2), 3)), col = "black", pos = 4)
+text(quantile(fd_m4E2, 0.025), par("usr")[4] * 0.8, labels = paste("2.5%:", round(quantile(fd_m4E2, 0.025), 3)), col = "black", pos = 4)
+text(quantile(fd_m4E2, 0.975), par("usr")[4] * 0.8, labels = paste("97.5%:", round(quantile(fd_m4E2, 0.975), 3)), col = "black", pos = 4)
+
+#_____________________________________________________________________________#
+# ... the following command lines save the generated plots into a single PDF-file ...
+dev.copy2pdf(file = ("First_Differences_OVA_m4_E2.pdf"), 
+             family = "Times", 
+             width = 12, 
+             height=6)
+#_____________________________________________________________________________#
+
+# .............................................................................#
+# .................................. MODEL 5 ..................................#
+# .............................................................................#
+
+# ... we generate a 3D array with as many rows as there are observations (nrow(X)), as many columns as there are covariates in the X-matrix (ncol(X)), and a depth of 2 for each of the two scenarios that will be taken into account ...
+cases_m5E2 <- array(NA, c(dim(X_m5E2), 2))  
+
+# assign X values to all dimensions of cases 
+# ie we get two identical layers of X matrices  
+cases_m5E2[, ,] <- X_m5E2
+
+# select the columns to adjust for simulation 
+sel1_m5E2 <- which(colnames(X_m5E2) == "female")
+sel2_m5E2 <- which(colnames(X_m5E2) == "int_m56E2")
+
+# assign 0 to "female" column in layer 1
+cases_m5E2[, sel1_m5E2, 1] <- 0
+# assign 1 to female column in layer 2
+cases_m5E2[, sel1_m5E2, 2] <- 1
+
+# assign 0 to interaction ("int_m56E2") column in layer 1
+cases_m5E2[, sel2_m5E2, 1] <- 0*X_m5E2[, "female"]
+# assign "female" value to interaction column in layer 2
+cases_m5E2[, sel2_m5E2, 2] <- 1*X_m5E2[, "female"]
+
+# Loop over the matrices.
+val_m5E2 <- matrix(NA, nrow = n_simulations, ncol = 2)
+
+# for each layer in cases (third dimension)
+for(i in 1:2) {
+  ev_m5E2 <- sim_function(coefs = coefficients_m5_E2 ,
+                          vcov = vcov_m5_E2 ,
+                          response_function = response_function,
+                          stochastic_component = stochastic_component,
+                          scenario = cases_m5E2[,,i],
+                          predicted_values = F
+                          )$ev
+  
+  tmp_val_m5E2 <- apply(ev_m5E2, 1, mean)
+  val_m5E2[, i] <- tmp_val_m5E2
+}
+
+# ... we then estimate the first differences and store these in an object called "fd_m4E2" ...
+fd_m5E2 <- val_m5E2[, 1] - val_m5E2[, 2]
+
+# ... we then proceed to generate the plots for a better visualization of the results ...
+par(mfrow = c(1, 2)) # This will allow us to display the First Differences for the two models side by side ...
+
+# ... we first plot the histogram ...
+hist(
+  fd_m5E2,
+  breaks = 20,
+  main = "Histogram of Simulated First Differences (2019)",
+  xlab = "First Difference",
+  las = 1,
+  col = "lightblue",
+  border = "white"
+)
+
+# Add a line for the mean of the first differences
+abline(v = mean(fd_m5E2), 
+       col = "black",
+       lwd = 2)
+
+# Add dashed lines for the 2.5% and 97.5% quantiles
+abline(v = quantile(fd_m5E2, c(0.025, 0.975)),
+       col = "black",
+       lty = "dashed",
+       lwd = 2)
+
+# Optionally, add text annotations for the mean and quantiles
+text(mean(fd_m5E2), par("usr")[4] * 0.9, labels = paste("Mean:", round(mean(fd_m5E2), 3)), col = "black", pos = 4)
+text(quantile(fd_m5E2, 0.025), par("usr")[4] * 0.8, labels = paste("2.5%:", round(quantile(fd_m5E2, 0.025), 3)), col = "black", pos = 4)
+text(quantile(fd_m5E2, 0.975), par("usr")[4] * 0.8, labels = paste("97.5%:", round(quantile(fd_m5E2, 0.975), 3)), col = "black", pos = 4)
+
+# ... and we then generate a density plot ...
+plot(
+  density(fd_m5E2),
+  main = "Density Plot of Simulated First Differences (2019)",
+  xlab = "First Difference",
+  ylab = "Density",
+  las = 1,
+  col = "lightblue",
+  lwd = 2
+)
+
+# Add a line for the mean of the first differences
+abline(v = mean(fd_m5E2), 
+       col = "black",
+       lwd = 2)
+
+# Add dashed lines for the 2.5% and 97.5% quantiles
+abline(v = quantile(fd_m5E2, c(0.025, 0.975)),
+       col = "black",
+       lty = "dashed",
+       lwd = 2)
+
+# Optionally, add text annotations for the mean and quantiles
+text(mean(fd_m5E2), par("usr")[4] * 0.9, labels = paste("Mean:", round(mean(fd_m5E2), 3)), col = "black", pos = 4)
+text(quantile(fd_m5E2, 0.025), par("usr")[4] * 0.8, labels = paste("2.5%:", round(quantile(fd_m5E2, 0.025), 3)), col = "black", pos = 4)
+text(quantile(fd_m5E2, 0.975), par("usr")[4] * 0.8, labels = paste("97.5%:", round(quantile(fd_m5E2, 0.975), 3)), col = "black", pos = 4)
+
+#_____________________________________________________________________________#
+# ... the following command lines save the generated plots into a single PDF-file ...
+dev.copy2pdf(file = ("First_Differences_OVA_m5_E2.pdf"), 
+             family = "Times", 
+             width = 12, 
+             height=6)
+#_____________________________________________________________________________#
+
+# .............................................................................#
+# .................................. MODEL 6 ..................................#
+# .............................................................................#
+
+# ... we generate a 3D array with as many rows as there are observations (nrow(X)), as many columns as there are covariates in the X-matrix (ncol(X)), and a depth of 2 for each of the two scenarios that will be taken into account ...
+cases_m6E2 <- array(NA, c(dim(X_m6E2), 2))  
+
+# assign X values to all dimensions of cases 
+# ie we get two identical layers of X matrices  
+cases_m6E2[, ,] <- X_m6E2
+
+# select the columns to adjust for simulation 
+sel1_m6E2 <- which(colnames(X_m6E2) == "female")
+sel2_m6E2 <- which(colnames(X_m6E2) == "int_m56E2")
+
+# assign 0 to "female" column in layer 1
+cases_m6E2[, sel1_m6E2, 1] <- 0
+# assign 1 to female column in layer 2
+cases_m6E2[, sel1_m6E2, 2] <- 1
+
+# assign 0 to interaction ("int_m56E2") column in layer 1
+cases_m6E2[, sel2_m6E2, 1] <- 0*X_m6E2[, "female"]
+# assign "female" value to interaction column in layer 2
+cases_m6E2[, sel2_m6E2, 2] <- 1*X_m6E2[, "female"]
+
+# Loop over the matrices.
+val_m6E2 <- matrix(NA, nrow = n_simulations, ncol = 2)
+
+# for each layer in cases (third dimension)
+for(i in 1:2) {
+  ev_m6E2 <- sim_function(coefs = coefficients_m6_E2 ,
+                          vcov = vcov_m6_E2 ,
+                          response_function = response_function,
+                          stochastic_component = stochastic_component,
+                          scenario = cases_m6E2[,,i],
+                          predicted_values = F
+                          )$ev
+  
+  tmp_val_m6E2 <- apply(ev_m6E2, 1, mean)
+  val_m6E2[, i] <- tmp_val_m6E2
+}
+
+# ... we then estimate the first differences and store these in an object called "fd_m4E2" ...
+fd_m6E2 <- val_m6E2[, 1] - val_m6E2[, 2]
+
+# ... we then proceed to generate the plots for a better visualization of the results ...
+par(mfrow = c(1, 2)) # This will allow us to display the First Differences for the two models side by side ...
+
+# ... we first plot the histogram ...
+hist(
+  fd_m6E2,
+  breaks = 20,
+  main = "Histogram of Simulated First Differences (2020)",
+  xlab = "First Difference",
+  las = 1,
+  col = "lightblue",
+  border = "white"
+)
+
+# Add a line for the mean of the first differences
+abline(v = mean(fd_m6E2), 
+       col = "black",
+       lwd = 2)
+
+# Add dashed lines for the 2.5% and 97.5% quantiles
+abline(v = quantile(fd_m6E2, c(0.025, 0.975)),
+       col = "black",
+       lty = "dashed",
+       lwd = 2)
+
+# Optionally, add text annotations for the mean and quantiles
+text(mean(fd_m6E2), par("usr")[4] * 0.9, labels = paste("Mean:", round(mean(fd_m6E2), 3)), col = "black", pos = 4)
+text(quantile(fd_m6E2, 0.025), par("usr")[4] * 0.8, labels = paste("2.5%:", round(quantile(fd_m6E2, 0.025), 3)), col = "black", pos = 4)
+text(quantile(fd_m6E2, 0.975), par("usr")[4] * 0.8, labels = paste("97.5%:", round(quantile(fd_m6E2, 0.975), 3)), col = "black", pos = 4)
+
+# ... and we then generate a density plot ...
+plot(
+  density(fd_m6E2),
+  main = "Density Plot of Simulated First Differences (2020)",
+  xlab = "First Difference",
+  ylab = "Density",
+  las = 1,
+  col = "lightblue",
+  lwd = 2
+)
+
+# Add a line for the mean of the first differences
+abline(v = mean(fd_m6E2), 
+       col = "black",
+       lwd = 2)
+
+# Add dashed lines for the 2.5% and 97.5% quantiles
+abline(v = quantile(fd_m6E2, c(0.025, 0.975)),
+       col = "black",
+       lty = "dashed",
+       lwd = 2)
+
+# Optionally, add text annotations for the mean and quantiles
+text(mean(fd_m6E2), par("usr")[4] * 0.9, labels = paste("Mean:", round(mean(fd_m6E2), 3)), col = "black", pos = 4)
+text(quantile(fd_m6E2, 0.025), par("usr")[4] * 0.8, labels = paste("2.5%:", round(quantile(fd_m6E2, 0.025), 3)), col = "black", pos = 4)
+text(quantile(fd_m6E2, 0.975), par("usr")[4] * 0.8, labels = paste("97.5%:", round(quantile(fd_m6E2, 0.975), 3)), col = "black", pos = 4)
+
+#_____________________________________________________________________________#
+# ... the following command lines save the generated plots into a single PDF-file ...
+dev.copy2pdf(file = ("First_Differences_OVA_m6_E2.pdf"), 
+             family = "Times", 
+             width = 12, 
+             height=6)
+#_____________________________________________________________________________#
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
