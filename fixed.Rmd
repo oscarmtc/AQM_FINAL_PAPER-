@@ -1,0 +1,240 @@
+---
+title: "AQM Final Paper: Code for Replication and Conduction of the Analysis"
+author: "Ekaterina Leevik, Oscar Martinez, Elizabeth Sites"
+date: ""
+output:
+  pdf_document:
+    toc: no
+    includes:
+      in_header: header.tex
+  # html_notebook:
+    # toc: no
+  html_document:
+    toc: no
+bibliography: 
+---
+
+```{r Initial Setup & Download of Required Packages, include=FALSE} 
+
+# The first line sets an option for the final document that can be produced from
+# the .Rmd file. Don't worry about it.
+knitr::opts_chunk$set(echo = TRUE)
+
+# The next bit (lines 22-43) is quite powerful and useful. 
+# First you define which packages you need for your analysis and assign it to 
+# the p_needed object. 
+p_needed <-
+  c("viridis", "knitr", "sandwich", "magrittr", "kableExtra", "MASS", "dplyr", "data.table", "margins", "readr", "plm", "Hmisc", "stargazer", "brglm2")
+
+# Now you check which packages are already installed on your computer.
+# The function installed.packages() returns a vector with all the installed 
+# packages.
+packages <- rownames(installed.packages())
+# Then you check which of the packages you need are not installed on your 
+# computer yet. Essentially you compare the vector p_needed with the vector
+# packages. The result of this comparison is assigned to p_to_install.
+p_to_install <- p_needed[!(p_needed %in% packages)]
+# If at least one element is in p_to_install you then install those missing
+# packages.
+if (length(p_to_install) > 0) {
+  install.packages(p_to_install)
+}
+# Now that all packages are installed on the computer, you can load them for
+# this project. Additionally the expression returns whether the packages were
+# successfully loaded.
+sapply(p_needed, require, character.only = TRUE)
+
+```
+
+```{r data}
+data_panel <- read.csv("data_panel.csv")
+```
+
+``` {r lm pooling}
+lm_fixed <- glm(vim_vox ~ msexism + female + age + edu3_2 +edu3_3 +dhincome_all + intpol + authoritarian + nativism +orgterr +pop6amz + msexism*female + as.factor(data_panel$wave),
+                 data = data_panel,
+                 family = binomial)
+
+summary(lm_fixed)
+
+data_panel <- data_panel %>%
+  mutate(wave1 = case_when(
+    wave == 9  ~ "Wave 9",
+    wave == 10 ~ "Wave 10",
+    wave == 11 ~ "Wave 11",
+    wave == 12 ~ "Wave 12",
+    TRUE       ~ NA_character_  # for any other values, NA is assigned
+  ))
+levels(as.factor(data_panel$wave1))
+
+data_panel$wave1 <- factor(data_panel$wave1, levels = c("Wave 9", "Wave 10", "Wave 11", "Wave 12"))
+
+plot(x = data_panel$msexism,
+     y = data_panel$vim_vox,
+     pch = 19,
+     ylim = c(-10,-5),
+     bty = "n",
+     xlab = "Level of sexism",
+     ylab = "Probability of voting for Vox",
+     main = "Fixed Effects (for waves) Regression",
+     font.main = 1,
+     col = viridis(4)[data_panel$wave])
+
+fe_coefs <- coef(lm_fixed)
+length(fe_coefs)
+abline(fe_coefs[1], fe_coefs[16], #wave 9
+       lwd = 2,
+       col = viridis(4)[1])
+abline(fe_coefs[1] + fe_coefs[13], fe_coefs[16], #wave 10
+       lwd = 2,
+       col = viridis(4)[2])
+abline(fe_coefs[1] + fe_coefs[14], fe_coefs[16], #wave 11
+       lwd = 2,
+       col = viridis(4)[3])
+abline(fe_coefs[1] + fe_coefs[15], fe_coefs[16], #wave 12
+       lwd = 2,
+       col = viridis(4)[4])
+legend(
+  "bottomright",
+  legend = levels(data_panel$wave1),
+  lty = 1,
+  col = viridis(4)[as.factor(data_panel$wave1)],
+  bty = "n"
+)
+
+```
+
+
+``` {r function}
+sim_function <- function(lm_obj, nsim = 1000, scenario){
+  
+  # Step 1: Get the regression coefficients
+  beta_hat <- coef(lm_obj)
+  
+  # Step 2: Generate sampling distribution
+  
+  # Step 2.1: Get the variance-covariance matrix.
+  V_hat <-  vcov(lm_obj) 
+  
+  # Step 2.2: Draw from the multivariate normal distribution.
+  S <- mvrnorm(nsim, beta_hat, V_hat)
+
+  # Step 3: Choose interesting covariate values. 
+  # Make sure the matrix multiplication also works for single scenarios
+  if(is.null(nrow(scenario))){
+    scenario <- matrix(scenario, nrow = 1)
+  }
+  
+  # Print a message if the scenario does not fit the regression.
+  if(ncol(scenario) != length(lm_obj$coefficients)){
+    return(cat("The scenario has the wrong number of variables."))
+  } 
+  
+  # Step 4: Calculate Quantities of Interest - 
+  # Expected Values
+  EV <- S %*% t(scenario)
+  return(EV)
+}
+```
+
+``` {r simulation}
+nsim <- 1000
+
+# Step 1: Get the regression coefficients
+#   NOTE: We are only using fixed effects
+beta_hat <- coef(lm_fixed)
+length(beta_hat)
+# Step 2: Generate sampling distribution
+
+# Step 2.1: Get the variance-covariance matrix.
+V_hat <-  vcov(lm_fixed)
+
+set.seed(123)
+S <- mvrnorm(nsim, beta_hat, V_hat)
+
+dim(S)
+sexism_seq <-  seq(min(data_panel$msexism[!is.na(data_panel$msexism)]), max(data_panel$msexism[!is.na(data_panel$msexism)]), 
+                  length.out = 10)
+
+scenario_w <- as.matrix(cbind(1,
+                    sexism_seq,
+                    1, #for female
+                    mean(data_panel$age),
+                    mean(data_panel$edu3_2),
+                    mean(data_panel$edu3_3),
+                    mean(na.omit(data_panel$dhincome_all)),
+                    mean(data_panel$intpol),
+                    mean(data_panel$authoritarian),
+                    mean(data_panel$nativism),
+                    mean(data_panel$orgterr),
+                    mean(data_panel$pop6amz),
+                    0, #dummy 1
+                    0, #dummy 2
+                    0, #dummy 3
+                    1*sexism_seq
+                    ) )
+
+dim(scenario_w)
+scenario_m <- cbind(1,
+                    sexism_seq,
+                    0, #for male
+                    mean(data_panel$age),
+                    mean(data_panel$edu3_2),
+                    mean(data_panel$edu3_3),
+                    mean(na.omit(data_panel$dhincome_all)),
+                    mean(data_panel$intpol),
+                    mean(data_panel$authoritarian),
+                    mean(data_panel$nativism),
+                    mean(data_panel$orgterr),
+                    mean(data_panel$pop6amz),
+                    0, #dummy 1
+                    0, #dummy 2
+                    0, #dummy 3
+                    0*sexism_seq
+                    ) 
+
+ev_w <- sim_function(lm_fixed, 1000, scenario =  scenario_w)
+ev_m <- sim_function(lm_fixed, 1000, scenario =  scenario_m)
+
+# Assuming you have calculated the confidence intervals as below:
+lower_women <- apply(ev_w , 2, function(x) quantile(x, probs = 0.025))
+upper_women <- apply(ev_w , 2, function(x) quantile(x, probs = 0.975))
+lower_men <- apply(ev_m , 2, function(x) quantile(x, probs = 0.025))
+upper_men <- apply(ev_m, 2, function(x) quantile(x, probs = 0.975))
+
+
+# Plot predicted probabilities with confidence intervals
+plot(x = sexism_seq,
+     y = apply(ev_w, 2, mean),
+     type = "n",
+     lwd = 2,
+     main = "Predicted probabilities", 
+     cex.main = 0.7,
+     xlab = "Level of Sexism",
+     ylab = "Pr(Intention to Vote for VOX)", 
+     ylim = c(-9, -2), 
+     cex.axis = 0.7, 
+     cex.lab = 0.7,
+     xaxt = "n")
+axis(1, at = seq(0, 1, by = 0.05), cex.axis = 0.7)
+
+# Predicted probabilities for treatment and control group
+lines(x = sexism_seq, y = apply(ev_w, 2, mean), lwd = 2, col = "red")
+lines(x = sexism_seq, y = apply(ev_m, 2, mean), lwd = 2, col = "blue")
+# Add a background grid
+abline(h = seq(0, 1, by = 0.1), col = "grey90")
+abline(v = seq(0, 1, by = 0.1), col = "grey90")
+
+# Add confidence intervals as shaded areas
+polygon(c(sexism_seq, rev(sexism_seq)), c(upper_women, rev(lower_women)), col = rgb(1, 0, 0, 0.2), border = NA)
+polygon(c(sexism_seq, rev(sexism_seq)), c(upper_men, rev(lower_men)), col = rgb(0, 0, 1, 0.2), border = NA)
+
+# Some annotations
+text(x = c(0.5, 0.5), y = c(0.25, 0.28), labels = c("Women", "Men"), cex = 0.7, pos = 4, col = c("red", "blue"))
+
+# Add distribution of actual observations
+rug(jitter(data_panel$msexism, 0.1), ticksize = 0.02, lwd = 1)
+
+
+
+```
