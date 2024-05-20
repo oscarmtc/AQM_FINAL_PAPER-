@@ -1503,7 +1503,7 @@ mean(data_panel$lm2_orgterr, na.rm = T) # CHECK: same descriptive statistics as 
 mean(data_panel$lm2_pop6amz, na.rm = T) # CHECK: same descriptive statistics as STATA output
 mean(data_panel$lm2_msexism, na.rm = T) # CHECK: same descriptive statistics as STATA output
 
-# ... we finalize the procedure by eliminating the created reference objects. The purpose of this step is to "clean" the working environmebt by getting rid of objects that will, not be used anymore ...
+# ... we finalize the procedure by eliminating the created reference objects. The purpose of this step is to "clean" the working environment by getting rid of objects that will, not be used anymore ...
 rm(list = c("reference6a_STATA", 
             "reference6b_STATA", 
             "reference6c_STATA", 
@@ -1892,11 +1892,11 @@ cat(Replication_Table_3)
 
 ## Analysis Part 1: Dichotomous Dependent Variable
 
-This initial part of our analysis examines whether the effect of sexism on support for the VOX party (operationalized as a respondent's intention to vote for this party) varies between women and men. For this initial part of our empirical analysis, we employ a dichotomous dependent variable measuring whether a respondent intends to cast a vote in favor of vox (coded as "0"), or in favor of another party (coded as "1"). 
+This initial part of our analysis examines whether the effect of sexism on support for the VOX party (operationalized as a respondent's intention to vote for this party) varies between women and men. For this initial part of our empirical analysis, we employ a dichotomous dependent variable measuring whether a respondent intends to cast a vote in favor of vox (coded as "1"), or in favor of another party (coded as "0"). 
 
-However, the binary dependent variable we use for our analysis differs from the one used by Anduiza & Rico in one major way, While Anduiza & Rico employ a variable taking the value of 1 for respondents intending to vote for VOX and a value of 0 otherwise, their measurement fails to distinguish between instances where respondents actually intend to cast a valid vote (either for VOX or for another party) and cases where respondents do not intend to either cast a valid vote or to vote at all. 
+However, the binary dependent variable we use for our analysis differs from the one used by Anduiza & Rico (2022) in one major way. While Anduiza & Rico (2022) employ a variable taking the value of 1 for respondents intending to vote for VOX and a value of 0 otherwise, their measurement fails to distinguish between instances where respondents actually intend to cast a valid vote (either for VOX or for another party) and cases where respondents do not intend to either cast a valid vote or to vote at all. 
 
-To account for possible nonvoters, we refine the measurement used by Anduiza & Rico and generate the binary variable "affirmative_vox" coded as 1 for respondents intending to vote for VOX and 0 otherwise. However, for cases in which respondents intend to cast a blank or null vote, not to cast any vote, not to vote for any of the suggested parties, or do not know for which party to vote, the variable take a missing value. The purpose of this finer operationalization of vote intention is to distinguish between voter (and regardless of the direction of their support) with an intention to cast a vote and potential nonvoters. 
+To account for possible nonvoters (and to limit our analysis exclusively to potential voters), we refine the measurement used by Anduiza & Rico (2022) and generate the binary variable "affirmative_vox" coded as 1 for respondents intending to vote for VOX and 0 otherwise. However, for cases in which respondents intend to cast a blank or null vote, not to cast any vote, not to vote for any of the suggested parties, or do not know for which party to vote, the variable takes a missing value. The purpose of this finer operationalization of vote intention is to distinguish between voters with an intention to cast a vote (regardless of the direction of their intended support) and potential nonvoters. 
 
 Before starting with the analysis, the dependent variable "affirmative_vox" is generated. 
 
@@ -1921,15 +1921,17 @@ Having generated the dependent variable, we proceed with the conduction of our e
 ### Analysis Part 1.1: Specification from Table 2
 
 This initial part of the analysis consists of the following sub-section: 
-     1.1: We initiate by defining the dependent and independent variables (both models). 
-     1.2: We then optimize the log-likelihood functions given the inputs defined in step 1.1 (both models).
-     1.3: We display the results in a nice-formatted table (both models).
-     1.4: Using the results from part 1.2, we estimate Quantities of Interest (QoI's):
-        1.4.1: Definition of the Simulation Function 
-        1.4.2: Predicted Probabilities
-        1.4.3: First Differences 
-    
-```{r Part 1.1.: Definition of Dependent and Independent Variables}
+     1.1.1: We initiate by defining the dependent and independent variables (both models). 
+     1.1.2: We then optimize the log-likelihood functions given the inputs defined in step 1.1 (both models).
+     1.1.3: We display the results in a nice-formatted table (both models).
+     1.1.4: We define the Simulation Function for the estimation of the Quantities of Interest. 
+     1.1.5: Definition of the Number of Simulations.
+     1.1.6: Definition of Scenarios.
+     1.1.7: Estimation of Predicted Probabilities Using the Average Value Approach.
+     1.1.8: Estimation of First Differences.
+     1.1.9: Estimation of First Differences Using the Observed Value Approach
+
+```{r Part 1.1.1: Definition of Dependent and Independent Variables}
 
 # .............................................................................#
 # ............................... MODEL 1 (2019) ..............................#
@@ -2055,7 +2057,7 @@ X_m2E1 <- as.matrix(sapply(X_m2E1, as.numeric))
 
 ```
 
-```{r Part 1.2.: Optimization of Logit-Log-Likelihood Functions}
+```{r Part 1.1.2: Optimization of Logit-Log-Likelihood Functions}
 
 # .............................................................................#
 # ............................... MODEL 1 (2019) ..............................#
@@ -2141,7 +2143,7 @@ N_m2E1 <- length(Y_m2E1)
 
 ```
 
-```{r Part 1.3.: Display and Visualization of Regression Results}
+```{r Part 1.1.3: Display and Visualization of Regression Results}
 
 # Having obtained the values for the parameters of interest, this part generates a nice-looking table to display the results of the two logistic regressions. 
 
@@ -2237,7 +2239,6 @@ kable(results_m2E1,
                               )
       )
 
-
 # .............................................................................#
 # ................ Joint Display MODELS 1 & 2 (2019 and 2020) .................#
 # .............................................................................#
@@ -2317,7 +2318,7 @@ cat(Analysis_Table_2)
 
 ```
 
-```{r Part 1.4.1: Definition of the Simlation Function}
+```{r Part 1.1.4: Definition of the Simlation Function}
 
 # ... before defining the Simulation Function, we initiate by defining the "response function" ...
 response_function <- function(x) {
@@ -2365,7 +2366,7 @@ sim_function <-
 
 ```
 
-```{r Part 1.4.2: Definition of the Key Quantities and Distributions for Simlation}
+```{r Part 1.1.5: Definition of the Number of Simlations}
 
 # Before initiating the conduction of the simulations, we first define a series of key quantities and distributions.
 
@@ -2374,20 +2375,8 @@ library(MASS) # ... we require the package "MASS" to conduct the draws from the 
 # ... we define the number of simulations that will be carried out ...
 n_simulations <- 1000 # 
 
-# ... and then define the corresponding variance-covariance matrices for models 1 and 2 (respectively) ...
-varcov_m1E1 <- solve(-res2_m1E1$hessian)
-varcov_m2E1 <- solve(-res2_m2E1$hessian)
-
-# ... having conducted the previous steps, we set up the sampling distribution for each of the two models ...
-S_m1E1 <- mvrnorm(n_simulations, res2_m1E1$par, varcov_m1E1) # ... for model 1 ...
-S_m2E1 <- mvrnorm(n_simulations, res2_m2E1$par, varcov_m2E1) # ... for model 2 ...
-
-# ... we finalize by inspecting the dimensions of the objects "S_m1E1" and "S_m1E1" ...
-dim(S_m1E1) # ... for model 1 ...
-dim(S_m2E1) # ... for model 2 ...
-
 ```
-```{r Part 1.4.3: Definition of Scenarios}
+```{r Part 1.1.6: Definition of Scenarios}
 
 # .............................................................................#
 # ............................... MODEL 1 (2019) ..............................#
@@ -2507,7 +2496,7 @@ sim_men_m2E1 <- sim_function(coefs = res2_m2E1$par,
 
 ```
 
-```{r Part 1.4.4: Estimation of Predicted Probabilities Using the Average Value Approach}
+```{r Part 1.1.7: Estimation of Predicted Probabilities Using the Average Value Approach}
 
 par(mfrow = c(1, 2)) # This will allow us to display the predicted probabilities for the two models side by side ...
 
@@ -2599,7 +2588,7 @@ rug(jitter(data_panel_m2E1$lm2_msexism[data_panel_m2E1$lm2_msexism <= 150], 0.1)
 
 #_____________________________________________________________________________#
 # ... the following command lines save the generated plots into a single PDF-file ...
-dev.copy2pdf(file = ("Predicted_Probabilities.pdf"), 
+dev.copy2pdf(file = ("Predicted_Probabilities_E1.pdf"), 
              family = "Times", 
              width = 12, 
              height=6)
@@ -2607,7 +2596,7 @@ dev.copy2pdf(file = ("Predicted_Probabilities.pdf"),
 
 ```
 
-```{r Part 1.4.4: Estimation of First Differences}
+```{r Part 1.1.8: Estimation of First Differences}
 
 par(mfrow = c(1, 2)) # This will allow us to display the First Differences for the two models side by side ...
 
@@ -2618,12 +2607,12 @@ par(mfrow = c(1, 2)) # This will allow us to display the First Differences for t
 # ... we initiate by estimating the first differences ...
 fd_m1E1 <- sim_women_m1E1 - sim_men_m1E1
 
-# ... we then generate the disply plot ...
+# ... we then generate the display plot ...
 plot(x = sexism_seq_m1E1,
      y = apply(fd_m1E1, 2, mean),
      type = "n",
      lwd = 2,
-     main = "First Difference (2019)", 
+     main = "First Difference Women - Men (2019)", 
      cex.main = 0.7,
      xlab = "Level of Individual Prior Sexism",
      ylab = "FD", 
@@ -2669,7 +2658,7 @@ plot(x = sexism_seq_m2E1,
      y = apply(fd_m2E1, 2, mean),
      type = "n",
      lwd = 2,
-     main = "First Difference (2020)", 
+     main = "First Difference Women - Men (2020)", 
      cex.main = 0.7,
      xlab = "Level of Individual Prior Sexism",
      ylab = "FD", 
@@ -2705,7 +2694,7 @@ abline(h = 0,
 
 #_____________________________________________________________________________#
 # ... the following command lines save the generated plots into a single PDF-file ...
-dev.copy2pdf(file = ("First_Differences_AVA.pdf"), 
+dev.copy2pdf(file = ("First_Differences_AVA_E1.pdf"), 
              family = "Times", 
              width = 12, 
              height=6)
@@ -2713,121 +2702,1204 @@ dev.copy2pdf(file = ("First_Differences_AVA.pdf"),
 
 ```
 
-```{r Part 1.4.4: Estimation of Predicted Probabilities Using the Observed Value Approach}
+```{r Part 1.1.9: Estimation of First Differences Using the Observed Value Approach}
 
-# More than one scenario in an array.
-# 3D array of dim nrow(X), ncol(X), 2
-cases <- array(NA, c(dim(X_m1E1), 2))
+# .............................................................................#
+# ............................... MODEL 1 (2019) ..............................#
+# .............................................................................#
+
+# ... we generate a 3D array with as many rows as there are observations (nrow(X)), as many columns as there are covariates in the X-matrix (ncol(X)), and a depth of 2 for each of the two scenarios that will be taken into account ...
+cases_m1E1 <- array(NA, c(dim(X_m1E1), 2))  
 
 # assign X values to all dimensions of cases 
 # ie we get two identical layers of X matrices  
-cases[, ,] <- X_m1E1
+cases_m1E1[, ,] <- X_m1E1
 
 # select the columns to adjust for simulation 
-sel1 <- which(colnames(X_m1E1) == "female")
-sel2 <- which(colnames(X_m1E1) == "int_m1E1")
+sel1_m1E1 <- which(colnames(X_m1E1) == "female")
+sel2_m1E1 <- which(colnames(X_m1E1) == "int_m1E1")
 
 # assign 0 to "female" column in layer 1
-cases[, sel1, 1] <- 0
+cases_m1E1[, sel1_m1E1, 1] <- 0
 # assign 1 to female column in layer 2
-cases[, sel1, 2] <- 1
+cases_m1E1[, sel1_m1E1, 2] <- 1
 
 # assign 0 to interaction ("int_m1E1") column in layer 1
-cases[, sel2, 1] <- 0*X_m1E1[, "female"]
-# assign "safety" value to interaction column in layer 2
-cases[, sel2, 2] <- 1*X_m1E1[, "female"]
+cases_m1E1[, sel2_m1E1, 1] <- 0*X_m1E1[, "female"]
+# assign "female" value to interaction column in layer 2
+cases_m1E1[, sel2_m1E1, 2] <- 1*X_m1E1[, "female"]
 
 # Loop over the matrices.
-val <- matrix(NA, nrow = nsim, ncol = 2)
+val_m1E1 <- matrix(NA, nrow = n_simulations, ncol = 2)
 
 # for each layer in cases (third dimension)
 for(i in 1:2) {
-  ev <- sim_function(
-      coefs = res2_m1E1$par,
-      vcov = solve(-res2_m1E1$hessian),
-      response_function = response_function,
-      stochastic_component = stochastic_component,
-      scenario = cases[,,i],
-      predicted_values = F
-    )$ev
+  ev_m1E1 <- sim_function(coefs = res2_m1E1$par,
+                          vcov = solve(-res2_m1E1$hessian),
+                          response_function = response_function,
+                          stochastic_component = stochastic_component,
+                          scenario = cases_m1E1[,,i],
+                          predicted_values = F
+                          )$ev
   
-  tmp_val <- apply(ev, 1, mean)
-  val[, i] <- tmp_val
+  tmp_val_m1E1 <- apply(ev_m1E1, 1, mean)
+  val_m1E1[, i] <- tmp_val_m1E1
 }
 
-fd <- val[, 1] - val[, 2]
+# ... we then estimate the first differences and store these in an object called "fd_m1E1" ...
+fd_m1E1 <- val_m1E1[, 1] - val_m1E1[, 2]
 
-###############################
-par(mfrow = c(1, 2))
+# ... we then proceed to generate the plots for a better visualization of the results ...
+par(mfrow = c(1, 2)) # This will allow us to display the First Differences for the two models side by side ...
 
-
-# Plot the histogram
+# ... we first plot the histogram ...
 hist(
-  fd,
+  fd_m1E1,
   breaks = 20,
-  main = "Histogram of Simulated First Differences",
+  main = "Histogram of Simulated First Differences (2019)",
   xlab = "First Difference",
   las = 1,
-  col = "lightpink",
+  col = "lightblue",
   border = "white"
 )
 
 # Add a line for the mean of the first differences
-abline(v = mean(fd), 
+abline(v = mean(fd_m1E1), 
        col = "black",
        lwd = 2)
 
 # Add dashed lines for the 2.5% and 97.5% quantiles
-abline(v = quantile(fd, c(0.025, 0.975)),
+abline(v = quantile(fd_m1E1, c(0.025, 0.975)),
        col = "black",
        lty = "dashed",
        lwd = 2)
 
 # Optionally, add text annotations for the mean and quantiles
-text(mean(fd), par("usr")[4] * 0.9, labels = paste("Mean:", round(mean(fd), 3)), col = "black", pos = 4)
-text(quantile(fd, 0.025), par("usr")[4] * 0.8, labels = paste("2.5%:", round(quantile(fd, 0.025), 3)), col = "black", pos = 4)
-text(quantile(fd, 0.975), par("usr")[4] * 0.8, labels = paste("97.5%:", round(quantile(fd, 0.975), 3)), col = "black", pos = 4)
+text(mean(fd_m1E1), par("usr")[4] * 0.9, labels = paste("Mean:", round(mean(fd_m1E1), 3)), col = "black", pos = 4)
+text(quantile(fd_m1E1, 0.025), par("usr")[4] * 0.8, labels = paste("2.5%:", round(quantile(fd_m1E1, 0.025), 3)), col = "black", pos = 4)
+text(quantile(fd_m1E1, 0.975), par("usr")[4] * 0.8, labels = paste("97.5%:", round(quantile(fd_m1E1, 0.975), 3)), col = "black", pos = 4)
 
-
-# Assuming fd is a vector of simulated first differences
-
-# Generate the density plot
+# ... and we then generate a density plot ...
 plot(
-  density(fd),
-  main = "Density Plot of Simulated First Differences",
+  density(fd_m1E1),
+  main = "Density Plot of Simulated First Differences (2019)",
   xlab = "First Difference",
   ylab = "Density",
   las = 1,
-  col = "lightpink",
+  col = "lightblue",
   lwd = 2
 )
 
 # Add a line for the mean of the first differences
-abline(v = mean(fd), 
+abline(v = mean(fd_m1E1), 
        col = "black",
        lwd = 2)
 
 # Add dashed lines for the 2.5% and 97.5% quantiles
-abline(v = quantile(fd, c(0.025, 0.975)),
+abline(v = quantile(fd_m1E1, c(0.025, 0.975)),
        col = "black",
        lty = "dashed",
        lwd = 2)
 
 # Optionally, add text annotations for the mean and quantiles
-text(mean(fd), par("usr")[4] * 0.9, labels = paste("Mean:", round(mean(fd), 3)), col = "black", pos = 4)
-text(quantile(fd, 0.025), par("usr")[4] * 0.8, labels = paste("2.5%:", round(quantile(fd, 0.025), 3)), col = "black", pos = 4)
-text(quantile(fd, 0.975), par("usr")[4] * 0.8, labels = paste("97.5%:", round(quantile(fd, 0.975), 3)), col = "black", pos = 4)
+text(mean(fd_m1E1), par("usr")[4] * 0.9, labels = paste("Mean:", round(mean(fd_m1E1), 3)), col = "black", pos = 4)
+text(quantile(fd_m1E1, 0.025), par("usr")[4] * 0.8, labels = paste("2.5%:", round(quantile(fd_m1E1, 0.025), 3)), col = "black", pos = 4)
+text(quantile(fd_m1E1, 0.975), par("usr")[4] * 0.8, labels = paste("97.5%:", round(quantile(fd_m1E1, 0.975), 3)), col = "black", pos = 4)
+
+#_____________________________________________________________________________#
+# ... the following command lines save the generated plots into a single PDF-file ...
+dev.copy2pdf(file = ("First_Differences_OVA_m1E1.pdf"), 
+             family = "Times", 
+             width = 12, 
+             height=6)
+#_____________________________________________________________________________#
+
+# .............................................................................#
+# ............................... MODEL 2 (2020) ..............................#
+# .............................................................................#
+
+# ... we generate a 3D array with as many rows as there are observations (nrow(X)), as many columns as there are covariates in the X-matrix (ncol(X)), and a depth of 2 for each of the two scenarios that will be taken into account ...
+cases_m2E1 <- array(NA, c(dim(X_m2E1), 2))  
+
+# assign X values to all dimensions of cases 
+# ie we get two identical layers of X matrices  
+cases_m2E1[, ,] <- X_m2E1
+
+# select the columns to adjust for simulation 
+sel1_m2E1 <- which(colnames(X_m2E1) == "female")
+sel2_m2E1 <- which(colnames(X_m2E1) == "int_m2E1")
+
+# assign 0 to "female" column in layer 1
+cases_m2E1[, sel1_m2E1, 1] <- 0
+# assign 1 to female column in layer 2
+cases_m2E1[, sel1_m2E1, 2] <- 1
+
+# assign 0 to interaction ("int_m1E1") column in layer 1
+cases_m2E1[, sel2_m2E1, 1] <- 0*X_m2E1[, "female"]
+# assign "female" value to interaction column in layer 2
+cases_m2E1[, sel2_m2E1, 2] <- 1*X_m2E1[, "female"]
+
+# Loop over the matrices.
+val_m2E1 <- matrix(NA, nrow = n_simulations, ncol = 2)
+
+# for each layer in cases (third dimension)
+for(i in 1:2) {
+  ev_m2E1 <- sim_function(coefs = res2_m2E1$par,
+                          vcov = solve(-res2_m2E1$hessian),
+                          response_function = response_function,
+                          stochastic_component = stochastic_component,
+                          scenario = cases_m2E1[,,i],
+                          predicted_values = F
+                          )$ev
+  
+  tmp_val_m2E1 <- apply(ev_m2E1, 1, mean)
+  val_m2E1[, i] <- tmp_val_m2E1
+}
+
+# ... we then estimate the first differences and store these in an object called "fd_m1E1" ...
+fd_m2E1 <- val_m2E1[, 1] - val_m2E1[, 2]
+
+# ... we then proceed to generate the plots for a better visualization of the results ...
+# ... we first plot the histogram ...
+hist(
+  fd_m2E1,
+  breaks = 20,
+  main = "Histogram of Simulated First Differences (2020)",
+  xlab = "First Difference",
+  las = 1,
+  col = "lightblue",
+  border = "white"
+)
+
+# Add a line for the mean of the first differences
+abline(v = mean(fd_m2E1), 
+       col = "black",
+       lwd = 2)
+
+# Add dashed lines for the 2.5% and 97.5% quantiles
+abline(v = quantile(fd_m2E1, c(0.025, 0.975)),
+       col = "black",
+       lty = "dashed",
+       lwd = 2)
+
+# Optionally, add text annotations for the mean and quantiles
+text(mean(fd_m2E1), par("usr")[4] * 0.9, labels = paste("Mean:", round(mean(fd_m2E1), 3)), col = "black", pos = 4)
+text(quantile(fd_m2E1, 0.025), par("usr")[4] * 0.8, labels = paste("2.5%:", round(quantile(fd_m2E1, 0.025), 3)), col = "black", pos = 4)
+text(quantile(fd_m2E1, 0.975), par("usr")[4] * 0.8, labels = paste("97.5%:", round(quantile(fd_m2E1, 0.975), 3)), col = "black", pos = 4)
+
+# ... and we then generate a density plot ...
+plot(
+  density(fd_m2E1),
+  main = "Density Plot of Simulated First Differences (2020)",
+  xlab = "First Difference",
+  ylab = "Density",
+  las = 1,
+  col = "lightblue",
+  lwd = 2
+)
+
+# Add a line for the mean of the first differences
+abline(v = mean(fd_m2E1), 
+       col = "black",
+       lwd = 2)
+
+# Add dashed lines for the 2.5% and 97.5% quantiles
+abline(v = quantile(fd_m2E1, c(0.025, 0.975)),
+       col = "black",
+       lty = "dashed",
+       lwd = 2)
+
+# Optionally, add text annotations for the mean and quantiles
+text(mean(fd_m2E1), par("usr")[4] * 0.9, labels = paste("Mean:", round(mean(fd_m2E1), 3)), col = "black", pos = 4)
+text(quantile(fd_m2E1, 0.025), par("usr")[4] * 0.8, labels = paste("2.5%:", round(quantile(fd_m2E1, 0.025), 3)), col = "black", pos = 4)
+text(quantile(fd_m2E1, 0.975), par("usr")[4] * 0.8, labels = paste("97.5%:", round(quantile(fd_m2E1, 0.975), 3)), col = "black", pos = 4)
+
+#_____________________________________________________________________________#
+# ... the following command lines save the generated plots into a single PDF-file ...
+dev.copy2pdf(file = ("First_Differences_OVA_m2E1.pdf"), 
+             family = "Times", 
+             width = 12, 
+             height=6)
+#_____________________________________________________________________________#
+
+```
+
+### Analysis Part 1.2: Specification from Table 3
+
+The second part of the analysis consists of the following sub-section: 
+     1.2.1: We initiate by generating the interaction variables for each of the models. 
+     1.2.2: Estimation of the models including the generated interaction variables.
+     1.2.3: We display the results in a nice-formatted table (all four models).
+     1.2.4: Definition of Scenarios
+     
+     1.2.5: Estimation of Predicted Probabilities Using the Average Value Approach.
+     1.2.6: Estimation of First Differences.
+     1.2.7: Estimation of First Differences Using the Observed Value Approach
+
+``` {r Part 1.2.1: Generation of Interaction Variables}
+
+# ... This section generates the interaction variables for each of the four specifications that will be taken into account. Since the interaction variables for models 1 and 2, 3 and 4, and 5 and 6 are respectively the same, we only generate three interaction variables ...
+
+#______________________________________________________________________________#
+# ... interaction variable "int_m12E2" for Models 1 and 2 ...
+data_panel$int_m12E2 <- data_panel$female * data_panel$lsmsexism
+#______________________________________________________________________________#
+
+#______________________________________________________________________________#
+# ... interaction variable "int_m34E2" for Models 3 and 4 ...
+data_panel$int_m34E2 <- data_panel$female * data_panel$posmsex
+#______________________________________________________________________________#
+
+#______________________________________________________________________________#
+# ... interaction variable "int_m34E2" for Models 5 and 6 ...
+data_panel$int_m56E2 <- data_panel$female * data_panel$negmsex
+#______________________________________________________________________________#
+
+```
+
+``` {r Part 1.2.2: Estimation of the Models with Interaction Variables}
+
+library(brglm2) # we first require the package "brglm2" ...
+
+# .............................................................................#
+# .................................. MODEL 1 ..................................#
+# .............................................................................#
+# ... we first fit the regression for Model 1 ("m1_E2") ...
+m1_E2 <- glm(affirmative_vox ~              # Dependent Variable 
+               female +                     # Constitutive Term "female" 
+               age +                        #
+               edu3_2 +                     #
+               edu3_3 +                     #
+               dhincome_all +               #
+               livingpartner +              #
+               intpol +                     #
+               l2vim_vox +                  #
+               l2authoritarian +            #
+               l2ideol +                    #
+               l2nativism +                 #
+               l2orgterr +                  #
+               l2pop6amz +                  #
+               l2msexism +                  #
+               lsvim_vox +                  #
+               lsauthoritarian +            #
+               lsideol +                    #
+               lsnativism +                 #
+               lsorgterr +                  #
+               lspop6amz +                  #
+               lsmsexism +                  # Constitutive Term "lsmsexism" 
+               int_m12E2,                    # Interaction Term "int_m12E2"
+             family = binomial(logit), method = "brglmFit",  data = data_panel %>% filter(year == 2019))
 
 
+# ... we extract the estimated coefficients ...
+coefficients_m1_E2 <- coef(m1_E2)
+# ... as well as the resulting variance-covariance matrix ...
+summary_m1_E2 <- summary(m1_E2)
+vcov_m1_E2 <- summary_m1_E2$cov.unscaled
+
+# .............................................................................#
+# .................................. MODEL 2 ..................................#
+# .............................................................................#
+# ... then for Model 2 ("m2_E2") ...
+m2_E2 <- glm(affirmative_vox ~              # Dependent Variable 
+               female +                     # Constitutive Term "female" 
+               age +                        #
+               edu3_2 +                     #
+               edu3_3 +                     #
+               dhincome_all +               #
+               livingpartner +              #
+               intpol +                     #
+               l2vim_vox +                  #
+               l2authoritarian +            #
+               l2ideol +                    #
+               l2nativism +                 #
+               l2orgterr +                  #
+               l2pop6amz +                  #
+               l2msexism +                  #
+               lsvim_vox +                  #
+               lsauthoritarian +            #
+               lsideol +                    #
+               lsnativism +                 #
+               lsorgterr +                  #
+               lspop6amz +                  #
+               lsmsexism +                  # Constitutive Term "lsmsexism" 
+               int_m12E2,                    # Interaction Term "int_m12E2"
+             family = binomial(logit), method = "brglmFit",  data = data_panel %>% filter(year == 2020))
+
+# ... we extract the estimated coefficients ...
+coefficients_m2_E2 <- coef(m2_E2)
+# ... as well as the resulting variance-covariance matrix ...
+summary_m2_E2 <- summary(m2_E2)
+vcov_m2_E2 <- summary_m2_E2$cov.unscaled
+
+# .............................................................................#
+# .................................. MODEL 3 ..................................#
+# .............................................................................#
+## ... we continue with Model 3 ("m3_E2") ..
+m3_E2 <- glm(affirmative_vox ~              # Dependent Variable 
+               female +                     # Constitutive Term "female" 
+               age +                        #
+               edu3_2 +                     #
+               edu3_3 +                     #
+               dhincome_all +               #
+               livingpartner +              #
+               intpol +                     #
+               l2vim_vox +                  #
+               l2authoritarian +            #
+               l2ideol +                    #
+               l2nativism +                 #
+               l2orgterr +                  #
+               l2pop6amz +                  #
+               l2msexism +                  #
+               lsvim_vox +                  #
+               lsauthoritarian +            #
+               lsideol +                    #
+               lsnativism +                 #
+               lsorgterr +                  #
+               lspop6amz +                  #
+               posmsex +                    # Constitutive Term "posmsex" 
+               int_m34E2 +                   # Interaction Term "int_m34E2"
+               negmsex,                    
+             family = binomial(logit), method = "brglmFit",  data = data_panel %>% filter(year == 2019))
+
+# ... we extract the estimated coefficients ...
+coefficients_m3_E2 <- coef(m3_E2)
+# ... as well as the resulting variance-covariance matrix ...
+summary_m3_E2 <- summary(m3_E2)
+vcov_m3_E2 <- summary_m3_E2$cov.unscaled
+
+# .............................................................................#
+# .................................. MODEL 4 ..................................#
+# .............................................................................#
+## ... and finalize with Model 4 ("m4_E2") ...
+m4_E2 <- glm(affirmative_vox ~              # Dependent Variable 
+               female +                     # Constitutive Term "female" 
+               age +                        #
+               edu3_2 +                     #
+               edu3_3 +                     #
+               dhincome_all +               #
+               livingpartner +              #
+               intpol +                     #
+               l2vim_vox +                  #
+               l2authoritarian +            #
+               l2ideol +                    #
+               l2nativism +                 #
+               l2orgterr +                  #
+               l2pop6amz +                  #
+               l2msexism +                  #
+               lsvim_vox +                  #
+               lsauthoritarian +            #
+               lsideol +                    #
+               lsnativism +                 #
+               lsorgterr +                  #
+               lspop6amz +                  #
+               posmsex +                    # Constitutive Term "posmsex" 
+               int_m34E2 +                   # Interaction Term "int_m34E2"
+               negmsex,                    
+             family = binomial(logit), method = "brglmFit",  data = data_panel %>% filter(year == 2020))
+
+# ... we extract the estimated coefficients ...
+coefficients_m4_E2 <- coef(m4_E2)
+# ... as well as the resulting variance-covariance matrix ...
+summary_m4_E2 <- summary(m4_E2)
+vcov_m4_E2 <- summary_m4_E2$cov.unscaled
+
+# .............................................................................#
+# .................................. MODEL 5 ..................................#
+# .............................................................................#
+## ... we continue with Model 5 ("m5_E2") ..
+m5_E2 <- glm(affirmative_vox ~              # Dependent Variable 
+               female +                     # Constitutive Term "female" 
+               age +                        #
+               edu3_2 +                     #
+               edu3_3 +                     #
+               dhincome_all +               #
+               livingpartner +              #
+               intpol +                     #
+               l2vim_vox +                  #
+               l2authoritarian +            #
+               l2ideol +                    #
+               l2nativism +                 #
+               l2orgterr +                  #
+               l2pop6amz +                  #
+               l2msexism +                  #
+               lsvim_vox +                  #
+               lsauthoritarian +            #
+               lsideol +                    #
+               lsnativism +                 #
+               lsorgterr +                  #
+               lspop6amz +                  #
+               posmsex +                    # 
+               negmsex+                     # Constitutive Term "negmsex"
+               int_m56E2,                   # Interaction Term "int_m56E2" 
+             family = binomial(logit), method = "brglmFit",  data = data_panel %>% filter(year == 2019))
+
+# ... we extract the estimated coefficients ...
+coefficients_m5_E2 <- coef(m5_E2)
+# ... as well as the resulting variance-covariance matrix ...
+summary_m5_E2 <- summary(m5_E2)
+vcov_m5_E2 <- summary_m5_E2$cov.unscaled
+
+# .............................................................................#
+# .................................. MODEL 6 ..................................#
+# .............................................................................#
+## ... and finalize with Model 6 ("m6_E2") ...
+m6_E2 <- glm(affirmative_vox ~              # Dependent Variable 
+               female +                     # Constitutive Term "female" 
+               age +                        #
+               edu3_2 +                     #
+               edu3_3 +                     #
+               dhincome_all +               #
+               livingpartner +              #
+               intpol +                     #
+               l2vim_vox +                  #
+               l2authoritarian +            #
+               l2ideol +                    #
+               l2nativism +                 #
+               l2orgterr +                  #
+               l2pop6amz +                  #
+               l2msexism +                  #
+               lsvim_vox +                  #
+               lsauthoritarian +            #
+               lsideol +                    #
+               lsnativism +                 #
+               lsorgterr +                  #
+               lspop6amz +                  #
+               posmsex +                    # 
+               negmsex+                     # Constitutive Term "negmsex"
+               int_m56E2,                   # Interaction Term "int_m56E2" 
+             family = binomial(logit), method = "brglmFit",  data = data_panel %>% filter(year == 2020))
+
+# ... we extract the estimated coefficients ...
+coefficients_m6_E2 <- coef(m6_E2)
+# ... as well as the resulting variance-covariance matrix ...
+summary_m6_E2 <- summary(m6_E2)
+vcov_m6_E2 <- summary_m6_E2$cov.unscaled
+
+```
+
+``` {r Part 1.2.3: Display and Visualization of the Regression Results}
+
+# Load the stargazer library
+library(stargazer)
+
+# Generate the stargazer command
+stargazer(m1_E2, m2_E2, m3_E2, m4_E2, m5_E2,m6_E2, type = "text",
+          dep.var.caption = "", 
+          dep.var.labels.include = TRUE, 
+          column.labels = c("2019", "2020", "2019", "2020", "2019", "2020"), 
+          keep.stat = "n", 
+          star.char = c("+", "*", "**"), 
+          star.cutoffs = c(0.1, 0.05, 0.01),  
+          notes = c("+ p<0.1", 
+                    "* p<0.05", 
+                    "** p<0.01"), 
+          covariate.labels = c("Female", 
+                               "Age", 
+                               "Upper secondary", 
+                               "Tertiary", 
+                               "Income", 
+                               "Lives with partner", 
+                               "Interest in politics", 
+                               "Vox intention (t-2)", 
+                               "Authoritarianism (t-2)", 
+                               "Ideological identification (t-2)", 
+                               "Nativism (t-2)", 
+                               "Territorial preference (t-2)", 
+                               "Populism (t-2)", 
+                               "Sexism (t-2)", 
+                               "Vox intention (t-1 minus t-2)", 
+                               "Authoritarianism (t-1 minus t-2)", 
+                               "Ideological identification (t-1 minus t-2)", 
+                               "Nativism (t-1 minus t-2)", 
+                               "Territorial preference (t-1 minus t-2)", 
+                               "Populism (t-1 minus t-2)", 
+                               "Sexism (t-1 minus t-2)", 
+                               "Sexism (t-1 minus t-2) x Female",
+                               "Increase in sexism (t-1 minus t-2)", 
+                               "Increase in sexism (t-1 minus t-2) x Female",
+                               "Decrease in sexism (t-1 minus t-2)",
+                               "Decrease in sexism (t-1 minus t-2) x Female",
+                               "Intercept"), 
+          notes.append = FALSE, 
+          no.space = TRUE, 
+          title = "Effect of prior change in attitudes and vote intention on intended vote for Vox - interactions included")
+
+#______________________________________________________________________________#
+# ... this last section generates the La-Tex corresponding to Table 1 ...
+Table_E2 <- capture.output(
+  stargazer(m1_E2, m2_E2, m3_E2, m4_E2, m5_E2,m6_E2, type = "latex",
+          dep.var.caption = "", 
+          dep.var.labels.include = TRUE, 
+          column.labels = c("2019", "2020", "2019", "2020", "2019", "2020"), 
+          keep.stat = "n", 
+          star.char = c("+", "*", "**"), 
+          star.cutoffs = c(0.1, 0.05, 0.01),  
+          notes = c("+ p<0.1", 
+                    "* p<0.05", 
+                    "** p<0.01"), 
+          covariate.labels = c("Female", 
+                               "Age", 
+                               "Upper secondary", 
+                               "Tertiary", 
+                               "Income", 
+                               "Lives with partner", 
+                               "Interest in politics", 
+                               "Vox intention (t-2)", 
+                               "Authoritarianism (t-2)", 
+                               "Ideological identification (t-2)", 
+                               "Nativism (t-2)", 
+                               "Territorial preference (t-2)", 
+                               "Populism (t-2)", 
+                               "Sexism (t-2)", 
+                               "Vox intention (t-1 minus t-2)", 
+                               "Authoritarianism (t-1 minus t-2)", 
+                               "Ideological identification (t-1 minus t-2)", 
+                               "Nativism (t-1 minus t-2)", 
+                               "Territorial preference (t-1 minus t-2)", 
+                               "Populism (t-1 minus t-2)", 
+                               "Sexism (t-1 minus t-2)", 
+                               "Sexism (t-1 minus t-2) x Female",
+                               "Increase in sexism (t-1 minus t-2)", 
+                               "Increase in sexism (t-1 minus t-2) x Female",
+                               "Decrease in sexism (t-1 minus t-2)",
+                               "Decrease in sexism (t-1 minus t-2) x Female",
+                               "Intercept"), 
+          notes.append = FALSE, 
+          no.space = TRUE, 
+          title = "Effect of prior change in attitudes and vote intention on intended vote for Vox - interactions included"))
+
+# ... print the La-TeX code to the console ...
+cat(Table_E2)
+
+```
+
+```{r Part 1.2.4: Definition of Scenarios}
+
+# .............................................................................#
+# .................................. MODEL 1 ..................................#
+# .............................................................................#
+
+# ... we initiate by defining a sequence of the variable "lsmsexism" ranging from its minimum value to its maximum with a total of 1000 intervals in between. This same sequence will be used for the Model-1 as well as for the Model-2 simulations ... 
+lsmsexism_seq_m12E2 <- seq(min(data_panel$lsmsexism[!is.na(data_panel$lsmsexism)]),
+                          max(data_panel$lsmsexism[!is.na(data_panel$lsmsexism)]),
+                          length.out = 1000)
+
+# ... we then define the corresponding scenario ...
+scenario_w_m1E2 <- cbind(1,                                              # Intercept 
+                         0,                                              # Female = 1 
+                         mean(data_panel$age),                           # ...  
+                         median(data_panel$edu3_2),                      # ...
+                         median(data_panel$edu3_3),                      # ...
+                         mean(data_panel$dhincome_all, na.rm = T),       # ... 
+                         median(data_panel$livingpartner, na.rm = T),    # ... 
+                         mean(data_panel$intpol, na.rm = T),             # ... 
+                         median(data_panel$l2vim_vox , na.rm = T),       # ...
+                         mean(data_panel$l2authoritarian  , na.rm = T),  # ...
+                         mean(data_panel$l2ideol, na.rm = T),            # ...
+                         mean(data_panel$l2nativism, na.rm = T),         # ...
+                         mean(data_panel$l2orgterr, na.rm = T),          # ...
+                         mean(data_panel$l2pop6amz, na.rm = T),          # ...
+                         mean(data_panel$l2msexism, na.rm = T),          # ...
+                         median(data_panel$lsvim_vox, na.rm = T),        # ...
+                         mean(data_panel$lsauthoritarian, na.rm = T),    # ...
+                         mean(data_panel$lsideol, na.rm = T),            # ...
+                         mean(data_panel$lsnativism, na.rm = T),         # ...
+                         mean(data_panel$lsorgterr, na.rm = T),          # ...
+                         mean(data_panel$lspop6amz, na.rm = T),          # ...
+                         lsmsexism_seq_m12E2,                            # Sexism-Sequence 
+                         1 * lsmsexism_seq_m12E2                         # Interaction 
+                         )   
+
+scenario_m_m1E2 <- cbind(1,                                              # Intercept 
+                         0,                                              # Female = 0 
+                         mean(data_panel$age),                           # ...  
+                         median(data_panel$edu3_2),                      # ...
+                         median(data_panel$edu3_3),                      # ...
+                         mean(data_panel$dhincome_all, na.rm = T),       # ... 
+                         median(data_panel$livingpartner, na.rm = T),    # ... 
+                         mean(data_panel$intpol, na.rm = T),             # ... 
+                         median(data_panel$l2vim_vox , na.rm = T),       # ...
+                         mean(data_panel$l2authoritarian  , na.rm = T),  # ...
+                         mean(data_panel$l2ideol, na.rm = T),            # ...
+                         mean(data_panel$l2nativism, na.rm = T),         # ...
+                         mean(data_panel$l2orgterr, na.rm = T),          # ...
+                         mean(data_panel$l2pop6amz, na.rm = T),          # ...
+                         mean(data_panel$l2msexism, na.rm = T),          # ...
+                         median(data_panel$lsvim_vox, na.rm = T),        # ...
+                         mean(data_panel$lsauthoritarian, na.rm = T),    # ...
+                         mean(data_panel$lsideol, na.rm = T),            # ...
+                         mean(data_panel$lsnativism, na.rm = T),         # ...
+                         mean(data_panel$lsorgterr, na.rm = T),          # ...
+                         mean(data_panel$lspop6amz, na.rm = T),          # ...
+                         lsmsexism_seq_m12E2,                            # Sexism-Sequence 
+                         0 * lsmsexism_seq_m12E2                         # Interaction 
+                         )    
+
+# ... having defined he scenarios, we proceed to implement the Simulation Function, specifying the appropriate inputs for each of the two scenarios specified above ...
+sim_women_m1E2 <- sim_function(coefs = coefficients_m1_E2, 
+                              vcov = vcov_m1_E2, 
+                              scenario = scenario_w_m1E2, 
+                              response_function = response_function, 
+                              stochastic_component = stochastic_component)$ev
+
+sim_men_m1E2 <- sim_function(coefs = coefficients_m1_E2, 
+                             vcov = vcov_m1_E2, 
+                             scenario = scenario_m_m1E2, 
+                             response_function = response_function, 
+                             stochastic_component = stochastic_component)$ev
+
+# .............................................................................#
+# .................................. MODEL 2 ..................................#
+# .............................................................................#
+
+# ... we then define the corresponding scenario ...
+scenario_w_m2E2 <- cbind(1,                                              # Intercept 
+                         1,                                              # Female = 1 
+                         mean(data_panel$age),                           # ...  
+                         median(data_panel$edu3_2),                      # ...
+                         median(data_panel$edu3_3),                      # ...
+                         mean(data_panel$dhincome_all, na.rm = T),       # ... 
+                         median(data_panel$livingpartner, na.rm = T),    # ... 
+                         mean(data_panel$intpol, na.rm = T),             # ... 
+                         median(data_panel$l2vim_vox , na.rm = T),       # ...
+                         mean(data_panel$l2authoritarian  , na.rm = T),  # ...
+                         mean(data_panel$l2ideol, na.rm = T),            # ...
+                         mean(data_panel$l2nativism, na.rm = T),         # ...
+                         mean(data_panel$l2orgterr, na.rm = T),          # ...
+                         mean(data_panel$l2pop6amz, na.rm = T),          # ...
+                         mean(data_panel$l2msexism, na.rm = T),          # ...
+                         median(data_panel$lsvim_vox, na.rm = T),        # ...
+                         mean(data_panel$lsauthoritarian, na.rm = T),    # ...
+                         mean(data_panel$lsideol, na.rm = T),            # ...
+                         mean(data_panel$lsnativism, na.rm = T),         # ...
+                         mean(data_panel$lsorgterr, na.rm = T),          # ...
+                         mean(data_panel$lspop6amz, na.rm = T),          # ...
+                         lsmsexism_seq_m12E2,                            # Sexism-Sequence 
+                         1 * lsmsexism_seq_m12E2                         # Interaction 
+                         )   
+
+scenario_m_m2E2 <- cbind(1,                                              # Intercept 
+                         0,                                              # Female = 0 
+                         mean(data_panel$age),                           # ...  
+                         median(data_panel$edu3_2),                      # ...
+                         median(data_panel$edu3_3),                      # ...
+                         mean(data_panel$dhincome_all, na.rm = T),       # ... 
+                         median(data_panel$livingpartner, na.rm = T),    # ... 
+                         mean(data_panel$intpol, na.rm = T),             # ... 
+                         median(data_panel$l2vim_vox , na.rm = T),       # ...
+                         mean(data_panel$l2authoritarian  , na.rm = T),  # ...
+                         mean(data_panel$l2ideol, na.rm = T),            # ...
+                         mean(data_panel$l2nativism, na.rm = T),         # ...
+                         mean(data_panel$l2orgterr, na.rm = T),          # ...
+                         mean(data_panel$l2pop6amz, na.rm = T),          # ...
+                         mean(data_panel$l2msexism, na.rm = T),          # ...
+                         median(data_panel$lsvim_vox, na.rm = T),        # ...
+                         mean(data_panel$lsauthoritarian, na.rm = T),    # ...
+                         mean(data_panel$lsideol, na.rm = T),            # ...
+                         mean(data_panel$lsnativism, na.rm = T),         # ...
+                         mean(data_panel$lsorgterr, na.rm = T),          # ...
+                         mean(data_panel$lspop6amz, na.rm = T),          # ...
+                         lsmsexism_seq_m12E2,                            # Sexism-Sequence 
+                         0 * lsmsexism_seq_m12E2                          # Interaction 
+                         )    
+
+# ... having defined he scenarios, we proceed to implement the Simulation Function, specifying the appropriate inputs for each of the two scenarios specified above ...
+sim_women_m2E2 <- sim_function(coefs = coefficients_m2_E2, 
+                              vcov = vcov_m2_E2, 
+                              scenario = scenario_w_m2E2, 
+                              response_function = response_function, 
+                              stochastic_component = stochastic_component)$ev
+
+sim_men_m2E2 <- sim_function(coefs = coefficients_m2_E2, 
+                             vcov = vcov_m2_E2, 
+                             scenario = scenario_m_m2E2, 
+                             response_function = response_function, 
+                             stochastic_component = stochastic_component)$ev
+
+# .............................................................................#
+# .................................. MODEL 3 ..................................#
+# .............................................................................#
+
+# ... we initiate by defining a sequence of the variable "posmsex" ranging from its minimum value to its maximum with a total of 1000 intervals in between. This same sequence will be used for the Model-3 as well as for the Model-4 simulations ... 
+posmsex_seq_m34E2 <- seq(min(data_panel$posmsex[!is.na(data_panel$posmsex)]),
+                          max(data_panel$posmsex[!is.na(data_panel$posmsex)]),
+                          length.out = 1000)
+
+# ... we then define the corresponding scenario ...
+scenario_w_m3E2 <- cbind(1,                                              # Intercept 
+                         1,                                              # Female = 1 
+                         mean(data_panel$age),                           # ...  
+                         median(data_panel$edu3_2),                      # ...
+                         median(data_panel$edu3_3),                      # ...
+                         mean(data_panel$dhincome_all, na.rm = T),       # ... 
+                         median(data_panel$livingpartner, na.rm = T),    # ... 
+                         mean(data_panel$intpol, na.rm = T),             # ... 
+                         median(data_panel$l2vim_vox , na.rm = T),       # ...
+                         mean(data_panel$l2authoritarian  , na.rm = T),  # ...
+                         mean(data_panel$l2ideol, na.rm = T),            # ...
+                         mean(data_panel$l2nativism, na.rm = T),         # ...
+                         mean(data_panel$l2orgterr, na.rm = T),          # ...
+                         mean(data_panel$l2pop6amz, na.rm = T),          # ...
+                         mean(data_panel$l2msexism, na.rm = T),          # ...
+                         median(data_panel$lsvim_vox, na.rm = T),        # ...
+                         mean(data_panel$lsauthoritarian, na.rm = T),    # ...
+                         mean(data_panel$lsideol, na.rm = T),            # ...
+                         mean(data_panel$lsnativism, na.rm = T),         # ...
+                         mean(data_panel$lsorgterr, na.rm = T),          # ...
+                         mean(data_panel$lspop6amz, na.rm = T),          # ...  
+                         posmsex_seq_m34E2,                              # posmsex-sequence
+                         1 * posmsex_seq_m34E2,                          # Interaction
+                         mean(data_panel$negmsex, na.rm = T)             # ...
+                         )   
+
+scenario_m_m3E2 <- cbind(1,                                              # Intercept 
+                         1,                                              # Female = 0 
+                         mean(data_panel$age),                           # ...  
+                         median(data_panel$edu3_2),                      # ...
+                         median(data_panel$edu3_3),                      # ...
+                         mean(data_panel$dhincome_all, na.rm = T),       # ... 
+                         median(data_panel$livingpartner, na.rm = T),    # ... 
+                         mean(data_panel$intpol, na.rm = T),             # ... 
+                         median(data_panel$l2vim_vox , na.rm = T),       # ...
+                         mean(data_panel$l2authoritarian  , na.rm = T),  # ...
+                         mean(data_panel$l2ideol, na.rm = T),            # ...
+                         mean(data_panel$l2nativism, na.rm = T),         # ...
+                         mean(data_panel$l2orgterr, na.rm = T),          # ...
+                         mean(data_panel$l2pop6amz, na.rm = T),          # ...
+                         mean(data_panel$l2msexism, na.rm = T),          # ...
+                         median(data_panel$lsvim_vox, na.rm = T),        # ...
+                         mean(data_panel$lsauthoritarian, na.rm = T),    # ...
+                         mean(data_panel$lsideol, na.rm = T),            # ...
+                         mean(data_panel$lsnativism, na.rm = T),         # ...
+                         mean(data_panel$lsorgterr, na.rm = T),          # ...
+                         mean(data_panel$lspop6amz, na.rm = T),          # ...  
+                         posmsex_seq_m34E2,                              # posmsex-sequence
+                         0 * posmsex_seq_m34E2,                          # Interaction
+                         mean(data_panel$negmsex, na.rm = T)             # ...
+                         ) 
+
+# ... having defined he scenarios, we proceed to implement the Simulation Function, specifying the appropriate inputs for each of the two scenarios specified above ...
+sim_women_m3E2 <- sim_function(coefs = coefficients_m3_E2, 
+                              vcov = vcov_m3_E2, 
+                              scenario = scenario_w_m3E2, 
+                              response_function = response_function, 
+                              stochastic_component = stochastic_component)$ev
+
+sim_men_m3E2 <- sim_function(coefs = coefficients_m3_E2, 
+                             vcov = vcov_m3_E2, 
+                             scenario = scenario_m_m3E2, 
+                             response_function = response_function, 
+                             stochastic_component = stochastic_component)$ev
+
+# .............................................................................#
+# .................................. MODEL 4 ..................................#
+# .............................................................................#
+
+# ... we then define the corresponding scenario ...
+scenario_w_m4E2 <- cbind(1,                                              # Intercept 
+                         1,                                              # Female = 1 
+                         mean(data_panel$age),                           # ...  
+                         median(data_panel$edu3_2),                      # ...
+                         median(data_panel$edu3_3),                      # ...
+                         mean(data_panel$dhincome_all, na.rm = T),       # ... 
+                         median(data_panel$livingpartner, na.rm = T),    # ... 
+                         mean(data_panel$intpol, na.rm = T),             # ... 
+                         median(data_panel$l2vim_vox , na.rm = T),       # ...
+                         mean(data_panel$l2authoritarian  , na.rm = T),  # ...
+                         mean(data_panel$l2ideol, na.rm = T),            # ...
+                         mean(data_panel$l2nativism, na.rm = T),         # ...
+                         mean(data_panel$l2orgterr, na.rm = T),          # ...
+                         mean(data_panel$l2pop6amz, na.rm = T),          # ...
+                         mean(data_panel$l2msexism, na.rm = T),          # ...
+                         median(data_panel$lsvim_vox, na.rm = T),        # ...
+                         mean(data_panel$lsauthoritarian, na.rm = T),    # ...
+                         mean(data_panel$lsideol, na.rm = T),            # ...
+                         mean(data_panel$lsnativism, na.rm = T),         # ...
+                         mean(data_panel$lsorgterr, na.rm = T),          # ...
+                         mean(data_panel$lspop6amz, na.rm = T),          # ...  
+                         posmsex_seq_m34E2,                              # posmsex-sequence
+                         1 * posmsex_seq_m34E2,                          # Interaction
+                         mean(data_panel$negmsex, na.rm = T)             # ...
+                         )   
+
+scenario_m_m4E2 <- cbind(1,                                              # Intercept 
+                         1,                                              # Female = 0 
+                         mean(data_panel$age),                           # ...  
+                         median(data_panel$edu3_2),                      # ...
+                         median(data_panel$edu3_3),                      # ...
+                         mean(data_panel$dhincome_all, na.rm = T),       # ... 
+                         median(data_panel$livingpartner, na.rm = T),    # ... 
+                         mean(data_panel$intpol, na.rm = T),             # ... 
+                         median(data_panel$l2vim_vox , na.rm = T),       # ...
+                         mean(data_panel$l2authoritarian  , na.rm = T),  # ...
+                         mean(data_panel$l2ideol, na.rm = T),            # ...
+                         mean(data_panel$l2nativism, na.rm = T),         # ...
+                         mean(data_panel$l2orgterr, na.rm = T),          # ...
+                         mean(data_panel$l2pop6amz, na.rm = T),          # ...
+                         mean(data_panel$l2msexism, na.rm = T),          # ...
+                         median(data_panel$lsvim_vox, na.rm = T),        # ...
+                         mean(data_panel$lsauthoritarian, na.rm = T),    # ...
+                         mean(data_panel$lsideol, na.rm = T),            # ...
+                         mean(data_panel$lsnativism, na.rm = T),         # ...
+                         mean(data_panel$lsorgterr, na.rm = T),          # ...
+                         mean(data_panel$lspop6amz, na.rm = T),          # ...  
+                         posmsex_seq_m34E2,                              # posmsex-sequence
+                         0 * posmsex_seq_m34E2,                          # Interaction
+                         mean(data_panel$negmsex, na.rm = T)             # ...
+                         ) 
+
+# ... having defined he scenarios, we proceed to implement the Simulation Function, specifying the appropriate inputs for each of the two scenarios specified above ...
+sim_women_m4E2 <- sim_function(coefs = coefficients_m4_E2, 
+                              vcov = vcov_m4_E2, 
+                              scenario = scenario_w_m4E2, 
+                              response_function = response_function, 
+                              stochastic_component = stochastic_component)$ev
+
+sim_men_m4E2 <- sim_function(coefs = coefficients_m4_E2, 
+                             vcov = vcov_m4_E2, 
+                             scenario = scenario_m_m4E2, 
+                             response_function = response_function, 
+                             stochastic_component = stochastic_component)$ev
+
+# .............................................................................#
+# .................................. MODEL 5 ..................................#
+# .............................................................................#
+
+# ... we initiate by defining a sequence of the variable "negmsex" ranging from its minimum value to its maximum with a total of 1000 intervals in between. This same sequence will be used for the Model-5 as well as for the Model-6 simulations ... 
+negmsex_seq_m56E2 <- seq(min(data_panel$negmsex[!is.na(data_panel$negmsex)]),
+                          max(data_panel$negmsex[!is.na(data_panel$negmsex)]),
+                          length.out = 1000)
+
+# ... we then define the corresponding scenario ...
+scenario_w_m5E2 <- cbind(1,                                              # Intercept 
+                         1,                                              # Female = 1 
+                         mean(data_panel$age),                           # ...  
+                         median(data_panel$edu3_2),                      # ...
+                         median(data_panel$edu3_3),                      # ...
+                         mean(data_panel$dhincome_all, na.rm = T),       # ... 
+                         median(data_panel$livingpartner, na.rm = T),    # ... 
+                         mean(data_panel$intpol, na.rm = T),             # ... 
+                         median(data_panel$l2vim_vox , na.rm = T),       # ...
+                         mean(data_panel$l2authoritarian  , na.rm = T),  # ...
+                         mean(data_panel$l2ideol, na.rm = T),            # ...
+                         mean(data_panel$l2nativism, na.rm = T),         # ...
+                         mean(data_panel$l2orgterr, na.rm = T),          # ...
+                         mean(data_panel$l2pop6amz, na.rm = T),          # ...
+                         mean(data_panel$l2msexism, na.rm = T),          # ...
+                         median(data_panel$lsvim_vox, na.rm = T),        # ...
+                         mean(data_panel$lsauthoritarian, na.rm = T),    # ...
+                         mean(data_panel$lsideol, na.rm = T),            # ...
+                         mean(data_panel$lsnativism, na.rm = T),         # ...
+                         mean(data_panel$lsorgterr, na.rm = T),          # ...
+                         mean(data_panel$lspop6amz, na.rm = T),          # ...
+                         mean(data_panel$posmsex , na.rm = T),           # ...
+                         negmsex_seq_m56E2,                              # negmsex-sequence
+                         1 * negmsex_seq_m56E2                           # Interaction  
+                         )   
+
+scenario_m_m5E2 <- cbind(1,                                              # Intercept 
+                         0,                                              # Female = 0 
+                         mean(data_panel$age),                           # ...  
+                         median(data_panel$edu3_2),                      # ...
+                         median(data_panel$edu3_3),                      # ...
+                         mean(data_panel$dhincome_all, na.rm = T),       # ... 
+                         median(data_panel$livingpartner, na.rm = T),    # ... 
+                         mean(data_panel$intpol, na.rm = T),             # ... 
+                         median(data_panel$l2vim_vox , na.rm = T),       # ...
+                         mean(data_panel$l2authoritarian  , na.rm = T),  # ...
+                         mean(data_panel$l2ideol, na.rm = T),            # ...
+                         mean(data_panel$l2nativism, na.rm = T),         # ...
+                         mean(data_panel$l2orgterr, na.rm = T),          # ...
+                         mean(data_panel$l2pop6amz, na.rm = T),          # ...
+                         mean(data_panel$l2msexism, na.rm = T),          # ...
+                         median(data_panel$lsvim_vox, na.rm = T),        # ...
+                         mean(data_panel$lsauthoritarian, na.rm = T),    # ...
+                         mean(data_panel$lsideol, na.rm = T),            # ...
+                         mean(data_panel$lsnativism, na.rm = T),         # ...
+                         mean(data_panel$lsorgterr, na.rm = T),          # ...
+                         mean(data_panel$lspop6amz, na.rm = T),          # ...
+                         mean(data_panel$posmsex , na.rm = T),           # ...
+                         negmsex_seq_m56E2,                              # negmsex-sequence
+                         0 * negmsex_seq_m56E2                          # Interaction  
+                         )   
+
+# ... having defined he scenarios, we proceed to implement the Simulation Function, specifying the appropriate inputs for each of the two scenarios specified above ...
+sim_women_m5E2 <- sim_function(coefs = coefficients_m5_E2, 
+                              vcov = vcov_m5_E2, 
+                              scenario = scenario_w_m5E2, 
+                              response_function = response_function, 
+                              stochastic_component = stochastic_component)$ev
+
+sim_men_m5E2 <- sim_function(coefs = coefficients_m5_E2, 
+                             vcov = vcov_m5_E2, 
+                             scenario = scenario_m_m5E2, 
+                             response_function = response_function, 
+                             stochastic_component = stochastic_component)$ev
+
+# .............................................................................#
+# .................................. MODEL 6 ..................................#
+# .............................................................................#
+
+# ... we then define the corresponding scenario ...
+scenario_w_m6E2 <- cbind(1,                                              # Intercept 
+                         1,                                              # Female = 1 
+                         mean(data_panel$age),                           # ...  
+                         median(data_panel$edu3_2),                      # ...
+                         median(data_panel$edu3_3),                      # ...
+                         mean(data_panel$dhincome_all, na.rm = T),       # ... 
+                         median(data_panel$livingpartner, na.rm = T),    # ... 
+                         mean(data_panel$intpol, na.rm = T),             # ... 
+                         median(data_panel$l2vim_vox , na.rm = T),       # ...
+                         mean(data_panel$l2authoritarian  , na.rm = T),  # ...
+                         mean(data_panel$l2ideol, na.rm = T),            # ...
+                         mean(data_panel$l2nativism, na.rm = T),         # ...
+                         mean(data_panel$l2orgterr, na.rm = T),          # ...
+                         mean(data_panel$l2pop6amz, na.rm = T),          # ...
+                         mean(data_panel$l2msexism, na.rm = T),          # ...
+                         median(data_panel$lsvim_vox, na.rm = T),        # ...
+                         mean(data_panel$lsauthoritarian, na.rm = T),    # ...
+                         mean(data_panel$lsideol, na.rm = T),            # ...
+                         mean(data_panel$lsnativism, na.rm = T),         # ...
+                         mean(data_panel$lsorgterr, na.rm = T),          # ...
+                         mean(data_panel$lspop6amz, na.rm = T),          # ...
+                         mean(data_panel$posmsex , na.rm = T),           # ...
+                         negmsex_seq_m56E2,                              # negmsex-sequence
+                         1 * negmsex_seq_m56E2                           # Interaction  
+                         )   
+
+scenario_m_m6E2 <- cbind(1,                                              # Intercept 
+                         0,                                              # Female = 0 
+                         mean(data_panel$age),                           # ...  
+                         median(data_panel$edu3_2),                      # ...
+                         median(data_panel$edu3_3),                      # ...
+                         mean(data_panel$dhincome_all, na.rm = T),       # ... 
+                         median(data_panel$livingpartner, na.rm = T),    # ... 
+                         mean(data_panel$intpol, na.rm = T),             # ... 
+                         median(data_panel$l2vim_vox , na.rm = T),       # ...
+                         mean(data_panel$l2authoritarian  , na.rm = T),  # ...
+                         mean(data_panel$l2ideol, na.rm = T),            # ...
+                         mean(data_panel$l2nativism, na.rm = T),         # ...
+                         mean(data_panel$l2orgterr, na.rm = T),          # ...
+                         mean(data_panel$l2pop6amz, na.rm = T),          # ...
+                         mean(data_panel$l2msexism, na.rm = T),          # ...
+                         median(data_panel$lsvim_vox, na.rm = T),        # ...
+                         mean(data_panel$lsauthoritarian, na.rm = T),    # ...
+                         mean(data_panel$lsideol, na.rm = T),            # ...
+                         mean(data_panel$lsnativism, na.rm = T),         # ...
+                         mean(data_panel$lsorgterr, na.rm = T),          # ...
+                         mean(data_panel$lspop6amz, na.rm = T),          # ...
+                         mean(data_panel$posmsex , na.rm = T),           # ...
+                         negmsex_seq_m56E2,                              # negmsex-sequence
+                         0 * negmsex_seq_m56E2                           # Interaction  
+                         )   
+
+# ... having defined he scenarios, we proceed to implement the Simulation Function, specifying the appropriate inputs for each of the two scenarios specified above ...
+sim_women_m6E2 <- sim_function(coefs = coefficients_m6_E2, 
+                              vcov = vcov_m6_E2, 
+                              scenario = scenario_w_m6E2, 
+                              response_function = response_function, 
+                              stochastic_component = stochastic_component)$ev
+
+sim_men_m6E2 <- sim_function(coefs = coefficients_m6_E2, 
+                             vcov = vcov_m6_E2, 
+                             scenario = scenario_m_m6E2, 
+                             response_function = response_function, 
+                             stochastic_component = stochastic_component)$ev
 
 ```
 
 
+```{r 1.2.5: Estimation of Predicted Probabilities Using the Average Value Approach}
+
+par(mfrow = c(6, 1)) # This will allow us to display the predicted probabilities for the two models side by side ...
+
+# .............................................................................#
+# .................................. MODEL 1 ..................................#
+# .............................................................................#
+
+# ... We initiate by calculating the confidence intervals as below ...
+lower_women_m1E2 <- apply(sim_women_m1E2, 2, function(x) quantile(x, probs = 0.025))
+upper_women_m1E2 <- apply(sim_women_m1E2, 2, function(x) quantile(x, probs = 0.975))
+lower_men_m1E2 <- apply(sim_men_m1E2, 2, function(x) quantile(x, probs = 0.025))
+upper_men_m1E2 <- apply(sim_men_m1E2, 2, function(x) quantile(x, probs = 0.975))
+
+# ... and then plot the estimated predicted probabilities using the confidence intervals we obtained above ...
+plot(x = lsmsexism_seq_m12E2,
+     y = apply(sim_women_m1E2, 2, mean),
+     type = "n",
+     lwd = 2,
+     main = "Predicted Probabiity of Intention to Vote for VOX (Year 2019)", 
+     cex.main = 0.7,
+     xlab = "Prior Change in Individual Sexism",
+     ylab = "Pr(Intention to Vote for VOX)", 
+     ylim = c(0, 0.6), 
+     cex.axis = 0.7, 
+     cex.lab = 0.7,
+     xaxt = "n")
+axis(1, at = seq(0, 1, by = 0.05), cex.axis = 0.7)
+
+# ... we add a background grid ...
+abline(h = seq(0, 1, by = 0.1), col = "grey90")
+abline(v = seq(0, 1, by = 0.1), col = "grey90")
+
+# ... and add confidence intervals as shaded areas ...
+polygon(c(lsmsexism_seq_m12E2, rev(lsmsexism_seq_m12E2)), c(upper_women_m1E2, rev(lower_women_m1E2)), col = rgb(1, 0, 0, 0.2), border = NA)
+polygon(c(lsmsexism_seq_m12E2v, rev(lsmsexism_seq_m12E2)), c(upper_men_m1E2, rev(lower_men_m1E2)), col = rgb(0, 0, 1, 0.2), border = NA)
+
+# Predicted probabilities for treatment and control group
+lines(x = sexism_seq_m1E2, y = apply(sim_women_m1E2, 2, mean), lwd = 2, col = "red")
+lines(x = sexism_seq_m1E2, y = apply(sim_men_m1E2, 2, mean), lwd = 2, col = "blue")
+
+# Some annotations
+text(x = c(0.5, 0.5), y = c(0.25, 0.28), labels = c("Women", "Men"), cex = 0.7, pos = 4, col = c("red", "blue"))
+
+# Add distribution of actual observations
+rug(jitter(data_panel$lsmsexism[data_panel$lsmsexism <= 150], 0.1), ticksize = 0.02, lwd = 1)
+
+# .............................................................................#
+# .................................. MODEL 2 ..................................#
+# .............................................................................#
+
+# ... We initiate by calculating the confidence intervals as below ...
+lower_women_m2E2 <- apply(sim_women_m2E2, 2, function(x) quantile(x, probs = 0.025))
+upper_women_m2E2 <- apply(sim_women_m2E2, 2, function(x) quantile(x, probs = 0.975))
+lower_men_m2E2 <- apply(sim_men_m2E2, 2, function(x) quantile(x, probs = 0.025))
+upper_men_m2E2 <- apply(sim_men_m2E2, 2, function(x) quantile(x, probs = 0.975))
+
+# ... and then plot the estimated predicted probabilities using the confidence intervals we obtained above ...
+plot(x = sexism_seq_m2E2,
+     y = apply(sim_women_m1E2, 2, mean),
+     type = "n",
+     lwd = 2,
+     main = "Predicted Probabiity of Intention to Vote for VOX (Year 2020)", 
+     cex.main = 0.7,
+     xlab = "Prior Change in Individual Sexism",
+     ylab = "Pr(Intention to Vote for VOX)", 
+     ylim = c(0, 0.6), 
+     cex.axis = 0.7, 
+     cex.lab = 0.7,
+     xaxt = "n")
+axis(1, at = seq(0, 1, by = 0.05), cex.axis = 0.7)
+
+# ... we add a background grid ...
+abline(h = seq(0, 1, by = 0.1), col = "grey90")
+abline(v = seq(0, 1, by = 0.1), col = "grey90")
+
+# ... and add confidence intervals as shaded areas ...
+polygon(c(sexism_seq_m1E2, rev(sexism_seq_m1E2)), c(upper_women_m1E2, rev(lower_women_m1E2)), col = rgb(1, 0, 0, 0.2), border = NA)
+polygon(c(sexism_seq_m1E2, rev(sexism_seq_m1E2)), c(upper_men_m1E2, rev(lower_men_m1E2)), col = rgb(0, 0, 1, 0.2), border = NA)
+
+# Predicted probabilities for treatment and control group
+lines(x = sexism_seq_m1E2, y = apply(sim_women_m1E2, 2, mean), lwd = 2, col = "red")
+lines(x = sexism_seq_m1E2, y = apply(sim_men_m1E2, 2, mean), lwd = 2, col = "blue")
+
+# Some annotations
+text(x = c(0.5, 0.5), y = c(0.25, 0.28), labels = c("Women", "Men"), cex = 0.7, pos = 4, col = c("red", "blue"))
+
+# Add distribution of actual observations
+rug(jitter(data_panel$lsmsexism[data_panel$lsmsexism <= 150], 0.1), ticksize = 0.02, lwd = 1)
+
+# .............................................................................#
+# .................................. MODEL 3 ..................................#
+# .............................................................................#
+
+# ... We initiate by calculating the confidence intervals as below ...
+lower_women_m3E2 <- apply(sim_women_m3E2, 2, function(x) quantile(x, probs = 0.025))
+upper_women_m3E2 <- apply(sim_women_m3E2, 2, function(x) quantile(x, probs = 0.975))
+lower_men_m3E2 <- apply(sim_men_m3E2, 2, function(x) quantile(x, probs = 0.025))
+upper_men_m3E2 <- apply(sim_men_m3E2, 2, function(x) quantile(x, probs = 0.975))
+
+# ... and then plot the estimated predicted probabilities using the confidence intervals we obtained above ...
+plot(x = posmsex_seq_m34E2,
+     y = apply(sim_women_m3E2, 2, mean),
+     type = "n",
+     lwd = 2,
+     main = "Predicted Probabiity of Intention to Vote for VOX (Year 2019)", 
+     cex.main = 0.7,
+     xlab = "Prior Increase in Individual Sexism",
+     ylab = "Pr(Intention to Vote for VOX)", 
+     ylim = c(0, 0.6), 
+     cex.axis = 0.7, 
+     cex.lab = 0.7,
+     xaxt = "n")
+axis(1, at = seq(0, 1, by = 0.05), cex.axis = 0.7)
+
+# ... we add a background grid ...
+abline(h = seq(0, 1, by = 0.1), col = "grey90")
+abline(v = seq(0, 1, by = 0.1), col = "grey90")
+
+# ... and add confidence intervals as shaded areas ...
+polygon(c(posmsex_seq_m34E2, rev(posmsex_seq_m34E2)), c(upper_women_m3E2, rev(lower_women_m3E2)), col = rgb(1, 0, 0, 0.2), border = NA)
+polygon(c(posmsex_seq_m34E2, rev(posmsex_seq_m34E2)), c(upper_men_m3E2, rev(lower_men_m3E2)), col = rgb(0, 0, 1, 0.2), border = NA)
+
+# Predicted probabilities for treatment and control group
+lines(x = posmsex_seq_m34E2, y = apply(sim_women_m3E2, 2, mean), lwd = 2, col = "red")
+lines(x = posmsex_seq_m34E2, y = apply(sim_men_m3E2, 2, mean), lwd = 2, col = "blue")
+
+# Some annotations
+text(x = c(0.5, 0.5), y = c(0.25, 0.28), labels = c("Women", "Men"), cex = 0.7, pos = 4, col = c("red", "blue"))
+
+# Add distribution of actual observations
+rug(jitter(data_panel$posmsex[data_panel$posmsex <= 150], 0.1), ticksize = 0.02, lwd = 1)
+
+# .............................................................................#
+# .................................. MODEL 4 ..................................#
+# .............................................................................#
+
+# ... We initiate by calculating the confidence intervals as below ...
+lower_women_m4E2 <- apply(sim_women_m4E2, 2, function(x) quantile(x, probs = 0.025))
+upper_women_m4E2 <- apply(sim_women_m4E2, 2, function(x) quantile(x, probs = 0.975))
+lower_men_m4E2 <- apply(sim_men_m4E2, 2, function(x) quantile(x, probs = 0.025))
+upper_men_m4E2 <- apply(sim_men_m4E2, 2, function(x) quantile(x, probs = 0.975))
+
+# ... and then plot the estimated predicted probabilities using the confidence intervals we obtained above ...
+plot(x = posmsex_seq_m34E2,
+     y = apply(sim_women_m4E2, 2, mean),
+     type = "n",
+     lwd = 2,
+     main = "Predicted Probabiity of Intention to Vote for VOX (Year 2019)", 
+     cex.main = 0.7,
+     xlab = "Prior Increase in Individual Sexism",
+     ylab = "Pr(Intention to Vote for VOX)", 
+     ylim = c(0, 0.6), 
+     cex.axis = 0.7, 
+     cex.lab = 0.7,
+     xaxt = "n")
+axis(1, at = seq(0, 1, by = 0.05), cex.axis = 0.7)
+
+# ... we add a background grid ...
+abline(h = seq(0, 1, by = 0.1), col = "grey90")
+abline(v = seq(0, 1, by = 0.1), col = "grey90")
+
+# ... and add confidence intervals as shaded areas ...
+polygon(c(posmsex_seq_m34E2, rev(posmsex_seq_m34E2)), c(upper_women_m4E2, rev(lower_women_m4E2)), col = rgb(1, 0, 0, 0.2), border = NA)
+polygon(c(posmsex_seq_m34E2, rev(posmsex_seq_m34E2)), c(upper_men_m4E2, rev(lower_men_m4E2)), col = rgb(0, 0, 1, 0.2), border = NA)
+
+# Predicted probabilities for treatment and control group
+lines(x = posmsex_seq_m34E2, y = apply(sim_women_m4E2, 2, mean), lwd = 2, col = "red")
+lines(x = posmsex_seq_m34E2, y = apply(sim_men_m4E2, 2, mean), lwd = 2, col = "blue")
+
+# Some annotations
+text(x = c(0.5, 0.5), y = c(0.25, 0.28), labels = c("Women", "Men"), cex = 0.7, pos = 4, col = c("red", "blue"))
+
+# Add distribution of actual observations
+rug(jitter(data_panel$posmsex[data_panel$posmsex <= 150], 0.1), ticksize = 0.02, lwd = 1)
+
+# .............................................................................#
+# .................................. MODEL 5 ..................................#
+# .............................................................................#
 
 
+# .............................................................................#
+# .................................. MODEL 6 ..................................#
+# .............................................................................#
 
 
-
-
-
-
+#_____________________________________________________________________________#
+# ... the following command lines save the generated plots into a single PDF-file ...
+dev.copy2pdf(file = ("Predicted_Probabilities_E2.pdf"), 
+             family = "Times", 
+             width = 12, 
+             height=6)
+#_____________________________________________________________________________#
