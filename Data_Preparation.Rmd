@@ -4799,13 +4799,1260 @@ dev.copy2pdf(file = ("First_Differences_OVA_m6_E2.pdf"),
 
 ```
 
+## Analysis Part 2: Multinomial Choice Model and Fixed-Effects Regression 
+
+``` {r multinomial function}
+ll_mnl <- function(theta, X, Z) { #theta will contain all the coef (4*7), z - outcome matrix with T/F values
+  # declarations
+  k <- ncol(X) # k independent variables - 7 incl intercept
+  J <- ncol(Z) # J choices in the dependent variable
+  
+  # create matrix of betas and set the first category to 0 - before it was a vector
+  beta <- matrix(0, 
+                 ncol = k, 
+                 nrow = J)
+  beta[-1, ] <- matrix(theta[1:(k * (J - 1))], #selects everything but the 1st row  - 7*3 - number of betas that we have
+                       ncol = k, 
+                       byrow = T)
+  
+  # Systematic component: utilities
+  # X_i %*% beta_J in each row (i.e. for each available choice) - one row in x is multipl by one row in B - basic, loop through the rows
+  V <- apply(beta, 1, # for each row(1) and column (2)
+             function(b) 
+               X %*% b) # we have as many rows as respondents,
+  
+  # Sum of exp(V)
+  Sexp <- apply(V, 1, function(v) #apply sum function to all the rows - sum of the exp of rows in v ---> 1 value for each observation --- vector now
+    sum(exp(v)))
+  
+  # probabilities
+  P <- apply(V, 2, function(v) #apply to columns -- prob to vote for specific party
+    exp(v) / Sexp)
+  
+  # log-likelihood
+  loglik <- sum(log(P[Z])) #subset prob of a chosen categories (Z is T/F matrix) -multipl
+  return(loglik)
+}
+```
+
+``` {r common var}
+
+# Step 1: Identify all variables that begin with "lm1"
+lm1_vars <- grep("^lm1", names(data_panel), value = TRUE)
+
+# Step 2: Combine all the variables into a single list of columns to check
+all_vars1 <- c("female", "age", "edu3_2", "edu3_3", "dhincome_all", "livingpartner", "intpol", lm1_vars)
+
+# Step 3: Filter the dataset for complete cases (rows with no missing values in these columns)
+complete_cases1 <- complete.cases(data_panel[, all_vars1])
+data_panel_complete1 <- data_panel[complete_cases1, ]
+
+missing_values <- c(54, 55)
+
+# ... we then create a duplicate of the variable variable "voteintentionspain" where the values defined above are coded as missing values for the duplicate/new variable ...
+data_panel_complete1$voteintentionspain_redef <- ifelse(data_panel_complete1$voteintentionspain %in% missing_values, NA, data_panel_complete1$voteintentionspain)
+
+data_panel_complete1  <- data_panel_complete1  %>%
+   mutate(combined_dep_var = case_when(
+    voteintentionspain_redef == 23 ~ "Vox",
+    voteintentionspain_redef %in% c(51, 52, 53) ~ "No vote",
+    TRUE ~ "Other"# Default case for all other values
+  ))
+na.omit(data_panel_complete1$combined_dep_var)
+data_panel_complete1$combined_dep_var <- factor(data_panel_complete1$combined_dep_var)
+
+
+cats1 <- sort(unique(data_panel_complete1$combined_dep_var))  # different categories - need it to make a matrix with choices
+J1 <- length(unique(data_panel_complete1$combined_dep_var))  # number of categories
+
+Z1 <- matrix(NA, 
+            nrow = length(data_panel_complete1$combined_dep_var), 
+            ncol = J1)  # indicator matrix
+
+for (j in 1:J1) {
+  Z1[, j] <- data_panel_complete1$combined_dep_var == cats1[j] #vote choice equals category or not
+}
+colnames(Z1) <- cats
+
+dim(Z1)
+# Sanity check
+head(Z1)
+head(data_panel_complete1$combined_dep_var)
+
+# Prepare our usual matrix X
+# we include relig, class, income, educ, age, urban
+# those variables are in column 6 to 11 in our data frame
 
 
 
+# Remove NA values for binary or categorical variables directly
+female1 <- as.numeric(data_panel_complete1$female)
+female1 <- female1[!is.na(female1)]
+
+# Convert to numeric and remove NA values, with debugging
+age1 <- as.numeric(data_panel_complete1$age)
+age1 <- age1[!is.na(age1)]
+
+edu3_21 <- as.numeric(data_panel_complete1$edu3_2)
+edu3_21 <- edu3_21[!is.na(edu3_21)]
+
+edu3_31 <- as.numeric(data_panel_complete1$edu3_3)
+edu3_31 <- edu3_31[!is.na(edu3_31)]
+
+# Remove NA values directly (already numeric in example)
+dhincome_all1 <- data_panel_complete1$dhincome_all[!is.na(data_panel_complete1$dhincome_all)]
+lm1_authoritarian1 <- data_panel_complete1$lm1_authoritarian[!is.na(data_panel_complete1$lm1_authoritarian)]
+
+# Convert to numeric and remove NA values, with debugging
+livingpartner1 <- as.numeric(data_panel_complete1$livingpartner)
+livingpartner1 <- livingpartner1[!is.na(livingpartner1)]
+
+intpol1 <- as.numeric(data_panel_complete1$intpol)
+intpol1 <- intpol1[!is.na(intpol1)]
+
+lm1_ideol1 <- as.numeric(data_panel_complete1$lm1_ideol)
+lm1_ideol1 <- lm1_ideol1[!is.na(lm1_ideol1)]
+
+lm1_nativism1 <- as.numeric(data_panel_complete1$lm1_nativism)
+lm1_nativism1 <- lm1_nativism1[!is.na(lm1_nativism1)]
+
+lm1_orgterr1 <- as.numeric(data_panel_complete1$lm1_orgterr)
+lm1_orgterr1 <- lm1_orgterr1[!is.na(lm1_orgterr1)]
+
+lm1_pop6amz1 <- as.numeric(data_panel_complete1$lm1_pop6amz)
+lm1_pop6amz1 <- lm1_pop6amz1[!is.na(lm1_pop6amz1)]
+
+lm1_msexism1 <- as.numeric(data_panel_complete1$lm1_msexism)
+lm1_msexism1 <- lm1_msexism1[!is.na(lm1_msexism1)]
+
+#int_m1E1 <- as.numeric(data_panel$int_m1E1)
+#int_m1E1 <- int_m1E1[!is.na(int_m1E1)]
+
+lengths <- sapply(list(female, age, edu3_2, edu3_3, dhincome_all, livingpartner, intpol, lm1_authoritarian, lm1_ideol, lm1_nativism, lm1_orgterr, lm1_pop6amz, lm1_msexism), length)
+print(lengths)
+
+
+X1 <- as.matrix( cbind(1,female1, age1, edu3_21, edu3_31, dhincome_all1, livingpartner1, intpol1, lm1_authoritarian1, lm1_ideol1, lm1_nativism1,
+lm1_orgterr1, lm1_pop6amz1,lm1_msexism1))
+#X1 <- na.omit(X1)
+class(X1)
+dim(X1)
+
+```
+
+``` {r regression}
+startvals1 <- rep(0, ncol(X1) * (J1 - 1))
+
+res111 <- optim(
+  startvals1,
+  ll_mnl,
+  X = X1,
+  Z = Z1,
+  method = "BFGS",
+  control = list(fnscale = -1, trace = TRUE),
+  hessian = TRUE
+)
+
+res111$par 
+betaHat <- matrix(res111$par,
+                  ncol = ncol(X1), #number of indep var - 7
+                  nrow = ncol(Z1)-1, #but we need to estimate 3 row instead of 4
+                  byrow = T)
+
+colnames(betaHat) <- c("(Intercept)", colnames(X1)[2:ncol(X1)])
+rownames(betaHat) <-  levels(data_panel_complete1$combined_dep_var)[2:ncol(Z1)]
+
+
+se <-
+  matrix(sqrt(diag(solve(-res111$hessian))),
+         ncol = ncol(X1),
+         nrow = ncol(Z1)-1,
+         byrow = T)
+colnames(se) <- c("(Intercept)", colnames(X1)[2:ncol(X1)])
+rownames(se) <-  levels(data_panel_complete1$combined_dep_var)[2:ncol(Z1)]
+
+betaHat
+se
+```
+
+``` {r check - issue here :(}
+library('nnet')
+data_panel_complete1$combined_dep_var <- factor(data_panel_complete1$combined_dep_var)
+data_panel_complete1$combined_dep_var <- relevel(data_panel_complete1$combined_dep_var, ref = "No vote")
+check <- multinom(combined_dep_var ~ 
+                    female + age + edu3_2 + edu3_3 + dhincome_all + livingpartner + intpol+ lm1_authoritarian+lm1_ideol+ lm1_nativism+
+                    lm1_orgterr + lm1_pop6amz + lm1_msexism, 
+                  data = data_panel_complete1)
+
+summary(check)
+betaHat
+se
+```
+
+``` {r QOI}
+# Get coefficients and the variance-covariance matrix for the simulation
+mu <- res111$par
+varcov <- solve(-res111$hessian)
+
+# Define nsim, J (number of categories) and k (number of independent variables)
+nsim <- 1000
+J <- length(unique(data_panel_complete1$combined_dep_var))  # Number of categories
+k <- ncol(X1)
+
+set.seed(123)
+# Set up the sampling distribution
+S <- mvrnorm(nsim, mu, varcov)
+
+# Store in an array similar to what we did in the ll function - we need to make a matrix - J rows, k columns and 1000 times
+beta_S <- array(0, dim = c(J, k, nsim))
+
+# Check dimensions:
+dim(beta_S)
+
+# fill the array with the sampling distribution of betas
+for(sim in 1:nsim) { #take first set of betas and put in the matrix, go to the second layer, etc, etc
+  beta_S[-1, ,sim] <- matrix(S[sim,],  #select everything but 1 row
+                             ncol = k, 
+                             byrow = T)
+} #1000 matrices behind each other - each set of b is a matrix
+
+beta_S
+# Set up your scenarios
+n_scenarios <- 2 # Number of scenarios; in the first scen everybody is not relig, in the 2nd - relig
+
+cases <- array(NA, c(dim(X1),
+                     n_scenarios))  
+
+cases[, , ] <- X1 #fill with x
+
+sel <- which(colnames(X1) == "female")
+
+cases[, sel, 1] <- 0 #first case - male
+cases[,,1]
+cases[, sel, 2] <- 1 #second - everyone female
+cases[,,2]
+
+# Now our array V will have four (!) dimensions
+V <- V2 <- #matrix of utilities
+  array(NA, 
+        dim = c(nrow(X1),       # number of observations - row
+                J,             # number of categories - this form a matrix n*4 -columns
+                nsim,          # number of simulations - how often we put each case behind each other
+                n_scenarios))  # number of scenarios 
+#the 1st column is always 0 (utilities to vote for CDA), 2nd row utility for 1st observation to vote for 3 parties (3 columns) - and again we do this 1000 times
+# and we do it one more time for relig case ---> we have 4 dimens in total
+
+# Loop over the scenarios
+for(i in 1:n_scenarios){ #loop through the scenarios - in the 1 iter we go to non-relig, 2 - relig
+  V[,,,i] <- apply(beta_S[,,], c(1,3),  #c(1,3)= every rpw in eacj simu
+                   function(bs) cases[,,i] %*% bs) #obsevred values in the 1/2 iter * betas
+}
+
+# the apply command over more than two dimensions is hard!
+# maybe a nested loop is more intuitive to understand what is happening here:
+
+
+# Have a look at the dimensions
+dim(V)
+
+# Now we want to summarize over multiple dimensions
+Sexp <- apply(V, c(1,3,4), function(v) sum(exp(v))) #sum of each row ; 1,3,4 - dimensions
+
+dim(Sexp) #observ*simul *scenarios
+
+# With V and Sexp we have everything to get P
+P <- array(NA, c(nsim, J, n_scenarios))
+
+for (scen in 1:n_scenarios) {
+  for (category in 1:J) { #each column is div by the sum
+    P[, category, scen] <- 
+      apply(exp(V[, category, , scen]) / Sexp[, , scen], 2, mean) #apply to each indiv sim; apply to the sim in the 2nd dimen (simul)
+  }
+}
+
+# Summarize to get our quantities of interest
+
+# non-religious voters
+QoI0Mean <- apply(P[, , 1], 2, mean)
+QoI0CI <-
+  apply(P[, , 1], 2, function(x)
+    quantile(x, probs = c(0.025, 0.975)))
+
+# religious voters
+QoI1Mean <- apply(P[, , 2], 2, mean)
+QoI1CI <-
+  apply(P[, , 2], 2, function(x)
+    quantile(x, probs = c(0.025, 0.975)))
+
+partycolors <- c("mediumseagreen", 
+                 "red", 
+                 "orange")
+
+QoIFD <- P[, , 2] - P[, , 1]
+
+QoIFDMean <- apply(QoIFD, 2, mean)
+QoIFDCI <-
+  apply(QoIFD, 2, function(x)
+    quantile(x, probs = c(0.025, 0.975)))
+
+plot(
+  x = c(0.2, 0.4, 0.6, 0.25, 0.45, 0.65),
+  y = c(QoI0Mean, QoI1Mean)
+)
+```
+
+``` {r graph}
+plot(
+  x = c(0.2, 0.4, 0.6, 0.25, 0.45, 0.65),
+  y = c(QoI0Mean, QoI1Mean),
+  xlim = c(0.1, 0.8),
+  ylim = c(0.01, 0.9),
+  bty = "n",
+  xaxt = "n",
+  las = 1,
+  xlab = "",
+  ylab = "Predicted Probability of Voting for Party",
+  main = "Female and Male",
+  font.main = 1,
+  type = "n"
+)
+abline(h = seq(0, 0.9, 0.1),
+       col = adjustcolor("black", alpha = 0.2))
+points(
+  x = c(0.2, 0.4, 0.6, 0.25, 0.45, 0.65),
+  y = c(QoI0Mean, QoI1Mean),
+  pch = 19,
+  cex = 1,
+  col = partycolors
+)
+text(1,
+     x = c(0.2, 0.4, 0.6, 0.25, 0.45, 0.65),
+   y = rep(0.01, 4),
+   labels = rep(c("female", "male"), each = 3),
+     srt = 45,
+     cex = 0.9,
+   pos=3)
+axis(1, 
+     at = c(0.2, 0.4, 0.6),
+     labels = levels(data_panel_complete1$combined_dep_var),
+     tick = F)
+segments(
+  x0 = c(0.2, 0.4, 0.6, 0.25, 0.45, 0.65),
+  y0 = c(QoI0CI[1,], QoI1CI[1,]),
+  y1 = c(QoI0CI[2,], QoI1CI[2,]) ,
+  lwd = 6,
+  lend = 1,
+  col = adjustcolor(partycolors, alpha = 0.4)
+)
+abline(v = c(0.3, 0.55, 0.7),
+       lty = "dashed",
+       col = "lightgrey")
+
+plot(
+  x = c(0.2, 0.4, 0.6),
+  y = QoIFDMean,
+  xlim = c(0.1, 0.9),
+  ylim = c(-0.5, 0.5),
+  bty = "n",
+  xaxt = "n",
+  las = 1,
+  xlab = "",
+  ylab = "First Difference",
+  main = "First Difference between female and not male voters",
+  font.main = 1,
+  type = "n"
+)
+abline(h = seq(-0.4, 0.4, 0.1),
+       col = adjustcolor("black", alpha = 0.2))
+abline(h = 0, lwd = 1, lty = "solid")
+points(
+  x = c(0.2, 0.4, 0.6),
+  y = QoIFDMean,
+  pch = 19,
+  cex = 1,
+  col = partycolors
+)
+text(x = (c(0.2, 0.4, 0.6) - 0.06),
+     y = QoIFDMean,
+     labels = levels(data_panel_complete1$combined_dep_var))
+segments(
+  x0 = c(0.2, 0.4, 0.6),
+  y0 = QoIFDCI[1,],
+  y1 = QoIFDCI[2,],
+  lwd = 6,
+  lend = 1,
+  col = adjustcolor(partycolors, alpha = 0.4)
+)
+abline(v = c(0.3, 0.5, 0.7),
+       lty = "dashed",
+       col = "lightgrey")
+```
+
+``` {r simulation sexism}
+
+lm1_msexism <- na.omit(as.numeric(data_panel$lm1_msexism))
+
+sexism_seq <- seq(min(lm1_msexism), max(lm1_msexism), length.out = 10)
+
+
+# Get coefficients and the variance-covariance matrix for the simulation
+mu <- res111$par
+varcov <- solve(-res111$hessian)
+
+# Define nsim, J (number of categories) and k (number of independent variables)
+nsim <- 1000
+J <- length(unique(data_panel_complete$combined_dep_var))  # Number of categories
+k <- ncol(X1)
+
+# Set up the sampling distribution
+S <- mvrnorm(nsim, mu, varcov)
+
+# Store in an array similar to what we did in the ll function - we need to make a matrix - J rows, k columns and 1000 times
+beta_S <- array(0, dim = c(J, k, nsim))
+
+# Check dimensions:
+dim(beta_S)
+
+# fill the array with the sampling distribution of betas
+for(sim in 1:nsim) { #take first set of betas and put in the matrix, go to the second layer, etc, etc
+  beta_S[-1, ,sim] <- matrix(S[sim,],  #select everything but 1 row
+                             ncol = k, 
+                             byrow = T)
+} #1000 matrices behind each other - each set of b is a matrix
+
+beta_S
+
+sel <- which(colnames(X1) == "lm1_msexism") # column 4
+# Set up your scenarios
+n_scenarios <- length(sexism_seq) # Number of scenarios; 10 as we have 10 cases
+
+cases <- array(NA, c(dim(X1),
+                     n_scenarios))  
+dim(cases)
+
+cases[, , ] <- X1 #fill with x
+
+for (i in 1:n_scenarios) {
+  cases[, sel, i] <-sexism_seq[i] #take observ values and assume that everyone has min income, 2nd time at 11 level, etc.
+}
+
+
+# Now our array V will have four (!) dimensions
+ V2 <- #matrix of utilities
+  array(NA, 
+        dim = c(nrow(X1),       # number of observations - row
+                J,             # number of categories - this form a matrix n*4 -columns
+                nsim,          # number of simulations - how often we put each case behind each other
+                n_scenarios))  # number of scenarios 
+#the 1st column is always 0 (utilities to vote for CDA), 2nd row utility for 1st observation to vote for 3 parties (3 columns) - and again we do this 1000 times
+# and we do it one more time for relig case ---> we have 4 dimens in total
+dim(V2)
+
+# 1) Loop over the scenarios
+for (i in 1:n_scenarios) {
+  # 2) in each scenario:
+  #    loop over the simulations
+  for (s in 1:nsim) {
+    # 3) in each scenario and simulation:
+    #    loop over the categories and calculate its utility
+    for (j in 1:J) {
+      # 4) calculate utility for the utility of 
+      #    - the current scenario
+      #    - based on the current set of simulated beta values
+      #    - for the current outcome category
+      
+      V2[,j,s,i] <- cases[,,i] %*% beta_S[j,,s] 
+      
+      # cases[,,i] the i-th scenario that we specified
+      # beta_S[j,,s] is the s-th simulation of beta for category j 
+      # (remember: there's one set of beta for each category and each simulation)
+    }
+  }
+}
+
+# the apply command over more than two dimensions is hard!
+# maybe a nested loop is more intuitive to understand what is happening here:
+
+# Have a look at the dimensions
+dim(V2)
+
+# Now we want to summarize over multiple dimensions
+Sexp <- apply(V2, c(1,3,4), function(v) sum(exp(v))) #sum of each row ; 1,3,4 - dimensions
+
+dim(Sexp) #observ*simul *scenarios
+
+# With V and Sexp we have everything to get P
+P <- array(NA, c(nsim, J, n_scenarios))
+dim(P)
+
+for (scen in 1:n_scenarios) {
+  for (category in 1:J) { #each column is div by the sum
+    P[, category, scen] <- 
+      apply(exp(V2[, category, , scen]) / Sexp[, , scen], 2, mean) #apply to each indiv sim; apply to the sim in the 2nd dimen (simul)
+  }
+}
+
+P
+# Summarize to get our quantities of interest
+
+QoImean <- matrix(NA, nrow = 3, ncol = n_scenarios)
+QoICI <- array(NA, dim = c(2,     # lower and upper bound
+                           3,     # number of categories
+                           10))   # number of scenarios
+
+
+QoI_Mean <- apply(P, c(2, 3), mean) #mean of columns because each colum address each party, apply to every column in every layer
+QoI_CI <-
+  apply(P, c(2, 3), function(x)
+    quantile(x, probs = c(0.025, 0.975)))
+
+partycolors <- c("mediumseagreen", 
+                 "red", 
+                 "orange")
+# Plot the results
+
+plot(
+  sexism_seq,
+  QoI_Mean[1,],
+  type = "n",
+  ylim = c(0, 1),
+  bty = "n",
+  ylab = "Predicted Probability of voting for Party",
+  xlab = "Sexism",
+  main = "The Effect of Sexism",
+  las = 1
+)
+
+for (i in 1:3) {
+  lines(sexism_seq, QoI_Mean[i,], 
+        col = partycolors[i],
+        lwd = 2)
+}
+
+for (i in 1:3) {
+  polygon(
+    c(rev(sexism_seq), sexism_seq),
+    c(rev(QoI_CI[1, i,]), QoI_CI[2, i,]),
+    col = adjustcolor(partycolors[i], alpha = 0.2) ,
+    border = NA
+  )
+}
+
+legend(
+  "topright",
+  legend = levels(data_panel_complete$combined_dep_var),
+  lty = 1,
+  col = partycolors,
+  bty = "n"
+)
+
+```
+``` {r model 2020}
+# Step 1: Identify all variables that begin with "lm1"
+lm2_vars <- grep("^lm2", names(data_panel), value = TRUE)
+
+# Step 2: Combine all the variables into a single list of columns to check
+all_vars <- c("female", "age", "edu3_2", "edu3_3", "dhincome_all", "livingpartner", "intpol", lm2_vars)
+
+# Step 3: Filter the dataset for complete cases (rows with no missing values in these columns)
+complete_cases <- complete.cases(data_panel[, all_vars])
+data_panel_complete <- data_panel[complete_cases, ]
+
+missing_values <- c(54, 55)
+
+# ... we then create a duplicate of the variable variable "voteintentionspain" where the values defined above are coded as missing values for the duplicate/new variable ...
+data_panel_complete$voteintentionspain_redef <- ifelse(data_panel_complete$voteintentionspain %in% missing_values, NA, data_panel_complete$voteintentionspain)
+
+data_panel_complete  <- data_panel_complete  %>%
+   mutate(combined_dep_var = case_when(
+    voteintentionspain_redef == 23 ~ "Vox",
+    voteintentionspain_redef %in% c(51, 52, 53) ~ "No vote",
+    TRUE ~ "Other"# Default case for all other values
+  ))
+na.omit(data_panel_complete$combined_dep_var)
+data_panel_complete$combined_dep_var <- factor(data_panel_complete $combined_dep_var)
+
+
+cats <- sort(unique(data_panel_complete $combined_dep_var))  # different categories - need it to make a matrix with choices
+J1 <- length(unique(data_panel_complete $combined_dep_var))  # number of categories
+
+Z1 <- matrix(NA, 
+            nrow = length(data_panel_complete $combined_dep_var), 
+            ncol = J1)  # indicator matrix
+
+for (j in 1:J1) {
+  Z1[, j] <- data_panel_complete $combined_dep_var == cats[j] #vote choice equals category or not
+}
+colnames(Z1) <- cats
+
+dim(Z1)
+# Sanity check
+head(Z1)
+head(data_panel_complete $combined_dep_var)
+
+# Prepare our usual matrix X
+# we include relig, class, income, educ, age, urban
+# those variables are in column 6 to 11 in our data frame
 
 
 
+# Remove NA values for binary or categorical variables directly
+female <- as.numeric(data_panel_complete$female)
+female <- female[!is.na(female)]
 
+# Convert to numeric and remove NA values, with debugging
+age <- as.numeric(data_panel_complete$age)
+age <- age[!is.na(age)]
+
+edu3_2 <- as.numeric(data_panel_complete$edu3_2)
+edu3_2 <- edu3_2[!is.na(edu3_2)]
+
+edu3_3 <- as.numeric(data_panel_complete$edu3_3)
+edu3_3 <- edu3_3[!is.na(edu3_3)]
+
+# Remove NA values directly (already numeric in example)
+dhincome_all <- data_panel_complete$dhincome_all[!is.na(data_panel_complete$dhincome_all)]
+lm2_authoritarian <- data_panel_complete$lm2_authoritarian[!is.na(data_panel_complete$lm2_authoritarian)]
+
+# Convert to numeric and remove NA values, with debugging
+livingpartner <- as.numeric(data_panel_complete$livingpartner)
+livingpartner <- livingpartner[!is.na(livingpartner)]
+
+intpol <- as.numeric(data_panel_complete$intpol)
+intpol <- intpol[!is.na(intpol)]
+
+lm2_ideol <- as.numeric(data_panel_complete$lm2_ideol)
+lm2_ideol <- lm2_ideol[!is.na(lm2_ideol)]
+
+lm2_nativism <- as.numeric(data_panel_complete$lm2_nativism)
+lm2_nativism <- lm2_nativism[!is.na(lm2_nativism)]
+
+lm2_orgterr <- as.numeric(data_panel_complete$lm2_orgterr)
+lm2_orgterr <- lm2_orgterr[!is.na(lm2_orgterr)]
+
+lm2_pop6amz <- as.numeric(data_panel_complete$lm2_pop6amz)
+lm2_pop6amz <- lm2_pop6amz[!is.na(lm2_pop6amz)]
+
+lm2_msexism <- as.numeric(data_panel_complete$lm2_msexism)
+lm2_msexism <- lm2_msexism[!is.na(lm2_msexism)]
+
+#int_m1E1 <- as.numeric(data_panel$int_m1E1)
+#int_m1E1 <- int_m1E1[!is.na(int_m1E1)]
+
+lengths <- sapply(list(female, age, edu3_2, edu3_3, dhincome_all, livingpartner, intpol, lm2_authoritarian, lm2_ideol, lm2_nativism, lm2_orgterr, lm2_pop6amz, lm2_msexism), length)
+print(lengths)
+
+
+X2 <- as.matrix( cbind(1,female, age, edu3_2, edu3_3, dhincome_all, livingpartner, intpol, lm2_authoritarian, lm2_ideol, lm2_nativism,
+lm2_orgterr, lm2_pop6amz,lm2_msexism))
+#X1 <- na.omit(X1)
+class(X2)
+dim(X2)
+```
+
+``` {r regression}
+startvals2 <- rep(0, ncol(X2) * (J1 - 1))
+
+res22 <- optim(
+  startvals2,
+  ll_mnl,
+  X = X2,
+  Z = Z1,
+  method = "BFGS",
+  control = list(fnscale = -1, trace = TRUE),
+  hessian = TRUE
+)
+
+res22$par 
+betaHat <- matrix(res22$par,
+                  ncol = ncol(X2), #number of indep var - 7
+                  nrow = ncol(Z1)-1, #but we need to estimate 3 row instead of 4
+                  byrow = T)
+
+colnames(betaHat) <- c("(Intercept)", colnames(X2)[2:ncol(X2)])
+rownames(betaHat) <-  levels(data_panel_complete$combined_dep_var)[2:ncol(Z1)]
+
+
+se <-
+  matrix(sqrt(diag(solve(-res22$hessian))),
+         ncol = ncol(X2),
+         nrow = ncol(Z1)-1,
+         byrow = T)
+colnames(se) <- c("(Intercept)", colnames(X2)[2:ncol(X2)])
+rownames(se) <-  levels(data_panel$combined_dep_var)[2:ncol(Z1)]
+
+betaHat
+se
+
+```
+
+
+```{r simulation 2020}
+#Get coefficients and the variance-covariance matrix for the simulation
+mu <- res22$par
+varcov <- solve(-res22$hessian)
+
+# Define nsim, J (number of categories) and k (number of independent variables)
+nsim <- 1000
+J <- length(unique(data_panel_complete$combined_dep_var))  # Number of categories
+k <- ncol(X2)
+
+set.seed(123)
+# Set up the sampling distribution
+S <- mvrnorm(nsim, mu, varcov)
+
+# Store in an array similar to what we did in the ll function - we need to make a matrix - J rows, k columns and 1000 times
+beta_S <- array(0, dim = c(J, k, nsim))
+
+# Check dimensions:
+dim(beta_S)
+
+# fill the array with the sampling distribution of betas
+for(sim in 1:nsim) { #take first set of betas and put in the matrix, go to the second layer, etc, etc
+  beta_S[-1, ,sim] <- matrix(S[sim,],  #select everything but 1 row
+                             ncol = k, 
+                             byrow = T)
+} #1000 matrices behind each other - each set of b is a matrix
+
+beta_S
+# Set up your scenarios
+n_scenarios <- 2 # Number of scenarios; in the first scen everybody is not relig, in the 2nd - relig
+
+cases <- array(NA, c(dim(X2),
+                     n_scenarios))  
+
+cases[, , ] <- X2 #fill with x
+
+sel <- which(colnames(X2) == "female")
+
+cases[, sel, 1] <- 0 #first case - male
+cases[,,1]
+cases[, sel, 2] <- 1 #second - everyone female
+cases[,,2]
+
+# Now our array V will have four (!) dimensions
+V <- V2 <- #matrix of utilities
+  array(NA, 
+        dim = c(nrow(X2),       # number of observations - row
+                J,             # number of categories - this form a matrix n*4 -columns
+                nsim,          # number of simulations - how often we put each case behind each other
+                n_scenarios))  # number of scenarios 
+#the 1st column is always 0 (utilities to vote for CDA), 2nd row utility for 1st observation to vote for 3 parties (3 columns) - and again we do this 1000 times
+# and we do it one more time for relig case ---> we have 4 dimens in total
+
+# Loop over the scenarios
+for(i in 1:n_scenarios){ #loop through the scenarios - in the 1 iter we go to non-relig, 2 - relig
+  V[,,,i] <- apply(beta_S[,,], c(1,3),  #c(1,3)= every rpw in eacj simu
+                   function(bs) cases[,,i] %*% bs) #obsevred values in the 1/2 iter * betas
+}
+
+# the apply command over more than two dimensions is hard!
+# maybe a nested loop is more intuitive to understand what is happening here:
+
+
+# Have a look at the dimensions
+dim(V)
+
+# Now we want to summarize over multiple dimensions
+Sexp <- apply(V, c(1,3,4), function(v) sum(exp(v))) #sum of each row ; 1,3,4 - dimensions
+
+dim(Sexp) #observ*simul *scenarios
+
+# With V and Sexp we have everything to get P
+P <- array(NA, c(nsim, J, n_scenarios))
+
+for (scen in 1:n_scenarios) {
+  for (category in 1:J) { #each column is div by the sum
+    P[, category, scen] <- 
+      apply(exp(V[, category, , scen]) / Sexp[, , scen], 2, mean) #apply to each indiv sim; apply to the sim in the 2nd dimen (simul)
+  }
+}
+
+# Summarize to get our quantities of interest
+
+# non-religious voters
+QoI0Mean1 <- apply(P[, , 1], 2, mean)
+QoI0CI1 <-
+  apply(P[, , 1], 2, function(x)
+    quantile(x, probs = c(0.025, 0.975)))
+
+# religious voters
+QoI1Mean1 <- apply(P[, , 2], 2, mean)
+QoI1CI1 <-
+  apply(P[, , 2], 2, function(x)
+    quantile(x, probs = c(0.025, 0.975)))
+
+partycolors <- c("mediumseagreen", 
+                 "red", 
+                 "orange")
+
+QoIFD1 <- P[, , 2] - P[, , 1]
+
+QoIFDMean1 <- apply(QoIFD1, 2, mean)
+QoIFDCI1 <-
+  apply(QoIFD1, 2, function(x)
+    quantile(x, probs = c(0.025, 0.975)))
+
+```
+
+``` {r plot pred prob and fd}
+plot(
+  x = c(0.2, 0.4, 0.6, 0.25, 0.45, 0.65),
+  y = c(QoI0Mean1, QoI1Mean1),
+  xlim = c(0.1, 0.8),
+  ylim = c(0.01, 0.9),
+  bty = "n",
+  xaxt = "n",
+  las = 1,
+  xlab = "",
+  ylab = "Predicted Probability of Voting for Party",
+  main = "Female and Male",
+  font.main = 1,
+  type = "n"
+)
+abline(h = seq(0, 0.9, 0.1),
+       col = adjustcolor("black", alpha = 0.2))
+points(
+  x = c(0.2, 0.4, 0.6, 0.25, 0.45, 0.65),
+  y = c(QoI0Mean1, QoI1Mean1),
+  pch = 19,
+  cex = 1,
+  col = partycolors
+)
+text(1,
+     x = c(0.2, 0.4, 0.6, 0.25, 0.45, 0.65),
+   y = rep(0.01, 4),
+   labels = rep(c("female", "male"), each = 3),
+     srt = 45,
+     cex = 0.9,
+   pos=3)
+axis(1, 
+     at = c(0.2, 0.4, 0.6),
+     labels = levels(data_panel_complete$combined_dep_var),
+     tick = F)
+segments(
+  x0 = c(0.2, 0.4, 0.6, 0.25, 0.45, 0.65),
+  y0 = c(QoI0CI1[1,], QoI1CI1[1,]),
+  y1 = c(QoI0CI1[2,], QoI1CI1[2,]) ,
+  lwd = 6,
+  lend = 1,
+  col = adjustcolor(partycolors, alpha = 0.4)
+)
+abline(v = c(0.3, 0.55, 0.7),
+       lty = "dashed",
+       col = "lightgrey")
+
+plot(
+  x = c(0.2, 0.4, 0.6),
+  y = QoIFDMean1,
+  xlim = c(0.1, 0.9),
+  ylim = c(-0.5, 0.5),
+  bty = "n",
+  xaxt = "n",
+  las = 1,
+  xlab = "",
+  ylab = "First Difference",
+  main = "First Difference between female and not male voters",
+  font.main = 1,
+  type = "n"
+)
+abline(h = seq(-0.4, 0.4, 0.1),
+       col = adjustcolor("black", alpha = 0.2))
+abline(h = 0, lwd = 1, lty = "solid")
+points(
+  x = c(0.2, 0.4, 0.6),
+  y = QoIFDMean1,
+  pch = 19,
+  cex = 1,
+  col = partycolors
+)
+text(x = (c(0.2, 0.4, 0.6) - 0.06),
+     y = QoIFDMean1,
+     labels = levels(data_panel_complete$combined_dep_var))
+segments(
+  x0 = c(0.2, 0.4, 0.6),
+  y0 = QoIFDCI1[1,],
+  y1 = QoIFDCI1[2,],
+  lwd = 6,
+  lend = 1,
+  col = adjustcolor(partycolors, alpha = 0.4)
+)
+abline(v = c(0.3, 0.5, 0.7),
+       lty = "dashed",
+       col = "lightgrey")
+```
+
+
+``` {r sexism 2020}
+lm2_msexism <- na.omit(as.numeric(data_panel$lm2_msexism))
+
+sexism_seq <- seq(min(lm2_msexism), max(lm2_msexism), length.out = 10)
+
+
+# Get coefficients and the variance-covariance matrix for the simulation
+mu <- res22$par
+varcov <- solve(-res22$hessian)
+
+# Define nsim, J (number of categories) and k (number of independent variables)
+nsim <- 1000
+J <- length(unique(data_panel_complete$combined_dep_var))  # Number of categories
+k <- ncol(X2)
+
+# Set up the sampling distribution
+S <- mvrnorm(nsim, mu, varcov)
+
+# Store in an array similar to what we did in the ll function - we need to make a matrix - J rows, k columns and 1000 times
+beta_S <- array(0, dim = c(J, k, nsim))
+
+# Check dimensions:
+dim(beta_S)
+
+# fill the array with the sampling distribution of betas
+for(sim in 1:nsim) { #take first set of betas and put in the matrix, go to the second layer, etc, etc
+  beta_S[-1, ,sim] <- matrix(S[sim,],  #select everything but 1 row
+                             ncol = k, 
+                             byrow = T)
+} #1000 matrices behind each other - each set of b is a matrix
+
+beta_S
+
+sel <- which(colnames(X2) == "lm2_msexism") # column 4
+# Set up your scenarios
+n_scenarios <- length(sexism_seq) # Number of scenarios; 10 as we have 10 cases
+
+cases <- array(NA, c(dim(X2),
+                     n_scenarios))  
+dim(cases)
+
+cases[, , ] <- X2 #fill with x
+
+for (i in 1:n_scenarios) {
+  cases[, sel, i] <-sexism_seq[i] #take observ values and assume that everyone has min income, 2nd time at 11 level, etc.
+}
+
+
+# Now our array V will have four (!) dimensions
+ V2 <- #matrix of utilities
+  array(NA, 
+        dim = c(nrow(X2),       # number of observations - row
+                J,             # number of categories - this form a matrix n*4 -columns
+                nsim,          # number of simulations - how often we put each case behind each other
+                n_scenarios))  # number of scenarios 
+#the 1st column is always 0 (utilities to vote for CDA), 2nd row utility for 1st observation to vote for 3 parties (3 columns) - and again we do this 1000 times
+# and we do it one more time for relig case ---> we have 4 dimens in total
+dim(V2)
+
+# 1) Loop over the scenarios
+for (i in 1:n_scenarios) {
+  # 2) in each scenario:
+  #    loop over the simulations
+  for (s in 1:nsim) {
+    # 3) in each scenario and simulation:
+    #    loop over the categories and calculate its utility
+    for (j in 1:J) {
+      # 4) calculate utility for the utility of 
+      #    - the current scenario
+      #    - based on the current set of simulated beta values
+      #    - for the current outcome category
+      
+      V2[,j,s,i] <- cases[,,i] %*% beta_S[j,,s] 
+      
+      # cases[,,i] the i-th scenario that we specified
+      # beta_S[j,,s] is the s-th simulation of beta for category j 
+      # (remember: there's one set of beta for each category and each simulation)
+    }
+  }
+}
+
+# the apply command over more than two dimensions is hard!
+# maybe a nested loop is more intuitive to understand what is happening here:
+
+# Have a look at the dimensions
+dim(V2)
+
+# Now we want to summarize over multiple dimensions
+Sexp <- apply(V2, c(1,3,4), function(v) sum(exp(v))) #sum of each row ; 1,3,4 - dimensions
+
+dim(Sexp) #observ*simul *scenarios
+
+# With V and Sexp we have everything to get P
+P <- array(NA, c(nsim, J, n_scenarios))
+dim(P)
+
+for (scen in 1:n_scenarios) {
+  for (category in 1:J) { #each column is div by the sum
+    P[, category, scen] <- 
+      apply(exp(V2[, category, , scen]) / Sexp[, , scen], 2, mean) #apply to each indiv sim; apply to the sim in the 2nd dimen (simul)
+  }
+}
+
+P
+# Summarize to get our quantities of interest
+
+QoImean2 <- matrix(NA, nrow = 3, ncol = n_scenarios)
+QoICI2 <- array(NA, dim = c(2,     # lower and upper bound
+                           3,     # number of categories
+                           10))   # number of scenarios
+
+
+QoI_Mean2 <- apply(P, c(2, 3), mean) #mean of columns because each colum address each party, apply to every column in every layer
+QoI_CI2 <-
+  apply(P, c(2, 3), function(x)
+    quantile(x, probs = c(0.025, 0.975)))
+
+partycolors <- c("mediumseagreen", 
+                 "red", 
+                 "orange")
+# Plot the results
+
+plot(
+  sexism_seq,
+  QoI_Mean2[1,],
+  type = "n",
+  ylim = c(0, 1),
+  bty = "n",
+  ylab = "Predicted Probability of voting for Party",
+  xlab = "Sexism",
+  main = "The Effect of Sexism",
+  las = 1
+)
+
+for (i in 1:3) {
+  lines(sexism_seq, QoI_Mean2[i,], 
+        col = partycolors[i],
+        lwd = 2)
+}
+
+for (i in 1:3) {
+  polygon(
+    c(rev(sexism_seq), sexism_seq),
+    c(rev(QoI_CI2[1, i,]), QoI_CI2[2, i,]),
+    col = adjustcolor(partycolors[i], alpha = 0.2) ,
+    border = NA
+  )
+}
+
+legend(
+  "topright",
+  legend = levels(data_panel_complete$combined_dep_var),
+  lty = 1,
+  col = partycolors,
+  bty = "n"
+)
+```
+
+#Interactions
+
+``` {r interaction}
+inter_2019 <-  female1*lm1_msexism1
+
+X3<- as.matrix( cbind(1,female1, age1, edu3_21, edu3_31, dhincome_all1, livingpartner1, intpol1, lm1_authoritarian1, lm1_ideol1, lm1_nativism1,
+lm1_orgterr1, lm1_pop6amz1,lm1_msexism1, inter_2019))
+
+startvals3 <- rep(0, ncol(X3) * (J1 - 1))
+
+res3 <- optim(
+  startvals3,
+  ll_mnl,
+  X = X3,
+  Z = Z1,
+  method = "BFGS",
+  control = list(fnscale = -1, trace = TRUE),
+  hessian = TRUE
+)
+
+res3$par 
+betaHat <- matrix(res3$par,
+                  ncol = ncol(X3), #number of indep var - 7
+                  nrow = ncol(Z1)-1, #but we need to estimate 3 row instead of 4
+                  byrow = T)
+
+colnames(betaHat) <- c("(Intercept)", colnames(X3)[2:ncol(X3)])
+rownames(betaHat) <-  levels(data_panel_complete1$combined_dep_var)[2:ncol(Z1)]
+
+
+se <-
+  matrix(sqrt(diag(solve(-res3$hessian))),
+         ncol = ncol(X3),
+         nrow = ncol(Z1)-1,
+         byrow = T)
+colnames(se) <- c("(Intercept)", colnames(X3)[2:ncol(X3)])
+rownames(se) <-  levels(data_panel_complete1$combined_dep_var)[2:ncol(Z1)]
+
+betaHat
+se
+
+library('nnet')
+data_panel_complete1$combined_dep_var <- factor(data_panel_complete1$combined_dep_var)
+data_panel_complete1$combined_dep_var <- relevel(data_panel_complete1$combined_dep_var, ref = "No vote")
+check <- multinom(combined_dep_var ~ 
+                    female + age + edu3_2 + edu3_3 + dhincome_all + livingpartner + intpol+ lm1_authoritarian+lm1_ideol+ lm1_nativism+
+                    lm1_orgterr + lm1_pop6amz + lm1_msexism + female*lm1_msexism, 
+                  data = data_panel_complete1)
+
+summary(check)
+betaHat
+se
+```
+
+``` {r simulation interaction}
+
+lm1_msexism <- na.omit(as.numeric(data_panel$lm1_msexism))
+
+sexism_seq <- seq(min(lm1_msexism), max(lm1_msexism), length.out = 10)
+
+
+# Get coefficients and the variance-covariance matrix for the simulation
+mu <- res3$par
+varcov <- solve(-res3$hessian)
+
+# Define nsim, J (number of categories) and k (number of independent variables)
+nsim <- 1000
+J <- length(unique(data_panel_complete1$combined_dep_var))  # Number of categories
+k <- ncol(X3)
+
+# Set up the sampling distribution
+S <- mvrnorm(nsim, mu, varcov)
+
+# Store in an array similar to what we did in the ll function - we need to make a matrix - J rows, k columns and 1000 times
+beta_S <- array(0, dim = c(J, k, nsim))
+
+# Check dimensions:
+dim(beta_S)
+
+# fill the array with the sampling distribution of betas
+for(sim in 1:nsim) { #take first set of betas and put in the matrix, go to the second layer, etc, etc
+  beta_S[-1, ,sim] <- matrix(S[sim,],  #select everything but 1 row
+                             ncol = k, 
+                             byrow = T)
+} #1000 matrices behind each other - each set of b is a matrix
+
+beta_S
+
+sel <- which(colnames(X3) == "inter_2019") # column 4
+# Set up your scenarios
+n_scenarios <- length(sexism_seq) # Number of scenarios; 10 as we have 10 cases
+
+cases <- array(NA, c(dim(X3),
+                     n_scenarios))  
+dim(cases)
+
+cases[, , ] <- X3 #fill with x
+
+for (i in 1:n_scenarios) {
+  cases[, sel, i] <-sexism_seq[i] #take observ values and assume that everyone has min income, 2nd time at 11 level, etc.
+}
+
+
+# Now our array V will have four (!) dimensions
+ V2 <- #matrix of utilities
+  array(NA, 
+        dim = c(nrow(X1),       # number of observations - row
+                J,             # number of categories - this form a matrix n*4 -columns
+                nsim,          # number of simulations - how often we put each case behind each other
+                n_scenarios))  # number of scenarios 
+#the 1st column is always 0 (utilities to vote for CDA), 2nd row utility for 1st observation to vote for 3 parties (3 columns) - and again we do this 1000 times
+# and we do it one more time for relig case ---> we have 4 dimens in total
+dim(V2)
+
+# 1) Loop over the scenarios
+for (i in 1:n_scenarios) {
+  # 2) in each scenario:
+  #    loop over the simulations
+  for (s in 1:nsim) {
+    # 3) in each scenario and simulation:
+    #    loop over the categories and calculate its utility
+    for (j in 1:J) {
+      # 4) calculate utility for the utility of 
+      #    - the current scenario
+      #    - based on the current set of simulated beta values
+      #    - for the current outcome category
+      
+      V2[,j,s,i] <- cases[,,i] %*% beta_S[j,,s] 
+      
+      # cases[,,i] the i-th scenario that we specified
+      # beta_S[j,,s] is the s-th simulation of beta for category j 
+      # (remember: there's one set of beta for each category and each simulation)
+    }
+  }
+}
+
+# the apply command over more than two dimensions is hard!
+# maybe a nested loop is more intuitive to understand what is happening here:
+
+# Have a look at the dimensions
+dim(V2)
+
+# Now we want to summarize over multiple dimensions
+Sexp <- apply(V2, c(1,3,4), function(v) sum(exp(v))) #sum of each row ; 1,3,4 - dimensions
+
+dim(Sexp) #observ*simul *scenarios
+
+# With V and Sexp we have everything to get P
+P <- array(NA, c(nsim, J, n_scenarios))
+dim(P)
+
+for (scen in 1:n_scenarios) {
+  for (category in 1:J) { #each column is div by the sum
+    P[, category, scen] <- 
+      apply(exp(V2[, category, , scen]) / Sexp[, , scen], 2, mean) #apply to each indiv sim; apply to the sim in the 2nd dimen (simul)
+  }
+}
+
+P
+# Summarize to get our quantities of interest
+
+QoImean <- matrix(NA, nrow = 3, ncol = n_scenarios)
+QoICI <- array(NA, dim = c(2,     # lower and upper bound
+                           3,     # number of categories
+                           10))   # number of scenarios
+
+
+QoI_Mean <- apply(P, c(2, 3), mean) #mean of columns because each colum address each party, apply to every column in every layer
+QoI_CI <-
+  apply(P, c(2, 3), function(x)
+    quantile(x, probs = c(0.025, 0.975)))
+
+partycolors <- c("mediumseagreen", 
+                 "red", 
+                 "orange")
+# Plot the results
+
+plot(
+  sexism_seq,
+  QoI_Mean[1,],
+  type = "n",
+  ylim = c(0, 1),
+  bty = "n",
+  ylab = "Predicted Probability of voting for Party",
+  xlab = "Sexism",
+  main = "The Effect of Sexism",
+  las = 1
+)
+
+for (i in 1:3) {
+  lines(sexism_seq, QoI_Mean[i,], 
+        col = partycolors[i],
+        lwd = 2)
+}
+
+for (i in 1:3) {
+  polygon(
+    c(rev(sexism_seq), sexism_seq),
+    c(rev(QoI_CI[1, i,]), QoI_CI[2, i,]),
+    col = adjustcolor(partycolors[i], alpha = 0.2) ,
+    border = NA
+  )
+}
+
+legend(
+  "topright",
+  legend = levels(data_panel_complete$combined_dep_var),
+  lty = 1,
+  col = partycolors,
+  bty = "n"
+)
+```
 
 
 
