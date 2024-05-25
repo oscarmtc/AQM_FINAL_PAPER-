@@ -14,11 +14,11 @@ output:
 bibliography: 
 ---
 
-## Introduction 
+# Introduction 
 
 This file contains the code for the replication of the analysis presented in the written paper. All of the Tables and Graphs presented in the main sections of the paper, as well as the entire set of Materials presented in the Appendix can be generated using this code without need of additional manipulations. 
 
-### Package-Setup & Data Download 
+# Package-Setup & Data Download 
 
 This first two chunks do not form part of the analysis. The first series of code lines has the purpose of defining the packages that will be required throughout the entire data preparation and analysis. The second chunk downloads the main data source and stores it in an object labeled "data". 
 
@@ -62,7 +62,7 @@ data <- fread("spanish_political_attitudes_dataset_2017_to_2020.csv")
 
 ```
 
-## Data Preparation: Re-codeing, Re-scaling, and Generation of New variables
+# Data Preparation: Re-codeing, Re-scaling, and Generation of New variables
 
 This section of the file corresponding to the process of preparing the data for the later analysis performs the following functions:
      1. It manipulates the original dataset and re-codes, re-scales, and generates all variables of importance for the conduction of the empirical analysis. Different groups of variables are generated in the following code chunks. Each code chunk specifies in its title the variables that are being generated, recoded, or modified. 
@@ -983,7 +983,7 @@ data_panel$intention_novote <- ifelse(data_panel$voteintentionspain_redef %in% n
 
 ```
 
-## Replication of the Paper's Original Results 
+# Replication of the Paper's Original Results 
 
 This section has the main purpose of replicating the original findings of the presented in the paper "Sexism and the far-right vote: The individual dynamics of gender backlash". Even though the original results will not form part of our contribution, the replication of these will allow us to assess the following aspects: 
                  1. Inspect the correctness of the conducted data preparation 
@@ -1890,7 +1890,7 @@ cat(Replication_Table_3)
 
 ```
 
-## Analysis Part 1: Dichotomous Dependent Variable
+# Analysis Part 1: Dichotomous Dependent Variable
 
 This initial part of our analysis examines whether the effect of sexism on support for the VOX party (operationalized as a respondent's intention to vote for this party) varies between women and men. For this initial part of our empirical analysis, we employ a dichotomous dependent variable measuring whether a respondent intends to cast a vote in favor of vox (coded as "1"), or in favor of another party (coded as "0"). 
 
@@ -2376,6 +2376,7 @@ library(MASS) # ... we require the package "MASS" to conduct the draws from the 
 n_simulations <- 1000 # 
 
 ```
+
 ```{r Part 1.1.6: Definition of Scenarios}
 
 # .............................................................................#
@@ -4799,7 +4800,1214 @@ dev.copy2pdf(file = ("First_Differences_OVA_m6_E2.pdf"),
 
 ```
 
-## Analysis Part 2: Multinomial Choice Model and Fixed-Effects Regression 
+### Analysis Part 1.3: Interactions with Model Specification from Table 1 
+
+This part of the analysis consists of the following sub-section: 
+     1.3.1: We initiate by generating the interaction variables for each of the models
+     1.3.2: Definition of Dependent and Independent Variables
+     1.3.3: We display the results in a nice-formatted table (all four models)
+     1.2.4: Definition of Scenarios
+     1.2.5: Estimation of Predicted Probabilities Using the Average Value Approach
+     1.2.6: Estimation of First Differences
+     
+     1.2.7: Estimation of First Differences Using the Observed Value Approach
+     
+
+``` {r Part 1.3.1: Generation of Interaction Variables}
+
+# ... This section generates the interaction variables for each of the three models that will latter be estimated. In all three cases, the same interaction variable will be used. 
+
+#______________________________________________________________________________#
+# ... interaction variable "int_E3" for all Models ...
+data_panel$int_E3 <- data_panel$female * data_panel$msexism
+
+#______________________________________________________________________________#
+
+```
+
+```{r Part 1.3.2: Definition of Dependent and Independent Variables}
+
+# ... we define a vector containing the names of all the variables (as stored in the main data frame) that will be used for the estimation of the model ...
+variables_E3  <- c("female",                  
+                   "age",                    
+                   "edu3_2",                 
+                   "edu3_3",                 
+                   "dhincome_all",           
+                   "livingpartner",          
+                   "intpol",                 
+                   "authoritarian",          
+                   "ideol",                  
+                   "nativism",               
+                   "orgterr",                
+                   "pop6amz",                
+                   "msexism",    
+                   "int_E3", 
+                   "affirmative_vox",
+                   "year"
+                   )
+
+# ... we then generate a data subset ("data_E3") containing the variables as defined by the vector "variables_m1_E3" ...
+data_E3 <- na.omit(data_panel[, c(variables_E3)])
+
+# .............................................................................#
+# .................................. MODEL 1 ..................................#
+# .............................................................................#
+
+# ... we create a subset of the data frame "data_E3" containing only observations for which the value of "year" is 2018 ...
+est_m1_E3 <- subset(data_E3,year == 2018) 
+
+# ... we then define the dependent variable (affirmative_vox"),...
+est_m1_E3$affirmative_vox <- as.numeric(est_m1_E3$affirmative_vox) # we make sure that the DV is numeric 
+Y_m1_E3 <- est_m1_E3$affirmative_vox
+Y_m1_E3 <- as.numeric(Y_m1_E3) # we store the resulting Y-vector as a numeric vector
+
+# ... and proceed to define the set of independent variables ...
+independent_variables_m1_E3 <- c("female",                  
+                                 "age",                    
+                                 "edu3_2",                 
+                                 "edu3_3",                 
+                                 "dhincome_all",           
+                                 "livingpartner",          
+                                 "intpol",                 
+                                 "authoritarian",          
+                                 "ideol",                  
+                                 "nativism",               
+                                 "orgterr",                
+                                 "pop6amz",                
+                                 "msexism",    
+                                 "int_E3"
+                                 )
+
+independent_variables_m1 <- est_m1_E3[, independent_variables_m1_E3]
+X_m1_E3 <- cbind(1, independent_variables_m1)
+X_m1_E3 <- as.matrix(sapply(X_m1_E3, as.numeric)) # we make sure that the matrix X is indeed saved as a matrix
+
+# .............................................................................#
+# .................................. MODEL 2 ..................................#
+# .............................................................................#
+
+# ... we create a subset of the data frame "data_E3" containing only observations for which the value of "year" is 2019 ...
+est_m2_E3 <- subset(data_E3,year == 2019) 
+
+# ... we then define the dependent variable (affirmative_vox"),...
+est_m2_E3$affirmative_vox <- as.numeric(est_m2_E3$affirmative_vox) # we make sure that the DV is numeric 
+Y_m2_E3 <- est_m2_E3$affirmative_vox
+Y_m2_E3 <- as.numeric(Y_m2_E3) # we store the resulting Y-vector as a numeric vector
+
+# ... and proceed to define the set of independent variables ...
+independent_variables_m2_E3 <- c("female",                  
+                                 "age",                    
+                                 "edu3_2",                 
+                                 "edu3_3",                 
+                                 "dhincome_all",           
+                                 "livingpartner",          
+                                 "intpol",                 
+                                 "authoritarian",          
+                                 "ideol",                  
+                                 "nativism",               
+                                 "orgterr",                
+                                 "pop6amz",                
+                                 "msexism",    
+                                 "int_E3"
+                                 )
+
+independent_variables_m2 <- est_m2_E3[, independent_variables_m2_E3]
+X_m2_E3 <- cbind(1, independent_variables_m2)
+X_m2_E3 <- as.matrix(sapply(X_m2_E3, as.numeric)) # we make sure that the matrix X is indeed saved as a matrix
+
+# .............................................................................#
+# .................................. MODEL 3 ..................................#
+# .............................................................................#
+
+# ... we create a subset of the data frame "data_E3" containing only observations for which the value of "year" is 2020 ...
+est_m3_E3 <- subset(data_E3,year == 2020) 
+
+# ... we then define the dependent variable (affirmative_vox"),...
+est_m3_E3$affirmative_vox <- as.numeric(est_m3_E3$affirmative_vox) # we make sure that the DV is numeric 
+Y_m3_E3 <- est_m3_E3$affirmative_vox
+Y_m3_E3 <- as.numeric(Y_m3_E3) # we store the resulting Y-vector as a numeric vector
+
+# ... and proceed to define the set of independent variables ...
+independent_variables_m3_E3 <- c("female",                  
+                                 "age",                    
+                                 "edu3_2",                 
+                                 "edu3_3",                 
+                                 "dhincome_all",           
+                                 "livingpartner",          
+                                 "intpol",                 
+                                 "authoritarian",          
+                                 "ideol",                  
+                                 "nativism",               
+                                 "orgterr",                
+                                 "pop6amz",                
+                                 "msexism",    
+                                 "int_E3"
+                                 )
+
+independent_variables_m3 <- est_m3_E3[, independent_variables_m3_E3]
+X_m3_E3 <- cbind(1, independent_variables_m3)
+X_m3_E3 <- as.matrix(sapply(X_m3_E3, as.numeric)) # we make sure that the matrix X is indeed saved as a matrix
+
+```
+
+```{r Part 1.3.3: Optimization of Logit-Log-Likelihood Functions}
+
+# .............................................................................#
+# .................................. MODEL 1 ..................................#
+# .............................................................................#
+
+# ... we initiate by defining the starting values (one for each covariate plus one for the intercept) ...
+startvalues1_m1E3 <- rep(0,15) 
+
+## ... and implement an initial optimization ...
+res1_m1E3 <- optim(par = startvalues1_m1E3,
+             fn = LL_logit,
+             y = Y_m1_E3,
+             X = X_m1_E3,
+             control = list(fnscale = -1),
+             hessian = TRUE,
+             method = "BFGS"
+             )
+
+# ... we subsequently conduct a second optimization ...
+startvalues2_m1E3 <- round(res1_m1E3$par,10)
+
+res2_m1E3 <- optim(par= startvalues2_m1E3,
+             fn = LL_logit,
+             y = Y_m1_E3,
+             X = X_m1_E3,
+             control=list(parscale=abs(res1_m1E3$par), fnscale = -1),
+             hessian = TRUE,
+             method = "BFGS"
+             )
+
+# ... we return the point estimates and store these in an object ...
+point_estimates_m1E3 <- res2_m1E3$par[1:15]
+
+# ... We proceed with the estimation of the standard errors ...
+SE_m1E3 <- sqrt(diag(solve(-res2_m1E3$hessian)))
+
+# ... we furthermore include the calculation of the p-values ...
+P_Values_m1E3 <- 2 * (1 - pnorm(abs(point_estimates_m1E3 / SE_m1E3)))
+
+# ... we additionally extract the number of observations ...
+N_m1E3 <- length(Y_m1_E3)
+
+# .............................................................................#
+# .................................. MODEL 2 ..................................#
+# .............................................................................#
+
+# ... we initiate by defining the starting values (one for each covariate plus one for the intercept) ...
+startvalues1_m2E3 <- rep(0,15) 
+
+## ... and implement an initial optimization ...
+res1_m2E3 <- optim(par = startvalues1_m2E3,
+             fn = LL_logit,
+             y = Y_m2_E3,
+             X = X_m2_E3,
+             control = list(fnscale = -1),
+             hessian = TRUE,
+             method = "BFGS"
+             )
+
+# ... we subsequently conduct a second optimization ...
+startvalues2_m2E3 <- round(res1_m2E3$par,10)
+
+res2_m2E3 <- optim(par= startvalues2_m2E3,
+             fn = LL_logit,
+             y = Y_m2_E3,
+             X = X_m2_E3,
+             control=list(parscale=abs(res1_m2E3$par), fnscale = -1),
+             hessian = TRUE,
+             method = "BFGS"
+             )
+
+# ... we return the point estimates and store these in an object ...
+point_estimates_m2E3 <- res2_m2E3$par[1:15]
+
+# ... We proceed with the estimation of the standard errors ...
+SE_m2E3 <- sqrt(diag(solve(-res2_m2E3$hessian)))
+
+# ... we furthermore include the calculation of the p-values ...
+P_Values_m2E3 <- 2 * (1 - pnorm(abs(point_estimates_m2E3 / SE_m2E3)))
+
+# ... we additionally extract the number of observations ...
+N_m2E3 <- length(Y_m2_E3)
+
+# .............................................................................#
+# .................................. MODEL 3 ..................................#
+# .............................................................................#
+
+# ... we initiate by defining the starting values (one for each covariate plus one for the intercept) ...
+startvalues1_m3E3 <- rep(0,15) 
+
+## ... and implement an initial optimization ...
+res1_m3E3 <- optim(par = startvalues1_m3E3,
+             fn = LL_logit,
+             y = Y_m3_E3,
+             X = X_m3_E3,
+             control = list(fnscale = -1),
+             hessian = TRUE,
+             method = "BFGS"
+             )
+
+# ... we subsequently conduct a second optimization ...
+startvalues2_m3E3 <- round(res1_m3E3$par,10)
+
+res2_m3E3 <- optim(par= startvalues2_m3E3,
+             fn = LL_logit,
+             y = Y_m3_E3,
+             X = X_m3_E3,
+             control=list(parscale=abs(res1_m3E3$par), fnscale = -1),
+             hessian = TRUE,
+             method = "BFGS"
+             )
+
+# ... we return the point estimates and store these in an object ...
+point_estimates_m3E3 <- res2_m3E3$par[1:15]
+
+# ... We proceed with the estimation of the standard errors ...
+SE_m3E3 <- sqrt(diag(solve(-res2_m3E3$hessian)))
+
+# ... we furthermore include the calculation of the p-values ...
+P_Values_m3E3 <- 2 * (1 - pnorm(abs(point_estimates_m3E3 / SE_m3E3)))
+
+# ... we additionally extract the number of observations ...
+N_m3E3 <- length(Y_m3_E3)
+
+```
+
+```{r Part 1.3.4: Display and Visualization of Regression Results}
+
+# Having obtained the values for the parameters of interest, this part generates a nice-looking table to display the results of the three logistic regressions. 
+
+library(knitr) # ... we need the "knitr" to be able to generate the tables ...
+
+# .............................................................................#
+# ....................... Joint Display MODELS 1, 2 & 3 .......................#
+# .............................................................................#
+
+# ... we initiate adding the corresponding stars to coefficients using the function "add_stars" ...
+Point_Estimates_m1E3_stars <- mapply(add_stars, round(point_estimates_m1E3, 3), P_Values_m1E3)
+Point_Estimates_m2E3_stars <- mapply(add_stars, round(point_estimates_m2E3, 3), P_Values_m2E3)
+Point_Estimates_m3E3_stars <- mapply(add_stars, round(point_estimates_m3E3, 3), P_Values_m3E3)
+
+# we then combine point estimates with SE ...
+output_1 <- cbind(Point_Estimates_m1E3_stars, round(SE_m1E3, 3))
+colnames(output_1) <- c('Coefficients (2018)', 'SE')
+rownames(output_1) <- c("Intercept",
+                        "Female",
+                        "Age",
+                        "High school / Vocational",
+                        "College",
+                        "Income",
+                        "Lives with partner",
+                        "Interest in politics",
+                        "Authoritarianism",
+                        "Ideological identification",
+                        "Nativism",
+                        "Territorial preference",
+                        "Populism",
+                        "Sexism",
+                        "Female x Sexism")
+
+# we then combine point estimates with SE ...
+output_2 <- cbind(Point_Estimates_m2E3_stars, round(SE_m2E3, 3))
+colnames(output_2) <- c('Coefficients (2019)', 'SE')
+rownames(output_2) <- c("Intercept",
+                        "Female",
+                        "Age",
+                        "High school / Vocational",
+                        "College",
+                        "Income",
+                        "Lives with partner",
+                        "Interest in politics",
+                        "Authoritarianism",
+                        "Ideological identification",
+                        "Nativism",
+                        "Territorial preference",
+                        "Populism",
+                        "Sexism",
+                        "Female x Sexism")
+
+# we then combine point estimates with SE ...
+output_3 <- cbind(Point_Estimates_m3E3_stars, round(SE_m3E3, 3))
+colnames(output_3) <- c('Coefficients (2020)', 'SE')
+rownames(output_3) <- c("Intercept",
+                        "Female",
+                        "Age",
+                        "High school / Vocational",
+                        "College",
+                        "Income",
+                        "Lives with partner",
+                        "Interest in politics",
+                        "Authoritarianism",
+                        "Ideological identification",
+                        "Nativism",
+                        "Territorial preference",
+                        "Populism",
+                        "Sexism",
+                        "Female x Sexism")
+
+
+# ... we then combine the two columns ...
+unified_table_4 <- cbind(output_1, output_2, output_3)
+
+# ... create a row for the number of observations for each model ...
+n_observations <- c(N_m1E3, "", N_m2E3, "", N_m3E3, "")
+
+# ... and append the number of observations row to the unified table ...
+unified_table_4 <- rbind(unified_table_4, "N" = n_observations)
+
+# ... we finalize by printing the generated table...
+kable(unified_table_4, 
+      digits = 3, 
+      align = "ccrl",
+      booktabs = TRUE,
+      caption = "Effect of Attitudes on Intended Vote for Vox - Interaction Term Included") %>%
+  kable_styling(full_width = FALSE)
+
+#______________________________________________________________________________#
+# ... this last section generates the La-Tex corresponding to Table 2 ...
+Extension3_Table <- kable(unified_table_4,
+                          digits = 3, 
+                          align = "ccrl",
+                          booktabs = TRUE, 
+                          format = "latex",
+                          caption = "Effect of Attitudes on Intended Vote for Vox - Interaction Term Included") %>%
+  kable_styling(full_width = FALSE)
+
+# ... print the La-TeX code to the console ...
+cat(Extension3_Table)
+
+```
+
+```{r Part 1.3.5: Definition of Scenarios}
+
+# .............................................................................#
+# .................................. MODEL 1 ..................................#
+# .............................................................................#
+
+# ... we initiate by defining a sequence of the variable "msexism", ranging from its minimum value to its maximum with a total of 1000 intervals in between. This same sequence will be used for the simulations of the three models ... 
+msexism_seq_m123E3 <- seq(min(data_panel$msexism[!is.na(data_panel$msexism)]),
+                          max(data_panel$msexism[!is.na(data_panel$msexism)]),
+                          length.out = 1000)
+
+# ... we then define the corresponding scenario ...
+scenario_w_m1E3 <- cbind(1,                                              # Intercept 
+                         1,                                              # Female = 1 
+                         mean(data_panel$age),                           # ...  
+                         median(data_panel$edu3_2),                      # ...
+                         median(data_panel$edu3_3),                      # ...
+                         mean(data_panel$dhincome_all, na.rm = T),       # ... 
+                         median(data_panel$livingpartner, na.rm = T),    # ... 
+                         mean(data_panel$intpol, na.rm = T),             # ... 
+                         mean(data_panel$authoritarian, na.rm = T),      # ...
+                         mean(data_panel$ideol, na.rm = T),              # ...
+                         mean(data_panel$nativism, na.rm = T),           # ...
+                         mean(data_panel$orgterr, na.rm = T),            # ...
+                         mean(data_panel$pop6amz, na.rm = T),            # ...
+                         msexism_seq_m123E3,                             # Sexism-Sequence 
+                         1 * msexism_seq_m123E3                          # Interaction 
+                         )   
+
+scenario_m_m1E3 <- cbind(1,                                              # Intercept 
+                         0,                                              # Female = 0 
+                         mean(data_panel$age),                           # ...  
+                         median(data_panel$edu3_2),                      # ...
+                         median(data_panel$edu3_3),                      # ...
+                         mean(data_panel$dhincome_all, na.rm = T),       # ... 
+                         median(data_panel$livingpartner, na.rm = T),    # ... 
+                         mean(data_panel$intpol, na.rm = T),             # ... 
+                         mean(data_panel$authoritarian, na.rm = T),      # ...
+                         mean(data_panel$ideol, na.rm = T),              # ...
+                         mean(data_panel$nativism, na.rm = T),           # ...
+                         mean(data_panel$orgterr, na.rm = T),            # ...
+                         mean(data_panel$pop6amz, na.rm = T),            # ...
+                         msexism_seq_m123E3,                             # Sexism-Sequence 
+                         0 * msexism_seq_m123E3                          # Interaction 
+                         )   
+
+# ... having defined the scenarios, we proceed to implement the Simulation Function, specifying the appropriate inputs for each of the two scenarios specified above ...
+sim_women_m1E3 <- sim_function(coefs = res2_m1E3$par, 
+                               vcov = solve(-res2_m1E3$hessian), 
+                               scenario = scenario_w_m1E3, 
+                               response_function = response_function, 
+                               stochastic_component = stochastic_component)$ev
+
+
+sim_men_m1E3 <- sim_function(coefs = res2_m1E3$par, 
+                               vcov = solve(-res2_m1E3$hessian), 
+                               scenario = scenario_m_m1E3, 
+                               response_function = response_function, 
+                               stochastic_component = stochastic_component)$ev
+
+# .............................................................................#
+# .................................. MODEL 2 ..................................#
+# .............................................................................#
+
+# ... we then define the corresponding scenario ...
+scenario_w_m2E3 <- cbind(1,                                              # Intercept 
+                         1,                                              # Female = 1 
+                         mean(data_panel$age),                           # ...  
+                         median(data_panel$edu3_2),                      # ...
+                         median(data_panel$edu3_3),                      # ...
+                         mean(data_panel$dhincome_all, na.rm = T),       # ... 
+                         median(data_panel$livingpartner, na.rm = T),    # ... 
+                         mean(data_panel$intpol, na.rm = T),             # ... 
+                         mean(data_panel$authoritarian, na.rm = T),      # ...
+                         mean(data_panel$ideol, na.rm = T),              # ...
+                         mean(data_panel$nativism, na.rm = T),           # ...
+                         mean(data_panel$orgterr, na.rm = T),            # ...
+                         mean(data_panel$pop6amz, na.rm = T),            # ...
+                         msexism_seq_m123E3,                             # Sexism-Sequence 
+                         1 * msexism_seq_m123E3                          # Interaction 
+                         )   
+
+scenario_m_m2E3 <- cbind(1,                                              # Intercept 
+                         0,                                              # Female = 0 
+                         mean(data_panel$age),                           # ...  
+                         median(data_panel$edu3_2),                      # ...
+                         median(data_panel$edu3_3),                      # ...
+                         mean(data_panel$dhincome_all, na.rm = T),       # ... 
+                         median(data_panel$livingpartner, na.rm = T),    # ... 
+                         mean(data_panel$intpol, na.rm = T),             # ... 
+                         mean(data_panel$authoritarian, na.rm = T),      # ...
+                         mean(data_panel$ideol, na.rm = T),              # ...
+                         mean(data_panel$nativism, na.rm = T),           # ...
+                         mean(data_panel$orgterr, na.rm = T),            # ...
+                         mean(data_panel$pop6amz, na.rm = T),            # ...
+                         msexism_seq_m123E3,                             # Sexism-Sequence 
+                         0 * msexism_seq_m123E3                          # Interaction 
+                         )   
+
+# ... having defined the scenarios, we proceed to implement the Simulation Function, specifying the appropriate inputs for each of the two scenarios specified above ...
+sim_women_m2E3 <- sim_function(coefs = res2_m2E3$par, 
+                               vcov = solve(-res2_m2E3$hessian), 
+                               scenario = scenario_w_m2E3, 
+                               response_function = response_function, 
+                               stochastic_component = stochastic_component)$ev
+
+
+sim_men_m2E3 <- sim_function(coefs = res2_m2E3$par, 
+                               vcov = solve(-res2_m2E3$hessian), 
+                               scenario = scenario_m_m2E3, 
+                               response_function = response_function, 
+                               stochastic_component = stochastic_component)$ev
+
+# .............................................................................#
+# .................................. MODEL 3 ..................................#
+# .............................................................................#
+
+# ... we then define the corresponding scenario ...
+scenario_w_m3E3 <- cbind(1,                                              # Intercept 
+                         1,                                              # Female = 1 
+                         mean(data_panel$age),                           # ...  
+                         median(data_panel$edu3_2),                      # ...
+                         median(data_panel$edu3_3),                      # ...
+                         mean(data_panel$dhincome_all, na.rm = T),       # ... 
+                         median(data_panel$livingpartner, na.rm = T),    # ... 
+                         mean(data_panel$intpol, na.rm = T),             # ... 
+                         mean(data_panel$authoritarian, na.rm = T),      # ...
+                         mean(data_panel$ideol, na.rm = T),              # ...
+                         mean(data_panel$nativism, na.rm = T),           # ...
+                         mean(data_panel$orgterr, na.rm = T),            # ...
+                         mean(data_panel$pop6amz, na.rm = T),            # ...
+                         msexism_seq_m123E3,                             # Sexism-Sequence 
+                         1 * msexism_seq_m123E3                          # Interaction 
+                         )   
+
+scenario_m_m3E3 <- cbind(1,                                              # Intercept 
+                         0,                                              # Female = 0 
+                         mean(data_panel$age),                           # ...  
+                         median(data_panel$edu3_2),                      # ...
+                         median(data_panel$edu3_3),                      # ...
+                         mean(data_panel$dhincome_all, na.rm = T),       # ... 
+                         median(data_panel$livingpartner, na.rm = T),    # ... 
+                         mean(data_panel$intpol, na.rm = T),             # ... 
+                         mean(data_panel$authoritarian, na.rm = T),      # ...
+                         mean(data_panel$ideol, na.rm = T),              # ...
+                         mean(data_panel$nativism, na.rm = T),           # ...
+                         mean(data_panel$orgterr, na.rm = T),            # ...
+                         mean(data_panel$pop6amz, na.rm = T),            # ...
+                         msexism_seq_m123E3,                             # Sexism-Sequence 
+                         0 * msexism_seq_m123E3                          # Interaction 
+                         )   
+
+# ... having defined the scenarios, we proceed to implement the Simulation Function, specifying the appropriate inputs for each of the two scenarios specified above ...
+sim_women_m3E3 <- sim_function(coefs = res2_m3E3$par, 
+                               vcov = solve(-res2_m3E3$hessian), 
+                               scenario = scenario_w_m3E3, 
+                               response_function = response_function, 
+                               stochastic_component = stochastic_component)$ev
+
+
+sim_men_m3E3 <- sim_function(coefs = res2_m3E3$par, 
+                               vcov = solve(-res2_m3E3$hessian), 
+                               scenario = scenario_m_m3E3, 
+                               response_function = response_function, 
+                               stochastic_component = stochastic_component)$ev
+
+```
+
+```{r 1.3.6: Estimation of Predicted Probabilities Using the Average Value Approach}
+
+# .............................................................................#
+# .................................. MODEL 1 ..................................#
+# .............................................................................#
+
+# ... We initiate by calculating the confidence intervals as below ...
+lower_women_m1E3 <- apply(sim_women_m1E3, 2, function(x) quantile(x, probs = 0.025))
+upper_women_m1E3 <- apply(sim_women_m1E3, 2, function(x) quantile(x, probs = 0.975))
+lower_men_m1E3 <- apply(sim_men_m1E3, 2, function(x) quantile(x, probs = 0.025))
+upper_men_m1E3 <- apply(sim_men_m1E3, 2, function(x) quantile(x, probs = 0.975))
+
+# ... and then plot the estimated predicted probabilities using the confidence intervals we obtained above ...
+plot(x = msexism_seq_m123E3,
+     y = apply(sim_women_m1E3, 2, mean),
+     type = "n",
+     lwd = 2,
+     main = "Predicted Probabiity of Intention to Vote for VOX (Year 2018)", 
+     cex.main = 0.7,
+     xlab = "Individual Sexism",
+     ylab = "Pr(Intention to Vote for VOX)", 
+     ylim = c(0, 0.3), 
+     cex.axis = 0.7, 
+     cex.lab = 0.7,
+     xaxt = "n")
+axis(1, at = seq(min(msexism_seq_m123E3), max(msexism_seq_m123E3), length.out = 20), cex.axis = 0.7)
+
+# ... we add a background grid ...
+abline(h = seq(0, 1, by = 0.1), col = "grey90")
+abline(v = seq(min(msexism_seq_m123E3), max(msexism_seq_m123E3), by = (max(msexism_seq_m123E3) - min(msexism_seq_m123E3)) / 10), col = "grey90")
+
+# ... and add confidence intervals as shaded areas ...
+polygon(c(msexism_seq_m123E3, rev(msexism_seq_m123E3)), c(upper_women_m1E3, rev(lower_women_m1E3)), col = rgb(1, 0, 0, 0.2), border = NA)
+polygon(c(msexism_seq_m123E3, rev(msexism_seq_m123E3)), c(upper_men_m1E3, rev(lower_men_m1E3)), col = rgb(0, 0, 1, 0.2), border = NA)
+
+# Predicted probabilities for treatment and control group
+lines(x = msexism_seq_m123E3, y = apply(sim_women_m1E3, 2, mean), lwd = 2, col = "red")
+lines(x = msexism_seq_m123E3, y = apply(sim_men_m1E3, 2, mean), lwd = 2, col = "blue")
+
+# Some annotations
+text(x = c(0.5, 0.5), y = c(0.25, 0.28), labels = c("Women", "Men"), cex = 0.7, pos = 4, col = c("red", "blue"))
+
+# Add distribution of actual observations
+rug(jitter(data_panel$msexism[data_panel$msexism <= 150], 0.1), ticksize = 0.02, lwd = 1)
+
+#_____________________________________________________________________________#
+# ... the following command lines save the generated plots into a single PDF-file ...
+dev.copy2pdf(file = ("Predicted_Probabilities_m1E3.pdf"), 
+             family = "Times", 
+             width = 12, 
+             height=6)
+#_____________________________________________________________________________#
+
+# .............................................................................#
+# .................................. MODEL 2 ..................................#
+# .............................................................................#
+
+# ... We initiate by calculating the confidence intervals as below ...
+lower_women_m2E3 <- apply(sim_women_m2E3, 2, function(x) quantile(x, probs = 0.025))
+upper_women_m2E3 <- apply(sim_women_m2E3, 2, function(x) quantile(x, probs = 0.975))
+lower_men_m2E3 <- apply(sim_men_m2E3, 2, function(x) quantile(x, probs = 0.025))
+upper_men_m2E3 <- apply(sim_men_m2E3, 2, function(x) quantile(x, probs = 0.975))
+
+# ... and then plot the estimated predicted probabilities using the confidence intervals we obtained above ...
+plot(x = msexism_seq_m123E3,
+     y = apply(sim_women_m2E3, 2, mean),
+     type = "n",
+     lwd = 2,
+     main = "Predicted Probabiity of Intention to Vote for VOX (Year 2019)", 
+     cex.main = 0.7,
+     xlab = "Individual Sexism",
+     ylab = "Pr(Intention to Vote for VOX)", 
+     ylim = c(0, 0.8), 
+     cex.axis = 0.7, 
+     cex.lab = 0.7,
+     xaxt = "n")
+axis(1, at = seq(min(msexism_seq_m123E3), max(msexism_seq_m123E3), length.out = 20), cex.axis = 0.7)
+
+# ... we add a background grid ...
+abline(h = seq(0, 1, by = 0.1), col = "grey90")
+abline(v = seq(min(msexism_seq_m123E3), max(msexism_seq_m123E3), by = (max(msexism_seq_m123E3) - min(msexism_seq_m123E3)) / 10), col = "grey90")
+
+# ... and add confidence intervals as shaded areas ...
+polygon(c(msexism_seq_m123E3, rev(msexism_seq_m123E3)), c(upper_women_m2E3, rev(lower_women_m2E3)), col = rgb(1, 0, 0, 0.2), border = NA)
+polygon(c(msexism_seq_m123E3, rev(msexism_seq_m123E3)), c(upper_men_m2E3, rev(lower_men_m2E3)), col = rgb(0, 0, 1, 0.2), border = NA)
+
+# Predicted probabilities for treatment and control group
+lines(x = msexism_seq_m123E3, y = apply(sim_women_m2E3, 2, mean), lwd = 2, col = "red")
+lines(x = msexism_seq_m123E3, y = apply(sim_men_m2E3, 2, mean), lwd = 2, col = "blue")
+
+# Some annotations
+text(x = c(0.5, 0.5), y = c(0.25, 0.28), labels = c("Women", "Men"), cex = 0.7, pos = 4, col = c("red", "blue"))
+
+# Add distribution of actual observations
+rug(jitter(data_panel$msexism[data_panel$msexism <= 150], 0.1), ticksize = 0.02, lwd = 1)
+
+#_____________________________________________________________________________#
+# ... the following command lines save the generated plots into a single PDF-file ...
+dev.copy2pdf(file = ("Predicted_Probabilities_m2E3.pdf"), 
+             family = "Times", 
+             width = 12, 
+             height=6)
+#_____________________________________________________________________________#
+
+# .............................................................................#
+# .................................. MODEL 3 ..................................#
+# .............................................................................#
+
+# ... We initiate by calculating the confidence intervals as below ...
+lower_women_m3E3 <- apply(sim_women_m3E3, 2, function(x) quantile(x, probs = 0.025))
+upper_women_m3E3 <- apply(sim_women_m3E3, 2, function(x) quantile(x, probs = 0.975))
+lower_men_m3E3 <- apply(sim_men_m3E3, 2, function(x) quantile(x, probs = 0.025))
+upper_men_m3E3 <- apply(sim_men_m3E3, 2, function(x) quantile(x, probs = 0.975))
+
+# ... and then plot the estimated predicted probabilities using the confidence intervals we obtained above ...
+plot(x = msexism_seq_m123E3,
+     y = apply(sim_women_m3E3, 2, mean),
+     type = "n",
+     lwd = 2,
+     main = "Predicted Probabiity of Intention to Vote for VOX (Year 2020)", 
+     cex.main = 0.7,
+     xlab = "Individual Sexism",
+     ylab = "Pr(Intention to Vote for VOX)", 
+     ylim = c(0, 0.6), 
+     cex.axis = 0.7, 
+     cex.lab = 0.7,
+     xaxt = "n")
+axis(1, at = seq(min(msexism_seq_m123E3), max(msexism_seq_m123E3), length.out = 20), cex.axis = 0.7)
+
+# ... we add a background grid ...
+abline(h = seq(0, 1, by = 0.1), col = "grey90")
+abline(v = seq(min(msexism_seq_m123E3), max(msexism_seq_m123E3), by = (max(msexism_seq_m123E3) - min(msexism_seq_m123E3)) / 10), col = "grey90")
+
+# ... and add confidence intervals as shaded areas ...
+polygon(c(msexism_seq_m123E3, rev(msexism_seq_m123E3)), c(upper_women_m3E3, rev(lower_women_m3E3)), col = rgb(1, 0, 0, 0.2), border = NA)
+polygon(c(msexism_seq_m123E3, rev(msexism_seq_m123E3)), c(upper_men_m3E3, rev(lower_men_m3E3)), col = rgb(0, 0, 1, 0.2), border = NA)
+
+# Predicted probabilities for treatment and control group
+lines(x = msexism_seq_m123E3, y = apply(sim_women_m3E3, 2, mean), lwd = 2, col = "red")
+lines(x = msexism_seq_m123E3, y = apply(sim_men_m3E3, 2, mean), lwd = 2, col = "blue")
+
+# Some annotations
+text(x = c(0.5, 0.5), y = c(0.25, 0.28), labels = c("Women", "Men"), cex = 0.7, pos = 4, col = c("red", "blue"))
+
+# Add distribution of actual observations
+rug(jitter(data_panel$msexism[data_panel$msexism <= 150], 0.1), ticksize = 0.02, lwd = 1)
+
+#_____________________________________________________________________________#
+# ... the following command lines save the generated plots into a single PDF-file ...
+dev.copy2pdf(file = ("Predicted_Probabilities_m3E3.pdf"), 
+             family = "Times", 
+             width = 12, 
+             height=6)
+#_____________________________________________________________________________#
+
+```
+
+```{r Part 1.3.7: Estimation of First Differences}
+
+# .............................................................................#
+# .................................. MODEL 1 ..................................#
+# .............................................................................#
+
+# ... we initiate by estimating the first differences ...
+fd_m1E3 <- sim_women_m1E3 - sim_men_m1E3
+
+# ... we then generate the display plot ...
+plot(x = msexism_seq_m123E3,
+     y = apply(fd_m1E3, 2, mean),
+     type = "n",
+     lwd = 2,
+     main = "First Difference Women - Men (2018)", 
+     cex.main = 0.7,
+     xlab = "Individual Sexism",
+     ylab = "FD", 
+     ylim=c(-0.4, 0.4), 
+     cex.axis = 0.7, 
+     cex.lab = 0.7,
+     xaxt = "n")
+axis(1, at = seq(0, 150, by = 25),
+     cex.axis = 0.7)
+
+# Background Raster
+abline(h = seq(-0.4, 0.6, by = 0.2), 
+       col = "grey90")
+abline(v = seq(0, 150, by = 25), 
+       col = "grey90")
+
+# FD
+lines(x = msexism_seq_m123E3,
+      y = apply(fd_m1E3, 2, mean),
+      lwd = 2)
+
+# Confidence Intervals
+lines(x = msexism_seq_m123E3,
+      y = apply(fd_m1E3, 2, quantile, 0.025),
+      lty = "dashed")
+lines(x = msexism_seq_m123E3,
+      y = apply(fd_m1E3, 2, quantile, 0.975),
+      lty = "dashed")
+
+# vertical line at y = 0
+abline(h = 0, 
+       lwd = 1)
+
+#_____________________________________________________________________________#
+# ... the following command lines save the generated plots into a single PDF-file ...
+dev.copy2pdf(file = ("First_Differences_AVA_m1E3.pdf"), 
+             family = "Times", 
+             width = 12, 
+             height=6)
+#_____________________________________________________________________________#
+
+# .............................................................................#
+# .................................. MODEL 2 ..................................#
+# .............................................................................#
+
+# ... we initiate by estimating the first differences ...
+fd_m2E3 <- sim_women_m2E3 - sim_men_m2E3
+
+# ... we then generate the display plot ...
+plot(x = msexism_seq_m123E3,
+     y = apply(fd_m2E3, 2, mean),
+     type = "n",
+     lwd = 2,
+     main = "First Difference Women - Men (2019)", 
+     cex.main = 0.7,
+     xlab = "Individual Sexism",
+     ylab = "FD", 
+     ylim=c(-0.4, 0.6), 
+     cex.axis = 0.7, 
+     cex.lab = 0.7,
+     xaxt = "n")
+axis(1, at = seq(0, 150, by = 25),
+     cex.axis = 0.7)
+
+# Background Raster
+abline(h = seq(-0.4, 0.6, by = 0.2), 
+       col = "grey90")
+abline(v = seq(0, 150, by = 25), 
+       col = "grey90")
+
+# FD
+lines(x = msexism_seq_m123E3,
+      y = apply(fd_m2E3, 2, mean),
+      lwd = 2)
+
+# Confidence Intervals
+lines(x = msexism_seq_m123E3,
+      y = apply(fd_m2E3, 2, quantile, 0.025),
+      lty = "dashed")
+lines(x = msexism_seq_m123E3,
+      y = apply(fd_m2E3, 2, quantile, 0.975),
+      lty = "dashed")
+
+# vertical line at y = 0
+abline(h = 0, 
+       lwd = 1)
+
+#_____________________________________________________________________________#
+# ... the following command lines save the generated plots into a single PDF-file ...
+dev.copy2pdf(file = ("First_Differences_AVA_m2E3.pdf"), 
+             family = "Times", 
+             width = 12, 
+             height=6)
+#_____________________________________________________________________________#
+
+# .............................................................................#
+# .................................. MODEL 3 ..................................#
+# .............................................................................#
+
+# ... we initiate by estimating the first differences ...
+fd_m3E3 <- sim_women_m3E3 - sim_men_m3E3
+
+# ... we then generate the display plot ...
+plot(x = msexism_seq_m123E3,
+     y = apply(fd_m3E3, 2, mean),
+     type = "n",
+     lwd = 2,
+     main = "First Difference Women - Men (2020)", 
+     cex.main = 0.7,
+     xlab = "Individual Sexism",
+     ylab = "FD", 
+     ylim=c(-0.4, 0.4), 
+     cex.axis = 0.7, 
+     cex.lab = 0.7,
+     xaxt = "n")
+axis(1, at = seq(0, 150, by = 25),
+     cex.axis = 0.7)
+
+# Background Raster
+abline(h = seq(-0.4, 0.6, by = 0.2), 
+       col = "grey90")
+abline(v = seq(0, 150, by = 25), 
+       col = "grey90")
+
+# FD
+lines(x = msexism_seq_m123E3,
+      y = apply(fd_m3E3, 2, mean),
+      lwd = 2)
+
+# Confidence Intervals
+lines(x = msexism_seq_m123E3,
+      y = apply(fd_m3E3, 2, quantile, 0.025),
+      lty = "dashed")
+lines(x = msexism_seq_m123E3,
+      y = apply(fd_m3E3, 2, quantile, 0.975),
+      lty = "dashed")
+
+# vertical line at y = 0
+abline(h = 0, 
+       lwd = 1)
+
+#_____________________________________________________________________________#
+# ... the following command lines save the generated plots into a single PDF-file ...
+dev.copy2pdf(file = ("First_Differences_AVA_m3E3.pdf"), 
+             family = "Times", 
+             width = 12, 
+             height=6)
+#_____________________________________________________________________________#
+
+```
+
+```{r Part 1.2.8: Estimation of First Differences Using the Observed Value Approach}
+
+# .............................................................................#
+# .................................. MODEL 1 ..................................#
+# .............................................................................#
+
+# ... we generate a 3D array with as many rows as there are observations (nrow(X)), as many columns as there are covariates in the X-matrix (ncol(X)), and a depth of 2 for each of the two scenarios that will be taken into account ...
+cases_m1E3 <- array(NA, c(dim(X_m1_E3), 2))  
+
+# assign X values to all dimensions of cases 
+# ie we get two identical layers of X matrices  
+cases_m1E3[, ,] <- X_m1_E3
+
+# select the columns to adjust for simulation 
+sel1_m1E3 <- which(colnames(X_m1_E3) == "female")
+sel2_m1E3 <- which(colnames(X_m1_E3) == "int_E3")
+
+# assign 0 to "female" column in layer 1
+cases_m1E3[, sel1_m1E3, 1] <- 0
+# assign 1 to female column in layer 2
+cases_m1E3[, sel1_m1E3, 2] <- 1
+
+# assign 0 to interaction ("int_E3") column in layer 1
+cases_m1E3[, sel2_m1E3, 1] <- 0*X_m1_E3[, "female"]
+# assign "female" value to int_E3v column in layer 2
+cases_m1E3[, sel2_m1E3, 2] <- 1*X_m1_E3[, "female"]
+
+# Loop over the matrices.
+val_m1E3 <- matrix(NA, nrow = n_simulations, ncol = 2)
+
+# for each layer in cases (third dimension)
+for(i in 1:2) {
+  ev_m1E3 <- sim_function(coefs = res2_m1E3$par,
+                          vcov = solve(-res2_m1E3$hessian),
+                          response_function = response_function,
+                          stochastic_component = stochastic_component,
+                          scenario = cases_m1E3[,,i],
+                          predicted_values = F
+                          )$ev
+  
+  tmp_val_m1E3 <- apply(ev_m1E3, 1, mean)
+  val_m1E3[, i] <- tmp_val_m1E3
+}
+
+# ... we then estimate the first differences and store these in an object called "fd_m1E1" ...
+fd_m1E3 <- val_m1E3[, 1] - val_m1E3[, 2]
+
+# ... we then proceed to generate the plots for a better visualization of the results ...
+par(mfrow = c(1, 2)) # This will allow us to display the First Differences for the two models side by side ...
+
+# ... we first plot the histogram ...
+hist(
+  fd_m1E3,
+  breaks = 20,
+  main = "Histogram of Simulated First Differences (2018)",
+  xlab = "First Difference",
+  las = 1,
+  col = "lightblue",
+  border = "white"
+)
+
+# Add a line for the mean of the first differences
+abline(v = mean(fd_m1E3), 
+       col = "black",
+       lwd = 2)
+
+# Add dashed lines for the 2.5% and 97.5% quantiles
+abline(v = quantile(fd_m1E3, c(0.025, 0.975)),
+       col = "black",
+       lty = "dashed",
+       lwd = 2)
+
+# Optionally, add text annotations for the mean and quantiles
+text(mean(fd_m1E3), par("usr")[4] * 0.9, labels = paste("Mean:", round(mean(fd_m1E3), 3)), col = "black", pos = 4)
+text(quantile(fd_m1E3, 0.025), par("usr")[4] * 0.8, labels = paste("2.5%:", round(quantile(fd_m1E3, 0.025), 3)), col = "black", pos = 4)
+text(quantile(fd_m1E3, 0.975), par("usr")[4] * 0.8, labels = paste("97.5%:", round(quantile(fd_m1E3, 0.975), 3)), col = "black", pos = 4)
+
+# ... and we then generate a density plot ...
+plot(
+  density(fd_m1E3),
+  main = "Density Plot of Simulated First Differences (2018)",
+  xlab = "First Difference",
+  ylab = "Density",
+  las = 1,
+  col = "lightblue",
+  lwd = 2
+)
+
+# Add a line for the mean of the first differences
+abline(v = mean(fd_m1E3), 
+       col = "black",
+       lwd = 2)
+
+# Add dashed lines for the 2.5% and 97.5% quantiles
+abline(v = quantile(fd_m1E3, c(0.025, 0.975)),
+       col = "black",
+       lty = "dashed",
+       lwd = 2)
+
+# Optionally, add text annotations for the mean and quantiles
+text(mean(fd_m1E3), par("usr")[4] * 0.9, labels = paste("Mean:", round(mean(fd_m1E3), 3)), col = "black", pos = 4)
+text(quantile(fd_m1E3, 0.025), par("usr")[4] * 0.8, labels = paste("2.5%:", round(quantile(fd_m1E3, 0.025), 3)), col = "black", pos = 4)
+text(quantile(fd_m1E3, 0.975), par("usr")[4] * 0.8, labels = paste("97.5%:", round(quantile(fd_m1E3, 0.975), 3)), col = "black", pos = 4)
+
+#_____________________________________________________________________________#
+# ... the following command lines save the generated plots into a single PDF-file ...
+dev.copy2pdf(file = ("First_Differences_OVA_m1_E3.pdf"), 
+             family = "Times", 
+             width = 12, 
+             height=6)
+#_____________________________________________________________________________#
+
+# .............................................................................#
+# .................................. MODEL 2 ..................................#
+# .............................................................................#
+
+# ... we generate a 3D array with as many rows as there are observations (nrow(X)), as many columns as there are covariates in the X-matrix (ncol(X)), and a depth of 2 for each of the two scenarios that will be taken into account ...
+cases_m2E3 <- array(NA, c(dim(X_m2_E3), 2))  
+
+# assign X values to all dimensions of cases 
+# ie we get two identical layers of X matrices  
+cases_m2E3[, ,] <- X_m2_E3
+
+# select the columns to adjust for simulation 
+sel1_m2E3 <- which(colnames(X_m2_E3) == "female")
+sel2_m2E3 <- which(colnames(X_m2_E3) == "int_E3")
+
+# assign 0 to "female" column in layer 1
+cases_m2E3[, sel1_m2E3, 1] <- 0
+# assign 1 to female column in layer 2
+cases_m2E3[, sel1_m2E3, 2] <- 1
+
+# assign 0 to interaction ("int_E3") column in layer 1
+cases_m2E3[, sel2_m2E3, 1] <- 0*X_m2_E3[, "female"]
+# assign "female" value to int_E3v column in layer 2
+cases_m2E3[, sel2_m2E3, 2] <- 1*X_m2_E3[, "female"]
+
+# Loop over the matrices.
+val_m2E3 <- matrix(NA, nrow = n_simulations, ncol = 2)
+
+# for each layer in cases (third dimension)
+for(i in 1:2) {
+  ev_m2E3 <- sim_function(coefs = res2_m2E3$par,
+                          vcov = solve(-res2_m2E3$hessian),
+                          response_function = response_function,
+                          stochastic_component = stochastic_component,
+                          scenario = cases_m2E3[,,i],
+                          predicted_values = F
+                          )$ev
+  
+  tmp_val_m2E3 <- apply(ev_m2E3, 1, mean)
+  val_m2E3[, i] <- tmp_val_m2E3
+}
+
+# ... we then estimate the first differences and store these in an object called "fd_m1E1" ...
+fd_m2E3 <- val_m2E3[, 1] - val_m2E3[, 2]
+
+# ... we then proceed to generate the plots for a better visualization of the results ...
+par(mfrow = c(1, 2)) # This will allow us to display the First Differences for the two models side by side ...
+
+# ... we first plot the histogram ...
+hist(
+  fd_m2E3,
+  breaks = 20,
+  main = "Histogram of Simulated First Differences (2019)",
+  xlab = "First Difference",
+  las = 1,
+  col = "lightblue",
+  border = "white"
+)
+
+# Add a line for the mean of the first differences
+abline(v = mean(fd_m2E3), 
+       col = "black",
+       lwd = 2)
+
+# Add dashed lines for the 2.5% and 97.5% quantiles
+abline(v = quantile(fd_m2E3, c(0.025, 0.975)),
+       col = "black",
+       lty = "dashed",
+       lwd = 2)
+
+# Optionally, add text annotations for the mean and quantiles
+text(mean(fd_m2E3), par("usr")[4] * 0.9, labels = paste("Mean:", round(mean(fd_m2E3), 3)), col = "black", pos = 4)
+text(quantile(fd_m2E3, 0.025), par("usr")[4] * 0.8, labels = paste("2.5%:", round(quantile(fd_m2E3, 0.025), 3)), col = "black", pos = 4)
+text(quantile(fd_m2E3, 0.975), par("usr")[4] * 0.8, labels = paste("97.5%:", round(quantile(fd_m2E3, 0.975), 3)), col = "black", pos = 4)
+
+# ... and we then generate a density plot ...
+plot(
+  density(fd_m2E3),
+  main = "Density Plot of Simulated First Differences (2019)",
+  xlab = "First Difference",
+  ylab = "Density",
+  las = 1,
+  col = "lightblue",
+  lwd = 2
+)
+
+# Add a line for the mean of the first differences
+abline(v = mean(fd_m2E3), 
+       col = "black",
+       lwd = 2)
+
+# Add dashed lines for the 2.5% and 97.5% quantiles
+abline(v = quantile(fd_m2E3, c(0.025, 0.975)),
+       col = "black",
+       lty = "dashed",
+       lwd = 2)
+
+# Optionally, add text annotations for the mean and quantiles
+text(mean(fd_m2E3), par("usr")[4] * 0.9, labels = paste("Mean:", round(mean(fd_m2E3), 3)), col = "black", pos = 4)
+text(quantile(fd_m2E3, 0.025), par("usr")[4] * 0.8, labels = paste("2.5%:", round(quantile(fd_m2E3, 0.025), 3)), col = "black", pos = 4)
+text(quantile(fd_m2E3, 0.975), par("usr")[4] * 0.8, labels = paste("97.5%:", round(quantile(fd_m2E3, 0.975), 3)), col = "black", pos = 4)
+
+#_____________________________________________________________________________#
+# ... the following command lines save the generated plots into a single PDF-file ...
+dev.copy2pdf(file = ("First_Differences_OVA_m2_E3.pdf"), 
+             family = "Times", 
+             width = 12, 
+             height=6)
+#_____________________________________________________________________________#
+
+# .............................................................................#
+# .................................. MODEL 3 ..................................#
+# .............................................................................#
+
+# ... we generate a 3D array with as many rows as there are observations (nrow(X)), as many columns as there are covariates in the X-matrix (ncol(X)), and a depth of 2 for each of the two scenarios that will be taken into account ...
+cases_m3E3 <- array(NA, c(dim(X_m3_E3), 2))  
+
+# assign X values to all dimensions of cases 
+# ie we get two identical layers of X matrices  
+cases_m3E3[, ,] <- X_m3_E3
+
+# select the columns to adjust for simulation 
+sel1_m3E3 <- which(colnames(X_m3_E3) == "female")
+sel2_m3E3 <- which(colnames(X_m3_E3) == "int_E3")
+
+# assign 0 to "female" column in layer 1
+cases_m3E3[, sel1_m3E3, 1] <- 0
+# assign 1 to female column in layer 2
+cases_m3E3[, sel1_m3E3, 2] <- 1
+
+# assign 0 to interaction ("int_E3") column in layer 1
+cases_m3E3[, sel2_m3E3, 1] <- 0*X_m3_E3[, "female"]
+# assign "female" value to int_E3v column in layer 2
+cases_m3E3[, sel2_m3E3, 2] <- 1*X_m3_E3[, "female"]
+
+# Loop over the matrices.
+val_m3E3 <- matrix(NA, nrow = n_simulations, ncol = 2)
+
+# for each layer in cases (third dimension)
+for(i in 1:2) {
+  ev_m3E3 <- sim_function(coefs = res2_m3E3$par,
+                          vcov = solve(-res2_m3E3$hessian),
+                          response_function = response_function,
+                          stochastic_component = stochastic_component,
+                          scenario = cases_m3E3[,,i],
+                          predicted_values = F
+                          )$ev
+  
+  tmp_val_m3E3 <- apply(ev_m3E3, 1, mean)
+  val_m3E3[, i] <- tmp_val_m3E3
+}
+
+# ... we then estimate the first differences and store these in an object called "fd_m1E1" ...
+fd_m3E3 <- val_m3E3[, 1] - val_m3E3[, 2]
+
+# ... we then proceed to generate the plots for a better visualization of the results ...
+par(mfrow = c(1, 2)) # This will allow us to display the First Differences for the two models side by side ...
+
+# ... we first plot the histogram ...
+hist(
+  fd_m3E3,
+  breaks = 20,
+  main = "Histogram of Simulated First Differences (2020)",
+  xlab = "First Difference",
+  las = 1,
+  col = "lightblue",
+  border = "white"
+)
+
+# Add a line for the mean of the first differences
+abline(v = mean(fd_m3E3), 
+       col = "black",
+       lwd = 2)
+
+# Add dashed lines for the 2.5% and 97.5% quantiles
+abline(v = quantile(fd_m3E3, c(0.025, 0.975)),
+       col = "black",
+       lty = "dashed",
+       lwd = 2)
+
+# Optionally, add text annotations for the mean and quantiles
+text(mean(fd_m3E3), par("usr")[4] * 0.9, labels = paste("Mean:", round(mean(fd_m3E3), 3)), col = "black", pos = 4)
+text(quantile(fd_m3E3, 0.025), par("usr")[4] * 0.8, labels = paste("2.5%:", round(quantile(fd_m3E3, 0.025), 3)), col = "black", pos = 4)
+text(quantile(fd_m3E3, 0.975), par("usr")[4] * 0.8, labels = paste("97.5%:", round(quantile(fd_m3E3, 0.975), 3)), col = "black", pos = 4)
+
+# ... and we then generate a density plot ...
+plot(
+  density(fd_m3E3),
+  main = "Density Plot of Simulated First Differences (2020)",
+  xlab = "First Difference",
+  ylab = "Density",
+  las = 1,
+  col = "lightblue",
+  lwd = 2
+)
+
+# Add a line for the mean of the first differences
+abline(v = mean(fd_m3E3), 
+       col = "black",
+       lwd = 2)
+
+# Add dashed lines for the 2.5% and 97.5% quantiles
+abline(v = quantile(fd_m3E3, c(0.025, 0.975)),
+       col = "black",
+       lty = "dashed",
+       lwd = 2)
+
+# Optionally, add text annotations for the mean and quantiles
+text(mean(fd_m3E3), par("usr")[4] * 0.9, labels = paste("Mean:", round(mean(fd_m3E3), 3)), col = "black", pos = 4)
+text(quantile(fd_m3E3, 0.025), par("usr")[4] * 0.8, labels = paste("2.5%:", round(quantile(fd_m3E3, 0.025), 3)), col = "black", pos = 4)
+text(quantile(fd_m3E3, 0.975), par("usr")[4] * 0.8, labels = paste("97.5%:", round(quantile(fd_m3E3, 0.975), 3)), col = "black", pos = 4)
+
+#_____________________________________________________________________________#
+# ... the following command lines save the generated plots into a single PDF-file ...
+dev.copy2pdf(file = ("First_Differences_OVA_m3_E3.pdf"), 
+             family = "Times", 
+             width = 12, 
+             height=6)
+#_____________________________________________________________________________#
+
+```
+
+# Analysis Part 2: Multinomial Choice Model and Fixed-Effects Regression 
 
 ``` {r multinomial function}
 ll_mnl <- function(theta, X, Z) { #theta will contain all the coef (4*7), z - outcome matrix with T/F values
@@ -5347,6 +6555,7 @@ legend(
 )
 
 ```
+
 ``` {r model 2020}
 # Step 1: Identify all variables that begin with "lm1"
 lm2_vars <- grep("^lm2", names(data_panel), value = TRUE)
@@ -6053,7 +7262,5 @@ legend(
   bty = "n"
 )
 ```
-
-
 
 
