@@ -1,0 +1,2766 @@
+---
+title: "AQM Final Paper: Code for Replication and Conduction of the Analysis"
+author: "Ekaterina Leevik, Oscar Martinez, Elizabeth Sites"
+date: ""
+output:
+  pdf_document:
+    toc: no
+    includes:
+      in_header: header.tex
+  # html_notebook:
+    # toc: no
+  html_document:
+    toc: no
+bibliography: 
+---
+
+```{r Initial Setup & Download of Required Packages, include=FALSE} 
+
+# The first line sets an option for the final document that can be produced from
+# the .Rmd file. Don't worry about it.
+knitr::opts_chunk$set(echo = TRUE)
+
+# The next bit (lines 22-43) is quite powerful and useful. 
+# First you define which packages you need for your analysis and assign it to 
+# the p_needed object. 
+p_needed <-
+  c("viridis", "knitr", "sandwich", "magrittr", "kableExtra", "MASS", "dplyr", "data.table", "margins", "readr", "plm", "Hmisc", "stargazer", "brglm2", "lme4")
+
+# Now you check which packages are already installed on your computer.
+# The function installed.packages() returns a vector with all the installed 
+# packages.
+packages <- rownames(installed.packages())
+# Then you check which of the packages you need are not installed on your 
+# computer yet. Essentially you compare the vector p_needed with the vector
+# packages. The result of this comparison is assigned to p_to_install.
+p_to_install <- p_needed[!(p_needed %in% packages)]
+# If at least one element is in p_to_install you then install those missing
+# packages.
+if (length(p_to_install) > 0) {
+  install.packages(p_to_install)
+}
+# Now that all packages are installed on the computer, you can load them for
+# this project. Additionally the expression returns whether the packages were
+# successfully loaded.
+sapply(p_needed, require, character.only = TRUE)
+
+```
+
+###Multi-level model with subset of data (only didn't vote/started voting)
+
+```{r data prep}
+data_panel<- read.csv("data_panel.csv")
+
+data_panel$wave10 <- ifelse(data_panel$wave == 10, 1,0)
+data_panel$wave11 <- ifelse(data_panel$wave == 11, 1,0)
+data_panel$wave12 <- ifelse(data_panel$wave == 12, 1,0)
+#make a subset without na's and with all variables as numeric
+mn_data_panel1 <- data_panel %>%
+  select(codpanelista2, vim_vox, female, age, edu3_2, edu3_3, dhincome_all, authoritarian, intpol, nativism, orgterr, pop6amz, msexism, wave11, wave12, wave) %>%
+  na.omit() %>%
+ mutate(across(everything(), as.numeric))
+```
+
+
+
+```{r new indep variables}
+#variable sexism
+mn_data_panel1$previous_msexism <-  ave(mn_data_panel1$msexism, mn_data_panel1$codpanelista2, FUN = function(x) c(NA, x[-length(x)]))
+
+mn_data_panel1$change_msexism <- mn_data_panel1$msexism - mn_data_panel1$previous_msexism 
+
+#income
+mn_data_panel1$previous_income <-  ave(mn_data_panel1$dhincome_all, mn_data_panel1$codpanelista2, FUN = function(x) c(NA, x[-length(x)]))
+
+mn_data_panel1$change_income <- mn_data_panel1$dhincome_all - mn_data_panel1$previous_income
+
+#nativism +orgterr + pop6amz
+# intpol
+mn_data_panel1$previous_intpol<-  ave(mn_data_panel1$intpol, mn_data_panel1$codpanelista2, FUN = function(x) c(NA, x[-length(x)]))
+
+mn_data_panel1$change_intpol <- mn_data_panel1$intpol - mn_data_panel1$previous_intpol
+
+#authoritarian
+mn_data_panel1$previous_authoritarian<-  ave(mn_data_panel1$authoritarian, mn_data_panel1$codpanelista2, FUN = function(x) c(NA, x[-length(x)]))
+
+mn_data_panel1$change_authoritarian <- mn_data_panel1$authoritarian - mn_data_panel1$previous_authoritarian
+
+#nativism
+mn_data_panel1$previous_nativism<-  ave(mn_data_panel1$nativism, mn_data_panel1$codpanelista2, FUN = function(x) c(NA, x[-length(x)]))
+
+mn_data_panel1$change_nativism <- mn_data_panel1$nativism - mn_data_panel1$previous_nativism
+
+#orgterr
+
+mn_data_panel1$previous_orgterr<-  ave(mn_data_panel1$orgterr, mn_data_panel1$codpanelista2, FUN = function(x) c(NA, x[-length(x)]))
+
+mn_data_panel1$change_orgterr<- mn_data_panel1$orgterr- mn_data_panel1$previous_orgterr
+
+#pop6amz
+mn_data_panel1$previous_pop6amz<-  ave(mn_data_panel1$pop6amz, mn_data_panel1$codpanelista2, FUN = function(x) c(NA, x[-length(x)]))
+
+mn_data_panel1$change_pop6amz<- mn_data_panel1$pop6amz- mn_data_panel1$previous_pop6amz
+
+```
+
+```{r dep var (don't vote and vote)}
+mn_data_panel1$previous_vim_vox <- ave(mn_data_panel1$vim_vox, mn_data_panel1$codpanelista2, FUN = function(x) c(NA, x[-length(x)]))
+
+mn_data_panel2 <-mn_data_panel1 %>%
+  group_by(codpanelista2) %>%
+  mutate(change_vox = case_when(
+    is.na(previous_vim_vox) ~ NA,  # No change for the first wave
+    previous_vim_vox == 0 & vim_vox == 0 ~ "Don't vote for Vox",
+    previous_vim_vox == 0 & vim_vox == 1 ~ "Start voting for Vox",
+    previous_vim_vox == 1 & vim_vox == 0 ~ "Stop voting for Vox",
+    previous_vim_vox == 1 & vim_vox == 1 ~ "Continue voting for Vox",
+    TRUE ~ NA
+  )) %>%
+  ungroup() %>%
+  filter(change_vox == "Start voting for Vox" |
+          change_vox == "Don't vote for Vox" ) %>%
+ mutate(vote_vox_binary = case_when(
+    change_vox == "Start voting for Vox" ~ 1,
+    TRUE ~ 0
+  ))
+
+table(mn_data_panel2$change_vox)
+  
+```
+
+### Multi-level models with subset and change is sexism
+
+## Model for switching from non-voters to voters
+
+```{r multi-level model without interaction}
+mlm_2 <- glmer(vote_vox_binary ~ female + age + edu3_2 +edu3_3 + change_msexism + change_income+ change_intpol+ change_authoritarian+ change_nativism+ change_orgterr+ change_pop6amz + 
+                (1 + change_msexism | wave), #1+ implements that level varies by countries
+              data = mn_data_panel2,
+              family = binomial(link = "logit"))
+summary(mlm_2)
+ranef(mlm_2)$wave
+
+wave_dta <- data.frame("wave" = rownames(ranef(mlm_2)$wave),
+                              "ranef" = ranef(mlm_2)$wave[, "(Intercept)"])
+
+
+intercepts_mlm2 <- 
+  fixef(mlm_2)["(Intercept)"] + 
+  ranef(mlm_2)$wave[,"(Intercept)"]
+
+slopes_mlm2 <- 
+  fixef(mlm_2)["change_msexism"] +
+  ranef(mlm_2)$wave[,"change_msexism"]
+as.matrix(as.numeric(slopes_mlm2))
+
+```
+
+```{r common plot}
+# Apply the logistic function to each element
+coefs <- 1 / (1 + exp(-slopes_mlm2))
+intercepts <- 1 / (1 + exp(-intercepts_mlm2))
+
+plot(x = mn_data_panel2$change_msexism,
+     y = mn_data_panel2$vote_vox_binary,
+     col = "grey80",
+     main = "Multilevel Model\n(Partial Pooling)",
+     font.main = 1,
+     ylab = "",
+     xlab = "",
+     ylim = c(0,1),
+     las = 1)
+# add regression lines for each country
+for (i in 1:length(intercepts)) {
+  abline(a = intercepts[i],
+         b = coefs[i])
+}
+```
+
+``` {r plot of change in sexism and switch to vote}
+sexism_seq <- seq(min(mn_data_panel2$change_msexism[!is.na(mn_data_panel2$change_msexism)]), max(mn_data_panel2$change_msexism[!is.na(mn_data_panel2$change_msexism)]), length.out = 100)
+
+
+beta_hat <- fixef(mlm_2)
+V_hat <-  vcov(mlm_2)
+
+set.seed(2024)
+library(MASS)
+S <- mvrnorm(1000, beta_hat, V_hat)
+
+scenario_sex <- cbind(1,
+                    median(mn_data_panel2$female),
+                    median(mn_data_panel2$age),
+                    median(mn_data_panel2$edu3_2),
+                    median(mn_data_panel2$edu3_3),
+                    sexism_seq,
+                    mean(mn_data_panel2$change_income),
+                    mean(mn_data_panel2$change_intpol),
+                    mean(mn_data_panel2$change_authoritarian),
+                    mean(mn_data_panel2$change_nativism),
+                    mean(mn_data_panel2$change_orgterr),
+                    mean(mn_data_panel2$change_pop6amz))
+
+ev_sex_mu <- S %*% t(scenario_sex)
+ev_s <-  1/(1 + exp(-ev_sex_mu))
+
+
+
+# Assuming you have calculated the confidence intervals as below:
+lower_sexism <- apply(ev_s , 2, function(x) quantile(x, probs = 0.025))
+upper_sexism <- apply(ev_s , 2, function(x) quantile(x, probs = 0.975))
+
+
+# Plot predicted probabilities with confidence intervals
+plot(x = sexism_seq,
+     y = apply(ev_s, 2, mean),
+     type = "n",
+     lwd = 2,
+     main = "Predicted probabilities", 
+     cex.main = 0.7,
+     xlab = "Level of Sexism",
+     ylab = "Pr(Intention to Vote for VOX)", 
+     ylim = c(0, 1), 
+     cex.axis = 0.7, 
+     cex.lab = 0.7,
+     xaxt = "n")
+axis(1, at = seq(-1, 1, by = 0.5), cex.axis = 0.7)
+
+# Predicted probabilities for treatment and control group
+lines(x = sexism_seq, y = apply(ev_s, 2, mean), lwd = 2, col = "red")
+# Add a background grid
+abline(h = seq(-1, 1, by = 0.1), col = "grey90")
+
+
+# Add confidence intervals as shaded areas
+polygon(c(sexism_seq, rev(sexism_seq)), c(upper_sexism, rev(lower_sexism)), col = rgb(1, 0, 0, 0.2), border = NA)
+
+
+# Add distribution of actual observations
+rug(jitter(mn_data_panel2$change_msexism, 0.001), ticksize = 0.02, lwd = 1)
+
+```
+
+## Model for switching from voter to non-voters
+```{r new dep var}
+mn_data_panel3 <-mn_data_panel1 %>%
+  group_by(codpanelista2) %>%
+  mutate(vote_vox = case_when(
+    is.na(previous_vim_vox) ~ NA,  # No change for the first wave
+    previous_vim_vox == 0 & vim_vox == 0 ~ "Don't vote for Vox",
+    previous_vim_vox == 0 & vim_vox == 1 ~ "Start voting for Vox",
+    previous_vim_vox == 1 & vim_vox == 0 ~ "Stop voting for Vox",
+    previous_vim_vox == 1 & vim_vox == 1 ~ "Continue voting for Vox",
+    TRUE ~ NA
+  )) %>%
+  ungroup() %>%
+  filter(vote_vox == "Continue voting for Vox" |
+          vote_vox == "Stop voting for Vox" ) %>%
+ mutate(cont_stop = case_when(
+    vote_vox == "Stop voting for Vox" ~ 1,
+    TRUE ~ 0
+  ))
+
+table(mn_data_panel3$change_msexism)
+
+#mn_data_panel3$interaction <- mn_data_panel3$change_msexism * mn_data_panel3$female
+
+mlm_3 <- glmer(cont_stop ~ female + age + edu3_2 +edu3_3 + change_msexism + change_income+ change_intpol+ change_authoritarian+ change_nativism + change_orgterr + change_pop6amz + 
+                (1 + change_msexism | wave), #1+ implements that level varies by countries
+              data = mn_data_panel3,
+              family = binomial(link = "logit"))
+summary(mlm_3)
+ranef(mlm_3)$wave
+
+wave_dta <- data.frame("wave" = rownames(ranef(mlm_3)$wave),
+                              "ranef" = ranef(mlm_3)$wave[, "(Intercept)"])
+
+
+intercepts_mlm3 <- 
+  fixef(mlm_3)["(Intercept)"] + 
+  ranef(mlm_3)$wave[,"(Intercept)"]
+
+slopes_mlm3 <- 
+  fixef(mlm_3)["change_msexism"] +
+  ranef(mlm_3)$wave[,"change_msexism"]
+as.matrix(as.numeric(slopes_mlm3))
+```
+
+
+
+```{r graph}
+sexism_seq <- seq(min(mn_data_panel3$change_msexism[!is.na(mn_data_panel3$change_msexism)]), max(mn_data_panel3$change_msexism[!is.na(mn_data_panel3$change_msexism)]), length.out = 100)
+
+
+beta_hat <- fixef(mlm_3)
+V_hat <-  vcov(mlm_3)
+
+set.seed(2024)
+library(MASS)
+S <- mvrnorm(1000, beta_hat, V_hat)
+
+scenario_sex <- cbind(1,
+                    median(mn_data_panel2$female), #female
+                    median(mn_data_panel2$age),
+                    median(mn_data_panel2$edu3_2),
+                    median(mn_data_panel2$edu3_3),
+                    sexism_seq,
+                    mean(mn_data_panel2$change_income),
+                    mean(mn_data_panel2$change_intpol),
+                    mean(mn_data_panel2$change_authoritarian),
+                    mean(mn_data_panel2$change_nativism),
+                    mean(mn_data_panel2$change_orgterr),
+                    mean(mn_data_panel2$change_pop6amz))
+
+ev_sex_mu <- S %*% t(scenario_sex)
+ev_s <-  1/(1 + exp(-ev_sex_mu))
+
+
+
+# Assuming you have calculated the confidence intervals as below:
+lower_sexism <- apply(ev_s , 2, function(x) quantile(x, probs = 0.025))
+upper_sexism <- apply(ev_s , 2, function(x) quantile(x, probs = 0.975))
+
+
+# Plot predicted probabilities with confidence intervals
+plot(x = sexism_seq,
+     y = apply(ev_s, 2, mean),
+     type = "n",
+     lwd = 2,
+     main = "Predicted probabilities", 
+     cex.main = 0.7,
+     xlab = "Level of Sexism",
+     ylab = "Pr(Intention to Vote for VOX)", 
+     ylim = c(0, 1), 
+     cex.axis = 0.7, 
+     cex.lab = 0.7,
+     xaxt = "n")
+axis(1, at = seq(-1, 1, by = 0.5), cex.axis = 0.7)
+
+# Predicted probabilities for treatment and control group
+lines(x = sexism_seq, y = apply(ev_s, 2, mean), lwd = 2, col = "red")
+# Add a background grid
+abline(h = seq(-1, 1, by = 0.1), col = "grey90")
+
+
+# Add confidence intervals as shaded areas
+polygon(c(sexism_seq, rev(sexism_seq)), c(upper_sexism, rev(lower_sexism)), col = rgb(1, 0, 0, 0.2), border = NA)
+
+
+# Add distribution of actual observations
+rug(jitter(mn_data_panel2$change_msexism, 0.001), ticksize = 0.02, lwd = 1)
+
+```
+
+### Fixed effects with subset (didn't vote-started to vote) and gender interaction
+```{r logit model}
+LLlogit <- function(theta, y, X) { #in the current model we need 2 thetas-B0, B1
+    
+    # theta consists merely of beta (dim is ncol(X))
+    beta <- theta[1:ncol(X)]
+    # linear predictor; make sure that X is stored as.matrix
+    mu <- X %*% beta
+    # link function
+    p <- 1/(1 + exp(-mu)) # transform into interval between 0 and 1 - cdf of logit distr
+    # log-likelihood
+    ll <- y * log(p) + (1 - y) * log(1 - p)
+    # sum
+    ll <- sum(ll)
+    return(ll)
+}
+
+mn_data_panel2$interaction <- as.numeric(mn_data_panel2$female* mn_data_panel2$change_msexism)
+
+y <-as.numeric(mn_data_panel2$vote_vox_binary)
+
+X <-  as.matrix(cbind(1, mn_data_panel2$female, mn_data_panel2$age, mn_data_panel2$edu3_2, mn_data_panel2$edu3_3, mn_data_panel2$change_msexism, mn_data_panel2$change_income, mn_data_panel2$change_intpol, mn_data_panel2$change_authoritarian, mn_data_panel2$change_nativism, mn_data_panel2$change_orgterr, mn_data_panel2$change_pop6amz,  mn_data_panel2$wave11, mn_data_panel2$wave12, mn_data_panel2$interaction)) 
+
+colnames(X) <- c(
+  "intercept",
+  "female",
+  "age",
+  "edu3_2",
+  "edu3_3",
+  "change_msexism",
+  "change_income",
+  "change_intpol",
+  "change_authoritarian",
+  "change_nativism",
+  "change_orgterr",
+  "change_pop6amz",
+  "wave11",
+  "wave12",
+  "female:change_msexism"
+)
+
+dim(X)
+
+startvals <- rep(0, ncol(X))
+
+res <- optim(par = startvals,
+             fn = LLlogit, 
+             y = y, 
+             X = X,
+             control = list(fnscale = -1),
+             hessian = TRUE,
+             method = "BFGS"
+             ) 
+
+res$par
+se <- sqrt(diag(solve(-res$hessian)))
+
+
+multi <- glm(vote_vox_binary ~ female + age + edu3_2 +edu3_3 + change_msexism + change_income+ change_intpol+ change_authoritarian+ change_nativism+ change_orgterr+ change_pop6amz + female* change_msexism + as.factor(wave),
+                 data = mn_data_panel2,
+                 family = binomial(link="logit"))
+summary(multi)
+res$par
+
+```
+
+
+``` {r function}
+sim_function <- function(lm_obj, nsim = 1000, scenario){
+  
+  # Step 1: Get the regression coefficients
+  beta_hat <- coef(lm_obj)
+  
+  # Step 2: Generate sampling distribution
+  
+  # Step 2.1: Get the variance-covariance matrix.
+  V_hat <-  vcov(lm_obj) 
+  
+  # Step 2.2: Draw from the multivariate normal distribution.
+  S <- mvrnorm(nsim, beta_hat, V_hat)
+
+  # Step 3: Choose interesting covariate values. 
+  # Make sure the matrix multiplication also works for single scenarios
+  if(is.null(nrow(scenario))){
+    scenario <- matrix(scenario, nrow = 1)
+  }
+  
+  # Print a message if the scenario does not fit the regression.
+  if(ncol(scenario) != length(lm_obj$coefficients)){
+    return(cat("The scenario has the wrong number of variables."))
+  } 
+  
+  # Step 4: Calculate Quantities of Interest - 
+  # Expected Values
+  mu <- S %*% t(scenario)
+  p <- 1/(1 + exp(-mu))
+  return(p)
+}
+```
+
+``` {r simulation}
+sexism_seq <- seq(min(mn_data_panel2$change_msexism[!is.na(mn_data_panel2$change_msexism)]), max(mn_data_panel2$change_msexism[!is.na(mn_data_panel2$change_msexism)]), length.out = 100)
+
+
+beta_hat <- res$par
+V_hat <-  solve(-res$hessian)
+
+set.seed(2024)
+library(MASS)
+S <- mvrnorm(1000, beta_hat, V_hat)
+
+scenario_w <- cbind(1,
+                    1, #female
+                    median(mn_data_panel2$age),
+                    median(mn_data_panel2$edu3_2),
+                    median(mn_data_panel2$edu3_3),
+                    sexism_seq,
+                    mean(mn_data_panel2$change_income),
+                    mean(mn_data_panel2$change_intpol),
+                    mean(mn_data_panel2$change_authoritarian),
+                    mean(mn_data_panel2$change_nativism),
+                    mean(mn_data_panel2$change_orgterr),
+                    mean(mn_data_panel2$change_pop6amz),
+                    0, #wave 11
+                    0, #wave 12
+                    1*sexism_seq)
+
+dim(scenario_w)
+scenario_m <- cbind(1,
+                    0, #male
+                    median(mn_data_panel2$age),
+                    median(mn_data_panel2$edu3_2),
+                    median(mn_data_panel2$edu3_3),
+                    sexism_seq,
+                    mean(mn_data_panel2$change_income),
+                    mean(mn_data_panel2$change_intpol),
+                    mean(mn_data_panel2$change_authoritarian),
+                    mean(mn_data_panel2$change_nativism),
+                    mean(mn_data_panel2$change_orgterr),
+                    mean(mn_data_panel2$change_pop6amz),
+                    0, #wave 11
+                    0, #wave 12
+                    0*sexism_seq) 
+
+ev_w_mu <- S %*% t(scenario_w)
+ev_w <-  1/(1 + exp(-ev_w_mu))
+
+ev_m_mu <- S %*% t(scenario_m)
+ev_m <-  1/(1 + exp(-ev_m_mu))
+
+
+# Assuming you have calculated the confidence intervals as below:
+lower_women <- apply(ev_w , 2, function(x) quantile(x, probs = 0.025))
+upper_women <- apply(ev_w , 2, function(x) quantile(x, probs = 0.975))
+lower_men <- apply(ev_m , 2, function(x) quantile(x, probs = 0.025))
+upper_men <- apply(ev_m, 2, function(x) quantile(x, probs = 0.975))
+
+
+# Plot predicted probabilities with confidence intervals
+plot(x = sexism_seq,
+     y = apply(ev_w, 2, mean),
+     type = "n",
+     lwd = 2,
+     main = "Predicted probabilities", 
+     cex.main = 0.7,
+     xlab = "Level of Sexism",
+     ylab = "Pr(Intention to Vote for VOX)", 
+     ylim = c(0, 0.5), 
+     cex.axis = 0.7, 
+     cex.lab = 0.7,
+     xaxt = "n")
+axis(1, at = seq(-1, 1, by = 0.5), cex.axis = 0.7)
+
+# Predicted probabilities for treatment and control group
+lines(x = sexism_seq, y = apply(ev_w, 2, mean), lwd = 2, col = "red")
+lines(x = sexism_seq, y = apply(ev_m, 2, mean), lwd = 2, col = "blue")
+# Add a background grid
+abline(h = seq(-1, 1, by = 0.1), col = "grey90")
+abline(v = seq(-1, 1, by = 0.1), col = "grey90")
+
+# Add confidence intervals as shaded areas
+polygon(c(sexism_seq, rev(sexism_seq)), c(upper_women, rev(lower_women)), col = rgb(1, 0, 0, 0.2), border = NA)
+polygon(c(sexism_seq, rev(sexism_seq)), c(upper_men, rev(lower_men)), col = rgb(0, 0, 1, 0.2), border = NA)
+
+# Some annotations
+text(x = c(0.5, 0.5), y = c(0.25, 0.28), labels = c("Women", "Men"), cex = 0.7, pos = 4, col = c("red", "blue"))
+
+# Add distribution of actual observations
+rug(jitter(mn_data_panel2$change_msexism, 0.001), ticksize = 0.02, lwd = 1)
+
+```
+
+### Multi-level with subset (didn't vote-started to vote) and gender interaction
+```{r multinom}
+library("lme4")
+
+mn_data_panel2$interaction <- mn_data_panel2$female*mn_data_panel2$change_msexism
+mlm_1 <- glmer(vote_vox_binary ~ female + age + edu3_2 +edu3_3 + change_msexism + change_income+ change_intpol+ change_authoritarian+ change_nativism+ change_orgterr+ change_pop6amz + interaction +
+                (1 + interaction | wave), #1+ implements that level varies by countries
+              data = mn_data_panel2,
+              family = binomial(link = "logit"))
+summary(mlm_1)
+ranef(mlm_1)$wave
+
+wave_dta <- data.frame("wave" = rownames(ranef(mlm_1)$wave),
+                              "ranef" = ranef(mlm_1)$wave[, "(Intercept)"])
+
+
+intercepts_mlm1 <- 
+  fixef(mlm_1)["(Intercept)"] + 
+  ranef(mlm_1)$wave[,"(Intercept)"]
+
+slopes_mlm1<- 
+  fixef(mlm_1)["interaction"] +
+  ranef(mlm_1)$wave[,"interaction"]
+```
+
+
+#FD between women and men
+
+```{r sim 10}
+nsim <- 10000
+
+# Step 1: Get the regression coefficients
+#   NOTE: We are only using fixed effects
+beta_hat <- fixef(mlm_1) 
+
+# Step 2: Generate sampling distribution
+
+# Step 2.1: Get the variance-covariance matrix.
+V_hat <-  vcov(mlm_1) #no info on the random effects
+
+set.seed(2024)
+# Step 2.2: Draw from the multivariate normal distribution.
+S1 <- mvrnorm(nsim, beta_hat, V_hat)
+
+# Additional Step 2.3: Add random effects
+
+# varying intercept
+S1[, "(Intercept)"] <- 
+  S1[, "(Intercept)"] +  #add fixed intercept + random intercept
+  ranef(mlm_1)$wave["10", "(Intercept)"] #intercept is above 5 units from average slope
+
+# varying slope
+S1[, "interaction"] <- 
+  S1[, "interaction"] + 
+  ranef(mlm_1)$wave["10", "interaction"] #subset ireland survey mean and add to the fixed intercepts
+
+min_sexism <- quantile(mn_data_panel2$change_msexism[mn_data_panel2$wave == "10"], 0.025)
+max_sexism <- quantile(mn_data_panel2$change_msexism[mn_data_panel2$wave == "10"], 0.975)
+dim(S1)
+#scenarios
+
+scenario_w_decr <- cbind(1,
+                    1, #female
+                    median(mn_data_panel2$age),
+                    median(mn_data_panel2$edu3_2),
+                    median(mn_data_panel2$edu3_3),
+                    -0.34,
+                    mean(mn_data_panel2$change_income),
+                    mean(mn_data_panel2$change_intpol),
+                    mean(mn_data_panel2$change_authoritarian),
+                    mean(mn_data_panel2$change_nativism),
+                    mean(mn_data_panel2$change_orgterr),
+                    mean(mn_data_panel2$change_pop6amz),
+                    1*(-0.34))
+
+
+scenario_m_decr <- cbind(1,
+                    0, #male
+                    median(mn_data_panel2$age),
+                    median(mn_data_panel2$edu3_2),
+                    median(mn_data_panel2$edu3_3),
+                    -0.34,
+                    mean(mn_data_panel2$change_income),
+                    mean(mn_data_panel2$change_intpol),
+                    mean(mn_data_panel2$change_authoritarian),
+                    mean(mn_data_panel2$change_nativism),
+                    mean(mn_data_panel2$change_orgterr),
+                    mean(mn_data_panel2$change_pop6amz),
+                    0*(-0.34)) 
+
+scenario_w_no <- cbind(1,
+                    1, #female
+                    median(mn_data_panel2$age),
+                    median(mn_data_panel2$edu3_2),
+                    median(mn_data_panel2$edu3_3),
+                    0,
+                    mean(mn_data_panel2$change_income),
+                    mean(mn_data_panel2$change_intpol),
+                    mean(mn_data_panel2$change_authoritarian),
+                    mean(mn_data_panel2$change_nativism),
+                    mean(mn_data_panel2$change_orgterr),
+                    mean(mn_data_panel2$change_pop6amz),
+                    1*(0))
+
+scenario_m_no <- cbind(1,
+                    0, #male
+                    median(mn_data_panel2$age),
+                    median(mn_data_panel2$edu3_2),
+                    median(mn_data_panel2$edu3_3),
+                    0,
+                    mean(mn_data_panel2$change_income),
+                    mean(mn_data_panel2$change_intpol),
+                    mean(mn_data_panel2$change_authoritarian),
+                    mean(mn_data_panel2$change_nativism),
+                    mean(mn_data_panel2$change_orgterr),
+                    mean(mn_data_panel2$change_pop6amz),
+                    0*0) 
+
+scenario_w_incr <- cbind(1,
+                    1, #female
+                    median(mn_data_panel2$age),
+                    median(mn_data_panel2$edu3_2),
+                    median(mn_data_panel2$edu3_3),
+                    0.3,
+                    mean(mn_data_panel2$change_income),
+                    mean(mn_data_panel2$change_intpol),
+                    mean(mn_data_panel2$change_authoritarian),
+                    mean(mn_data_panel2$change_nativism),
+                    mean(mn_data_panel2$change_orgterr),
+                    mean(mn_data_panel2$change_pop6amz),
+                    1*(0.3))
+
+scenario_m_incr <- cbind(1,
+                    0, #male
+                    median(mn_data_panel2$age),
+                    median(mn_data_panel2$edu3_2),
+                    median(mn_data_panel2$edu3_3),
+                    0.3,
+                    mean(mn_data_panel2$change_income),
+                    mean(mn_data_panel2$change_intpol),
+                    mean(mn_data_panel2$change_authoritarian),
+                    mean(mn_data_panel2$change_nativism),
+                    mean(mn_data_panel2$change_orgterr),
+                    mean(mn_data_panel2$change_pop6amz),
+                    0*0.3) 
+
+# Step 4: Calculate Quantities of Interest - 
+# Expected Values
+EV_w_d <- S1 %*% t(scenario_w_decr)
+EV_w_n <- S1 %*% t(scenario_w_no)
+EV_w_i <- S1 %*% t(scenario_w_incr)
+
+EV_m_d <- S1 %*% t(scenario_m_decr)
+EV_m_n <- S1 %*% t(scenario_m_no)
+EV_m_i <- S1 %*% t(scenario_m_incr)
+
+#get pred prob
+p_w_d <-  1/(1 + exp(-EV_w_d))
+p_w_n <-  1/(1 + exp(-EV_w_n))
+p_w_i <-1/(1 + exp(-EV_w_i))
+
+p_m_d <-  1/(1 + exp(-EV_m_d))
+p_m_n <-  1/(1 + exp(-EV_m_n))
+p_m_i <-1/(1 + exp(-EV_m_i))
+# Step 5: fd
+
+#for women
+#decrease-neutral
+fd_w_10_dn <- p_w_d - p_w_n 
+mean_fd_w_10_dn  <- apply(fd_w_10_dn, 2, mean)
+ci_fd_w_10_dn <- apply(fd_w_10_dn, 2, quantile, c(0.025, 0.975))
+
+#increase-neutral
+fd_w_10_in <- p_w_i - p_w_n 
+mean_fd_w_10_in  <- apply(fd_w_10_in, 2, mean)
+ci_fd_w_10_in <- apply(fd_w_10_in, 2, quantile, c(0.025, 0.975))
+
+#increase-decrease
+fd_w_10_id <- p_w_i - p_w_d 
+mean_fd_w_10_id  <- apply(fd_w_10_id, 2, mean)
+ci_fd_w_10_id <- apply(fd_w_10_id, 2, quantile, c(0.025, 0.975))
+
+#for men
+#decrease-neutral
+fd_m_10_dn <- p_m_d - p_m_n 
+mean_fd_m_10_dn  <- apply(fd_m_10_dn, 2, mean)
+ci_fd_m_10_dn <- apply(fd_m_10_dn, 2, quantile, c(0.025, 0.975))
+
+#increase-neutral
+fd_m_10_in <- p_m_i - p_m_n 
+mean_fd_m_10_in  <- apply(fd_m_10_in, 2, mean)
+ci_fd_m_10_in <- apply(fd_m_10_in, 2, quantile, c(0.025, 0.975))
+
+#increase-decrease
+fd_m_10_id <- p_m_i - p_m_d 
+mean_fd_m_10_id  <- apply(fd_m_10_id, 2, mean)
+ci_fd_m_10_id <- apply(fd_m_10_id, 2, quantile, c(0.025, 0.975))
+```
+
+#FD between woman with low and high sexism + man with low and high sexism between waves
+```{r plot fd change wave 9-10}
+cis10 <- rbind(
+  ci_fd_w_10_dn,
+  ci_fd_m_10_dn,
+  ci_fd_w_10_in,
+  ci_fd_m_10_in,
+  ci_fd_w_10_id,
+  ci_fd_m_10_id
+)
+
+cis10 <- matrix(cis10, ncol=2, byrow=TRUE)
+col <- c(viridis(1, 0.4), adjustcolor(viridis(3)[2], 0.4), viridis(1, 0.4), adjustcolor(viridis(3)[2], 0.4), viridis(1, 0.4), adjustcolor(viridis(3)[2], 0.4))
+
+
+
+plot(
+  y = c(6:1),
+  x = c(
+    mean_fd_w_10_dn,
+    mean_fd_m_10_dn,
+    mean_fd_w_10_in,
+   mean_fd_m_10_in,
+   mean_fd_w_10_id,
+   mean_fd_m_10_id
+  ),
+  cex = 1.5,
+  xlab = "First Difference ",
+  col = col,
+  ylab = "",
+  yaxt = "n",
+  xlim = c(-0.05, 0.05),
+  ylim = c(0, 6),
+  pch = 19,
+  main = "First Differences",
+  bty = "n"
+)
+segments(
+  x0 = c(cis10[1:6, 1]),
+  y0 = c(6:1),
+  x1 = c(cis10[1:6, 2]),
+  y1 = c(6:1),
+  col = c(col[1:6]),
+  lwd = 2
+)
+segments(
+  x0 = 0,
+  y0 = 0,
+  x1 = 0,
+  y1 = 15,
+  lty = "dashed"
+)
+legend(
+  "topright",
+  c("Women", "Men"),
+  lty = 1,
+  pch = 19,
+  lwd = 2,
+  col = c(col[1], col[2]),
+  bty = "n"
+)
+```
+
+```{r wave 11}
+nsim <- 10000
+
+# Step 1: Get the regression coefficients
+#   NOTE: We are only using fixed effects
+beta_hat <- fixef(mlm_1) 
+
+# Step 2: Generate sampling distribution
+
+# Step 2.1: Get the variance-covariance matrix.
+V_hat <-  vcov(mlm_1) #no info on the random effects
+
+set.seed(2024)
+# Step 2.2: Draw from the multivariate normal distribution.
+S2 <- mvrnorm(nsim, beta_hat, V_hat)
+
+# Additional Step 2.3: Add random effects
+
+# varying intercept
+S2[, "(Intercept)"] <- 
+  S2[, "(Intercept)"] +  #add fixed intercept + random intercept
+  ranef(mlm_1)$wave["11", "(Intercept)"] #intercept is above 5 units from average slope
+
+# varying slope
+S2[, "interaction"] <- 
+  S2[, "interaction"] + 
+  ranef(mlm_1)$wave["11", "interaction"] #subset ireland survey mean and add to the fixed intercepts
+min_sexism <- quantile(mn_data_panel2$change_msexism[mn_data_panel2$wave == "11"], 0.025)
+max_sexism <- quantile(mn_data_panel2$change_msexism[mn_data_panel2$wave == "11"], 0.975)
+dim(S2)
+#scenarios
+
+scenario_w_decr11 <- cbind(1,
+                    1, #female
+                    median(mn_data_panel2$age),
+                    median(mn_data_panel2$edu3_2),
+                    median(mn_data_panel2$edu3_3),
+                    -0.25,
+                    mean(mn_data_panel2$change_income),
+                    mean(mn_data_panel2$change_intpol),
+                    mean(mn_data_panel2$change_authoritarian),
+                    mean(mn_data_panel2$change_nativism),
+                    mean(mn_data_panel2$change_orgterr),
+                    mean(mn_data_panel2$change_pop6amz),
+                    1*(-0.25))
+
+
+scenario_m_decr11 <- cbind(1,
+                    0, #male
+                    median(mn_data_panel2$age),
+                    median(mn_data_panel2$edu3_2),
+                    median(mn_data_panel2$edu3_3),
+                    -0.25,
+                    mean(mn_data_panel2$change_income),
+                    mean(mn_data_panel2$change_intpol),
+                    mean(mn_data_panel2$change_authoritarian),
+                    mean(mn_data_panel2$change_nativism),
+                    mean(mn_data_panel2$change_orgterr),
+                    mean(mn_data_panel2$change_pop6amz),
+                    0*(-0.25)) 
+
+scenario_w_no <- cbind(1,
+                    1, #female
+                    median(mn_data_panel2$age),
+                    median(mn_data_panel2$edu3_2),
+                    median(mn_data_panel2$edu3_3),
+                    0,
+                    mean(mn_data_panel2$change_income),
+                    mean(mn_data_panel2$change_intpol),
+                    mean(mn_data_panel2$change_authoritarian),
+                    mean(mn_data_panel2$change_nativism),
+                    mean(mn_data_panel2$change_orgterr),
+                    mean(mn_data_panel2$change_pop6amz),
+                    1*(0))
+
+scenario_m_no <- cbind(1,
+                    0, #male
+                    median(mn_data_panel2$age),
+                    median(mn_data_panel2$edu3_2),
+                    median(mn_data_panel2$edu3_3),
+                    0,
+                    mean(mn_data_panel2$change_income),
+                    mean(mn_data_panel2$change_intpol),
+                    mean(mn_data_panel2$change_authoritarian),
+                    mean(mn_data_panel2$change_nativism),
+                    mean(mn_data_panel2$change_orgterr),
+                    mean(mn_data_panel2$change_pop6amz),
+                    0*0) 
+
+scenario_w_incr <- cbind(1,
+                    1, #female
+                    median(mn_data_panel2$age),
+                    median(mn_data_panel2$edu3_2),
+                    median(mn_data_panel2$edu3_3),
+                    0.35,
+                    mean(mn_data_panel2$change_income),
+                    mean(mn_data_panel2$change_intpol),
+                    mean(mn_data_panel2$change_authoritarian),
+                    mean(mn_data_panel2$change_nativism),
+                    mean(mn_data_panel2$change_orgterr),
+                    mean(mn_data_panel2$change_pop6amz),
+                    1*(0.35))
+
+scenario_m_incr <- cbind(1,
+                    0, #male
+                    median(mn_data_panel2$age),
+                    median(mn_data_panel2$edu3_2),
+                    median(mn_data_panel2$edu3_3),
+                    0.35,
+                    mean(mn_data_panel2$change_income),
+                    mean(mn_data_panel2$change_intpol),
+                    mean(mn_data_panel2$change_authoritarian),
+                    mean(mn_data_panel2$change_nativism),
+                    mean(mn_data_panel2$change_orgterr),
+                    mean(mn_data_panel2$change_pop6amz),
+                    0*0.35) 
+
+# Step 4: Calculate Quantities of Interest - 
+# Expected Values
+EV_w_d11 <- S2 %*% t(scenario_w_decr11)
+EV_w_n11 <- S2 %*% t(scenario_w_no)
+EV_w_i11 <- S2 %*% t(scenario_w_incr)
+
+EV_m_d11 <- S2 %*% t(scenario_m_decr11)
+EV_m_n11 <- S2 %*% t(scenario_m_no)
+EV_m_i11 <- S2 %*% t(scenario_m_incr)
+
+#get pred prob
+p_w_d11 <-  1/(1 + exp(-EV_w_d11))
+p_w_n11 <-  1/(1 + exp(-EV_w_n11))
+p_w_i11 <-1/(1 + exp(-EV_w_i11))
+
+p_m_d11 <-  1/(1 + exp(-EV_m_d11))
+p_m_n11 <-  1/(1 + exp(-EV_m_n11))
+p_m_i11 <-1/(1 + exp(-EV_m_i11))
+# Step 5: fd
+
+#for women
+#decrease-neutral
+fd_w_11_dn <- p_w_d11 - p_w_n11 
+mean_fd_w_11_dn  <- apply(fd_w_11_dn, 2, mean)
+ci_fd_w_11_dn <- apply(fd_w_11_dn, 2, quantile, c(0.025, 0.975))
+
+#increase-neutral
+fd_w_11_in <- p_w_i11 - p_w_n11 
+mean_fd_w_11_in  <- apply(fd_w_11_in, 2, mean)
+ci_fd_w_11_in <- apply(fd_w_11_in, 2, quantile, c(0.025, 0.975))
+
+#increase-decrease
+fd_w_11_id <- p_w_i11 - p_w_d11
+mean_fd_w_11_id  <- apply(fd_w_11_id, 2, mean)
+ci_fd_w_11_id <- apply(fd_w_11_id, 2, quantile, c(0.025, 0.975))
+
+#for men
+#decrease-neutral
+fd_m_11_dn <- p_m_d11 - p_m_n11 
+mean_fd_m_11_dn  <- apply(fd_m_11_dn, 2, mean)
+ci_fd_m_11_dn <- apply(fd_m_11_dn, 2, quantile, c(0.025, 0.975))
+
+#increase-neutral
+fd_m_11_in <- p_m_i11 - p_m_n11 
+mean_fd_m_11_in  <- apply(fd_m_11_in, 2, mean)
+ci_fd_m_11_in <- apply(fd_m_11_in, 2, quantile, c(0.025, 0.975))
+
+#increase-decrease
+fd_m_11_id <- p_m_i11 - p_m_d11
+mean_fd_m_11_id  <- apply(fd_m_11_id, 2, mean)
+ci_fd_m_11_id <- apply(fd_m_11_id, 2, quantile, c(0.025, 0.975))
+```
+
+```{r plot fd change wave 10-11}
+cis11 <- rbind(
+  ci_fd_w_11_dn,
+  ci_fd_m_11_dn,
+  ci_fd_w_11_in,
+  ci_fd_m_11_in,
+  ci_fd_w_11_id,
+  ci_fd_m_11_id
+)
+
+cis11 <- matrix(cis11, ncol=2, byrow=TRUE)
+col <- c(viridis(1, 0.4), adjustcolor(viridis(3)[2], 0.4), viridis(1, 0.4), adjustcolor(viridis(3)[2], 0.4), viridis(1, 0.4), adjustcolor(viridis(3)[2], 0.4))
+
+
+
+plot(
+  y = c(6:1),
+  x = c(
+    mean_fd_w_11_dn,
+    mean_fd_m_11_dn,
+    mean_fd_w_11_in,
+   mean_fd_m_11_in,
+   mean_fd_w_11_id,
+   mean_fd_m_11_id
+  ),
+  cex = 1.5,
+  xlab = "First Difference ",
+  col = col,
+  ylab = "",
+  yaxt = "n",
+  xlim = c(-0.1, 0.5),
+  ylim = c(0, 6),
+  pch = 19,
+  main = "First Differences",
+  bty = "n"
+)
+segments(
+  x0 = c(cis11[1:6, 1]),
+  y0 = c(6:1),
+  x1 = c(cis11[1:6, 2]),
+  y1 = c(6:1),
+  col = c(col[1:6]),
+  lwd = 2
+)
+segments(
+  x0 = 0,
+  y0 = 0,
+  x1 = 0,
+  y1 = 15,
+  lty = "dashed"
+)
+legend(
+  "topright",
+  c("Women", "Men"),
+  lty = 1,
+  pch = 19,
+  lwd = 2,
+  col = c(col[1], col[2]),
+  bty = "n"
+)
+```
+
+```{r wave 12}
+nsim <- 10000
+
+# Step 1: Get the regression coefficients
+#   NOTE: We are only using fixed effects
+beta_hat <- fixef(mlm_1) 
+
+# Step 2: Generate sampling distribution
+
+# Step 2.1: Get the variance-covariance matrix.
+V_hat <-  vcov(mlm_1) #no info on the random effects
+
+set.seed(2024)
+# Step 2.2: Draw from the multivariate normal distribution.
+S3 <- mvrnorm(nsim, beta_hat, V_hat)
+
+# Additional Step 2.3: Add random effects
+
+# varying intercept
+S3[, "(Intercept)"] <- 
+  S3[, "(Intercept)"] +  #add fixed intercept + random intercept
+  ranef(mlm_1)$wave["12", "(Intercept)"] #intercept is above 5 units from average slope
+
+# varying slope
+S3[, "interaction"] <- 
+  S3[, "interaction"] + 
+  ranef(mlm_1)$wave["12", "interaction"] #subset ireland survey mean and add to the fixed intercepts
+min_sexism <- quantile(mn_data_panel2$change_msexism[mn_data_panel2$wave == "12"], 0.025)
+max_sexism <- quantile(mn_data_panel2$change_msexism[mn_data_panel2$wave == "12"], 0.975)
+
+#scenarios
+
+scenario_w_decr12 <- cbind(1,
+                    1, #female
+                    median(mn_data_panel2$age),
+                    median(mn_data_panel2$edu3_2),
+                    median(mn_data_panel2$edu3_3),
+                    -0.25,
+                    mean(mn_data_panel2$change_income),
+                    mean(mn_data_panel2$change_intpol),
+                    mean(mn_data_panel2$change_authoritarian),
+                    mean(mn_data_panel2$change_nativism),
+                    mean(mn_data_panel2$change_orgterr),
+                    mean(mn_data_panel2$change_pop6amz),
+                    1*(-0.25))
+
+
+scenario_m_decr12 <- cbind(1,
+                    0, #male
+                    median(mn_data_panel2$age),
+                    median(mn_data_panel2$edu3_2),
+                    median(mn_data_panel2$edu3_3),
+                    -0.24,
+                    mean(mn_data_panel2$change_income),
+                    mean(mn_data_panel2$change_intpol),
+                    mean(mn_data_panel2$change_authoritarian),
+                    mean(mn_data_panel2$change_nativism),
+                    mean(mn_data_panel2$change_orgterr),
+                    mean(mn_data_panel2$change_pop6amz),
+                    0*(-0.24)) 
+
+scenario_w_no <- cbind(1,
+                    1, #female
+                    median(mn_data_panel2$age),
+                    median(mn_data_panel2$edu3_2),
+                    median(mn_data_panel2$edu3_3),
+                    0,
+                    mean(mn_data_panel2$change_income),
+                    mean(mn_data_panel2$change_intpol),
+                    mean(mn_data_panel2$change_authoritarian),
+                    mean(mn_data_panel2$change_nativism),
+                    mean(mn_data_panel2$change_orgterr),
+                    mean(mn_data_panel2$change_pop6amz),
+                    1*(0))
+
+scenario_m_no <- cbind(1,
+                    0, #male
+                    median(mn_data_panel2$age),
+                    median(mn_data_panel2$edu3_2),
+                    median(mn_data_panel2$edu3_3),
+                    0,
+                    mean(mn_data_panel2$change_income),
+                    mean(mn_data_panel2$change_intpol),
+                    mean(mn_data_panel2$change_authoritarian),
+                    mean(mn_data_panel2$change_nativism),
+                    mean(mn_data_panel2$change_orgterr),
+                    mean(mn_data_panel2$change_pop6amz),
+                    0*0) 
+
+scenario_w_incr12 <- cbind(1,
+                    1, #female
+                    median(mn_data_panel2$age),
+                    median(mn_data_panel2$edu3_2),
+                    median(mn_data_panel2$edu3_3),
+                    0.35,
+                    mean(mn_data_panel2$change_income),
+                    mean(mn_data_panel2$change_intpol),
+                    mean(mn_data_panel2$change_authoritarian),
+                    mean(mn_data_panel2$change_nativism),
+                    mean(mn_data_panel2$change_orgterr),
+                    mean(mn_data_panel2$change_pop6amz),
+                    1*(0.35))
+
+scenario_m_incr12 <- cbind(1,
+                    0, #male
+                    median(mn_data_panel2$age),
+                    median(mn_data_panel2$edu3_2),
+                    median(mn_data_panel2$edu3_3),
+                    0.35,
+                    mean(mn_data_panel2$change_income),
+                    mean(mn_data_panel2$change_intpol),
+                    mean(mn_data_panel2$change_authoritarian),
+                    mean(mn_data_panel2$change_nativism),
+                    mean(mn_data_panel2$change_orgterr),
+                    mean(mn_data_panel2$change_pop6amz),
+                    0*0.35) 
+
+# Step 4: Calculate Quantities of Interest - 
+# Expected Values
+EV_w_d12 <- S3 %*% t(scenario_w_decr12)
+EV_w_n12 <- S3 %*% t(scenario_w_no)
+EV_w_i12 <- S3 %*% t(scenario_w_incr12)
+
+EV_m_d12 <- S3 %*% t(scenario_m_decr12)
+EV_m_n12 <- S3 %*% t(scenario_m_no)
+EV_m_i12 <- S3 %*% t(scenario_m_incr12)
+
+#get pred prob
+p_w_d12 <-  1/(1 + exp(-EV_w_d12))
+p_w_n12 <-  1/(1 + exp(-EV_w_n12))
+p_w_i12 <-1/(1 + exp(-EV_w_i12))
+
+p_m_d12 <-  1/(1 + exp(-EV_m_d12))
+p_m_n12 <-  1/(1 + exp(-EV_m_n12))
+p_m_i12 <-1/(1 + exp(-EV_m_i12))
+# Step 5: fd
+
+#for women
+#decrease-neutral
+fd_w_12_dn <- p_w_d12 - p_w_n12 
+mean_fd_w_12_dn  <- apply(fd_w_12_dn, 2, mean)
+ci_fd_w_12_dn <- apply(fd_w_12_dn, 2, quantile, c(0.025, 0.975))
+
+#increase-neutral
+fd_w_12_in <- p_w_i12 - p_w_n12 
+mean_fd_w_12_in  <- apply(fd_w_12_in, 2, mean)
+ci_fd_w_12_in <- apply(fd_w_12_in, 2, quantile, c(0.025, 0.975))
+
+#increase-decrease
+fd_w_12_id <- p_w_i12 - p_w_d12
+mean_fd_w_12_id  <- apply(fd_w_12_id, 2, mean)
+ci_fd_w_12_id <- apply(fd_w_12_id, 2, quantile, c(0.025, 0.975))
+
+#for men
+#decrease-neutral
+fd_m_12_dn <- p_m_d12 - p_m_n12 
+mean_fd_m_12_dn  <- apply(fd_m_12_dn, 2, mean)
+ci_fd_m_12_dn <- apply(fd_m_12_dn, 2, quantile, c(0.025, 0.975))
+
+#increase-neutral
+fd_m_12_in <- p_m_i12 - p_m_n12 
+mean_fd_m_12_in  <- apply(fd_m_12_in, 2, mean)
+ci_fd_m_12_in <- apply(fd_m_12_in, 2, quantile, c(0.025, 0.975))
+
+#increase-decrease
+fd_m_12_id <- p_m_i12 - p_m_d12
+mean_fd_m_12_id  <- apply(fd_m_12_id, 2, mean)
+ci_fd_m_12_id <- apply(fd_m_12_id, 2, quantile, c(0.025, 0.975))
+```
+
+```{r plot fd change wave 10-12}
+cis12 <- rbind(
+  ci_fd_w_12_dn,
+  ci_fd_m_12_dn,
+  ci_fd_w_12_in,
+  ci_fd_m_12_in,
+  ci_fd_w_12_id,
+  ci_fd_m_12_id
+)
+
+cis12 <- matrix(cis12, ncol=2, byrow=TRUE)
+col <- c(viridis(1, 0.4), adjustcolor(viridis(3)[2], 0.4), viridis(1, 0.4), adjustcolor(viridis(3)[2], 0.4), viridis(1, 0.4), adjustcolor(viridis(3)[2], 0.4))
+
+
+
+plot(
+  y = c(6:1),
+  x = c(
+    mean_fd_w_12_dn,
+    mean_fd_m_12_dn,
+    mean_fd_w_12_in,
+   mean_fd_m_12_in,
+   mean_fd_w_12_id,
+   mean_fd_m_12_id
+  ),
+  cex = 1.5,
+  xlab = "First Difference ",
+  col = col,
+  ylab = "",
+  yaxt = "n",
+  xlim = c(-0.2, 0.4),
+  ylim = c(0, 6),
+  pch = 19,
+  main = "First Differences",
+  bty = "n"
+)
+segments(
+  x0 = c(cis12[1:6, 1]),
+  y0 = c(6:1),
+  x1 = c(cis12[1:6, 2]),
+  y1 = c(6:1),
+  col = c(col[1:6]),
+  lwd = 2
+)
+segments(
+  x0 = 0,
+  y0 = 0,
+  x1 = 0,
+  y1 = 15,
+  lty = "dashed"
+)
+legend(
+  "topright",
+  c("Women", "Men"),
+  lty = 1,
+  pch = 19,
+  lwd = 2,
+  col = c(col[1], col[2]),
+  bty = "n"
+)
+```
+
+
+
+
+#ORIGINAL MODEL
+
+
+#Fixed effect for the original model (interaction + vim_vox)
+
+``` {r log-lik}
+LLlogit <- function(theta, y, X) { #in the current model we need 2 thetas-B0, B1
+    
+    # theta consists merely of beta (dim is ncol(X))
+    beta <- theta[1:ncol(X)]
+    # linear predictor; make sure that X is stored as.matrix
+    mu <- X %*% beta
+    # link function
+    p <- 1/(1 + exp(-mu)) # transform into interval between 0 and 1 - cdf of logit distr
+    # log-likelihood
+    ll <- y * log(p) + (1 - y) * log(1 - p)
+    # sum
+    ll <- sum(ll)
+    return(ll)
+}
+
+data_panel_com <- data_panel %>%
+  select(codpanelista2, vim_vox,vim_pp, female, age, edu3_2, edu3_3, dhincome_all, authoritarian, intpol, nativism, orgterr, pop6amz, msexism, wave, wave10, wave11, wave12) %>%
+  na.omit() %>%
+ mutate(across(everything(), as.numeric))
+
+data_panel_com$interaction <- as.numeric(data_panel_com$msexism* data_panel_com$female)
+
+y <-as.numeric(data_panel_com$vim_vox)
+X <- cbind(1, data_panel_com$msexism, data_panel_com$female, data_panel_com$age, data_panel_com$edu3_2, data_panel_com$edu3_3, data_panel_com$dhincome_all, data_panel_com$intpol, data_panel_com$authoritarian, data_panel_com$nativism, data_panel_com$orgterr, data_panel_com$pop6amz, data_panel_com$interaction, data_panel_com$wave10, data_panel_com$wave11, data_panel_com$wave12)
+
+dim(X)
+
+startvals <- rep(0, 16)
+
+res <- optim(par = startvals,
+             fn = LLlogit, 
+             y = y, 
+             X = X,
+             control = list(fnscale = -1),
+             hessian = TRUE,
+             method = "BFGS"
+             ) 
+
+res$par
+se <- sqrt(diag(solve(-res$hessian)))
+```
+``` {r glm check}
+lm_fixed <- glm(vim_vox ~ msexism + female + age + edu3_2 +edu3_3 +dhincome_all + intpol + authoritarian + nativism +orgterr +pop6amz  +female* msexism+ as.factor(wave),
+                 data = data_panel_com,
+                 family = binomial(link="logit"))
+summary(lm_fixed)
+
+```
+
+``` {r plot}
+data_panel_com <- data_panel_com %>%
+  mutate(wave1 = case_when(
+    wave == 9  ~ "Wave 9",
+    wave == 10 ~ "Wave 10",
+    wave == 11 ~ "Wave 11",
+    wave == 12 ~ "Wave 12",
+    TRUE       ~ NA # for any other values, NA is assigned
+  ))
+levels(as.factor(data_panel$wave1))
+
+data_panel_com$wave1 <- factor(data_panel_com$wave1, levels = c("Wave 9", "Wave 10", "Wave 11", "Wave 12"))
+
+plot(x = data_panel_com$msexism,
+     y = data_panel_com$vim_vox,
+     pch = 19,
+     ylim = c(0,1),
+     bty = "n",
+     xlab = "Level of sexism",
+     ylab = "Probability of voting for Vox",
+     main = "Fixed Effects (for waves) Regression",
+     font.main = 1,
+     col = viridis(4)[data_panel_com$wave])
+
+fe_coefs <-   1/(1 + exp(-coef(lm_fixed)))
+
+length(fe_coefs)
+abline(fe_coefs[1], fe_coefs[16], #wave 9
+       lwd = 2,
+       col = viridis(4)[1])
+abline(fe_coefs[1] + fe_coefs[13], fe_coefs[16], #wave 10
+       lwd = 2,
+       col = viridis(4)[2])
+abline(fe_coefs[1] + fe_coefs[14], fe_coefs[16], #wave 11
+       lwd = 2,
+       col = viridis(4)[3])
+abline(fe_coefs[1] + fe_coefs[15], fe_coefs[16], #wave 12
+       lwd = 2,
+       col = viridis(4)[4])
+legend(
+  "bottomright",
+  legend = levels(data_panel_com$wave1),
+  lty = 1,
+  col = viridis(4)[as.factor(data_panel_com$wave1)],
+  bty = "n"
+)
+```
+
+``` {r function}
+sim_function <- function(lm_obj, nsim = 1000, scenario){
+  
+  # Step 1: Get the regression coefficients
+  beta_hat <- coef(lm_obj)
+  
+  # Step 2: Generate sampling distribution
+  
+  # Step 2.1: Get the variance-covariance matrix.
+  V_hat <-  vcov(lm_obj) 
+  
+  # Step 2.2: Draw from the multivariate normal distribution.
+  S <- mvrnorm(nsim, beta_hat, V_hat)
+
+  # Step 3: Choose interesting covariate values. 
+  # Make sure the matrix multiplication also works for single scenarios
+  if(is.null(nrow(scenario))){
+    scenario <- matrix(scenario, nrow = 1)
+  }
+  
+  # Print a message if the scenario does not fit the regression.
+  if(ncol(scenario) != length(lm_obj$coefficients)){
+    return(cat("The scenario has the wrong number of variables."))
+  } 
+  
+  # Step 4: Calculate Quantities of Interest - 
+  # Expected Values
+  mu <- S %*% t(scenario)
+  p <- 1/(1 + exp(-mu))
+  return(p)
+}
+```
+
+``` {r simulation}
+sexism_seq <-  seq(min(data_panel_com$msexism[!is.na(data_panel_com$msexism)]), max(data_panel_com$msexism[!is.na(data_panel_com$msexism)]), 
+                  length.out = 100)
+
+
+scenario_w <- cbind(1,
+                    sexism_seq,
+                    1, #for female
+                    median(data_panel_com$age),
+                    mean(data_panel_com$edu3_2),
+                    mean(data_panel_com$edu3_3),
+                    mean(data_panel_com$dhincome_all),
+                    median(data_panel_com$intpol),
+                   median(data_panel_com$authoritarian),
+                    median(data_panel_com$nativism),
+                    median(data_panel_com$orgterr),
+                    median(data_panel_com$pop6amz),
+                    0, #dummy 1
+                    0, #dummy 2
+                    0, #dummy 3
+                    1*sexism_seq)
+
+dim(scenario_w)
+scenario_m <- cbind(1,
+                    sexism_seq,
+                    0, #for male
+                    median(data_panel_com$age),
+                    mean(data_panel_com$edu3_2),
+                    mean(data_panel_com$edu3_3),
+                    mean(data_panel_com$dhincome_all),
+                    median(data_panel_com$intpol),
+                    median(data_panel_com$authoritarian),
+                    median(data_panel_com$nativism),
+                    median(data_panel_com$orgterr),
+                    median(data_panel_com$pop6amz),
+                    0, #dummy 1
+                    0, #dummy 2
+                    0, #dummy 3
+                    0*sexism_seq
+                    ) 
+
+ev_w <- sim_function(lm_fixed, 1000, scenario =  scenario_w)
+ev_m <- sim_function(lm_fixed, 1000, scenario =  scenario_m)
+
+
+# Assuming you have calculated the confidence intervals as below:
+lower_women <- apply(ev_w , 2, function(x) quantile(x, probs = 0.025))
+upper_women <- apply(ev_w , 2, function(x) quantile(x, probs = 0.975))
+lower_men <- apply(ev_m , 2, function(x) quantile(x, probs = 0.025))
+upper_men <- apply(ev_m, 2, function(x) quantile(x, probs = 0.975))
+
+
+# Plot predicted probabilities with confidence intervals
+plot(x = sexism_seq,
+     y = apply(ev_w, 2, mean),
+     type = "n",
+     lwd = 2,
+     main = "Predicted probabilities", 
+     cex.main = 0.7,
+     xlab = "Level of Sexism",
+     ylab = "Pr(Intention to Vote for VOX)", 
+     ylim = c(0, 0.15), 
+     cex.axis = 0.7, 
+     cex.lab = 0.7,
+     xaxt = "n")
+axis(1, at = seq(0, 1, by = 0.5), cex.axis = 0.7)
+
+# Predicted probabilities for treatment and control group
+lines(x = sexism_seq, y = apply(ev_w, 2, mean), lwd = 2, col = "red")
+lines(x = sexism_seq, y = apply(ev_m, 2, mean), lwd = 2, col = "blue")
+# Add a background grid
+abline(h = seq(0, 1, by = 0.1), col = "grey90")
+abline(v = seq(0, 1, by = 0.1), col = "grey90")
+
+# Add confidence intervals as shaded areas
+polygon(c(sexism_seq, rev(sexism_seq)), c(upper_women, rev(lower_women)), col = rgb(1, 0, 0, 0.2), border = NA)
+polygon(c(sexism_seq, rev(sexism_seq)), c(upper_men, rev(lower_men)), col = rgb(0, 0, 1, 0.2), border = NA)
+
+# Some annotations
+text(x = c(0.5, 0.5), y = c(0.25, 0.28), labels = c("Women", "Men"), cex = 0.7, pos = 4, col = c("red", "blue"))
+
+# Add distribution of actual observations
+rug(jitter(data_panel_com$msexism, 0.001), ticksize = 0.02, lwd = 1)
+
+```
+
+``` {r data for waves}
+w9_data <- data_panel_com %>%
+  filter(wave == 9)
+w10_data <- data_panel_com %>%
+  filter(wave == 10)
+
+w11_data <- data_panel_com %>%
+  filter(wave == 11)
+
+w11_fem <- w11_data %>%
+  filter(female== 1)
+
+mean(w11_fem $msexism)
+w11_male <- w11_data %>%
+  filter(female== 0)
+mean(w11_male$msexism)
+
+quantile(w11_male$msexism, c(0.975, 0.025))
+w12_data <- data_panel_com %>%
+  filter(wave == 12)
+```
+
+
+``` {r models}
+w9<- glm(vim_vox ~ msexism + female + age + edu3_2 +edu3_3 +dhincome_all + intpol + authoritarian + nativism +orgterr +pop6amz + msexism*female,
+                 data = w9_data,
+                 family = binomial(link="logit"))
+
+w10<- glm(vim_vox ~ msexism + female + age + edu3_2 +edu3_3 +dhincome_all + intpol + authoritarian + nativism +orgterr +pop6amz + msexism*female,
+                 data = w10_data,
+                 family = binomial(link="logit"))
+
+w11<- glm(vim_vox ~ msexism + female + age + edu3_2 +edu3_3 +dhincome_all + intpol + authoritarian + nativism +orgterr +pop6amz + msexism*female,
+                 data = w11_data,
+                 family = binomial(link="logit"))
+
+w12<- glm(vim_vox ~ msexism + female + age + edu3_2 +edu3_3 +dhincome_all + intpol + authoritarian + nativism +orgterr +pop6amz + msexism*female,
+                 data = w12_data,
+                 family = binomial(link="logit"))
+
+summary(w9)
+summary(w10)
+summary(w11)
+summary(w12)
+
+```
+
+``` {r scenarios for woman}
+set.seed(2024)
+#high sexism
+sc_w9_h <- as.matrix(cbind(1,
+                    0.7,
+                    1, #for female
+                    mean(data_panel$age),
+                    mean(data_panel$edu3_2),
+                    mean(data_panel$edu3_3),
+                    mean(na.omit(data_panel$dhincome_all)),
+                    mean(data_panel$intpol),
+                    mean(data_panel$authoritarian),
+                    mean(data_panel$nativism),
+                    mean(data_panel$orgterr),
+                    mean(data_panel$pop6amz),
+                    1*0.7
+                    ) )
+
+#low sexism
+sc_w9_l <- as.matrix(cbind(1,
+                    0.2,
+                    1, #for female
+                    mean(data_panel$age),
+                    mean(data_panel$edu3_2),
+                    mean(data_panel$edu3_3),
+                    mean(na.omit(data_panel$dhincome_all)),
+                    mean(data_panel$intpol),
+                    mean(data_panel$authoritarian),
+                    mean(data_panel$nativism),
+                    mean(data_panel$orgterr),
+                    mean(data_panel$pop6amz),
+                    1*0.2
+                    ) )
+
+#wave 9
+ev_w9_h <- sim_function(w9, 1000, scenario =  sc_w9_h)
+ev_w9_l <- sim_function(w9, 1000, scenario =  sc_w9_l)
+
+fd9 <- ev_w9_h - ev_w9_l 
+mean_w_9 <- mean(fd9)
+fd_w_9 <-quantile(fd9, c(0.975, 0.025))
+
+#wave 10
+ev_w10_h <- sim_function(w10, 1000, scenario =  sc_w9_h)
+ev_w10_l <- sim_function(w10, 1000, scenario =  sc_w9_l)
+
+fd10 <- ev_w10_h - ev_w10_l 
+mean_w_10 <- mean(fd10)
+fd_w_10 <- quantile(fd10, c(0.975, 0.025))
+
+#wave 11
+ev_w11_h <- sim_function(w11, 1000, scenario =  sc_w9_h)
+ev_w11_l <- sim_function(w11, 1000, scenario =  sc_w9_l)
+
+fd11 <- ev_w11_h - ev_w11_l 
+mean_w_11 <- mean(fd11)
+fd_w_11 <-quantile(fd11, c(0.975, 0.025))
+
+#wave 12
+ev_w12_h <- sim_function(w12, 1000, scenario =  sc_w9_h)
+ev_w12_l <- sim_function(w12, 1000, scenario =  sc_w9_l)
+
+fd12 <- ev_w12_h - ev_w12_l 
+mean_w_12 <- mean(fd12)
+fd_w_12 <-quantile(fd12, c(0.975, 0.025))
+```
+
+
+
+``` {r scenarios for men}
+set.seed(2024)
+
+#high sexism
+sc_m_h <- as.matrix(cbind(1,
+                    0.7,
+                    0, #for male
+                    mean(data_panel$age),
+                    mean(data_panel$edu3_2),
+                    mean(data_panel$edu3_3),
+                    mean(na.omit(data_panel$dhincome_all)),
+                    mean(data_panel$intpol),
+                    mean(data_panel$authoritarian),
+                    mean(data_panel$nativism),
+                    mean(data_panel$orgterr),
+                    mean(data_panel$pop6amz),
+                    0*0.7
+                    ) )
+
+#low sexism
+sc_m_l <- as.matrix(cbind(1,
+                    0.2,
+                    0, #for female
+                    mean(data_panel$age),
+                    mean(data_panel$edu3_2),
+                    mean(data_panel$edu3_3),
+                    mean(na.omit(data_panel$dhincome_all)),
+                    mean(data_panel$intpol),
+                    mean(data_panel$authoritarian),
+                    mean(data_panel$nativism),
+                    mean(data_panel$orgterr),
+                    mean(data_panel$pop6amz),
+                    0*0.2
+                    ) )
+
+#wave 9
+ev_m9_h <- sim_function(w9, 1000, scenario =  sc_m_h)
+ev_m9_l <- sim_function(w9, 1000, scenario =  sc_m_l)
+
+fd_m9 <- ev_m9_h - ev_m9_l 
+mean_m_9 <- mean(fd_m9)
+fd_m_9 <- quantile(fd_m9, c(0.975, 0.025))
+
+
+#wave 10
+ev_m10_h <- sim_function(w10, 1000, scenario =  sc_m_h)
+ev_m10_l <- sim_function(w10, 1000, scenario =  sc_m_l)
+
+fd_m10 <- ev_m10_h - ev_m10_l 
+mean_m_10 <- mean(fd_m10)
+fd_m_10 <- quantile(fd_m10, c(0.975, 0.025))
+
+
+#wave 11
+ev_m11_h <- sim_function(w11, 1000, scenario =  sc_m_h)
+ev_m11_l <- sim_function(w11, 1000, scenario =  sc_m_l)
+
+fd_m11 <- ev_m11_h - ev_m11_l 
+mean_m_11 <- mean(fd_m11)
+fd_m_11<- quantile(fd_m11, c(0.975, 0.025))
+
+#wave 12
+ev_m12_h <- sim_function(w12, 1000, scenario =  sc_m_h)
+ev_m12_l <- sim_function(w12, 1000, scenario =  sc_m_l)
+
+fd_m12 <- ev_m12_h - ev_m12_l 
+mean_m_12 <- mean(fd_m12)
+fd_m_12<- quantile(fd_m12, c(0.975, 0.025))
+```
+
+
+``` {r plot fd}
+cis <- rbind(
+  fd_w_9,
+  fd_m_9,
+  fd_w_10,
+  fd_m_10,
+  fd_w_11,
+  fd_m_11,
+  fd_w_12,
+  fd_m_12
+)
+col <- c(viridis(1, 0.4), adjustcolor(viridis(3)[2], 0.4), viridis(1, 0.4), adjustcolor(viridis(3)[2], 0.4), viridis(1, 0.4), adjustcolor(viridis(3)[2], 0.4), viridis(1, 0.4), adjustcolor(viridis(3)[2], 0.4))
+
+plot(
+  y =c(2:1),
+    x= c( mean_w_9,
+       mean_m_9))
+
+
+plot(
+  y = c(8:1),
+  x = c(
+    mean_w_9,
+    mean_m_9,
+    mean_w_10,
+   mean_m_10,
+   mean_w_11,
+   mean_m_11,
+   mean_w_12,
+   mean_m_12
+  ),
+  cex = 1.5,
+  xlab = "First Difference ",
+  col = col,
+  ylab = "",
+  yaxt = "n",
+  xlim = c(-0.05, 0.3),
+  ylim = c(0, 8),
+  pch = 19,
+  main = "First Differences",
+  bty = "n"
+)
+segments(
+  x0 = c(cis[1:8, 1]),
+  y0 = c(8:1),
+  x1 = c(cis[1:8, 2]),
+  y1 = c(8:1),
+  col = c(col[1:8]),
+  lwd = 2
+)
+segments(
+  x0 = 0,
+  y0 = 0,
+  x1 = 0,
+  y1 = 15,
+  lty = "dashed"
+)
+legend(
+  "topright",
+  c("Women", "Men"),
+  lty = 1,
+  pch = 19,
+  lwd = 2,
+  col = c(col[1], col[2]),
+  bty = "n"
+)
+```
+
+###Multi-level
+
+#Multi-level model
+
+```{r multi-level}
+library("lme4")
+data_panel_com$interaction <-data_panel_com$msexism*data_panel_com$female
+mlm_1 <- glmer(vim_vox ~ msexism + female + age + edu3_2 +edu3_3 +dhincome_all + intpol + authoritarian + nativism +orgterr +pop6amz + interaction+
+                (1  | wave), #????
+              data = data_panel_com,
+              family = binomial(link = "logit"))
+
+summary(mlm_1)
+ranef(mlm_1)$wave
+
+data_panel_com$interaction <-data_panel_com$msexism*data_panel_com$female
+
+mlm_3 <- glmer(vim_vox ~ msexism + female + age + edu3_2 +edu3_3 +dhincome_all + intpol + authoritarian + nativism +orgterr +pop6amz + interaction  +
+                (1 + interaction | wave), #1+ implements that level varies by countries
+              data = data_panel_com,
+              family = binomial(link = "logit"))
+
+summary(mlm_3)
+ranef(mlm_3)$wave
+
+wave_dta <- data.frame("wave" = rownames(ranef(mlm_3)$wave),
+                              "ranef" = ranef(mlm_3)$wave[, "(Intercept)"])
+
+
+intercepts_mlm3 <- 
+  fixef(mlm_3)["(Intercept)"] + 
+  ranef(mlm_3)$wave[,"(Intercept)"]
+
+slopes_mlm3 <- 
+  fixef(mlm_3)["interaction"] +
+  ranef(mlm_3)$wave[,"interaction"]
+
+fe_coefs <-   1/(1 + exp(-intercepts_mlm3))
+
+fe_slopes <- 1/(1 + exp(-slopes_mlm3))
+
+plot(x= data_panel_com$msexism,
+     y = data_panel_com$vim_vox,
+     col = "grey80",
+     main = "Multilevel Model\n(Partial Pooling)",
+     font.main = 1,
+     ylab = "Cabinet Party Vote Share in %",
+     xlab = "Average life satisfaction",
+     ylim = c(0,0.9),
+     las = 1)
+# add regression lines for each country
+for (i in 1:length(fe_coefs )) {
+  abline(a = fe_coefs[i],
+         b = fe_slopes [i])
+}
+
+```
+
+``` {r sim}
+nsim <- 10000
+
+# Step 1: Get the regression coefficients
+#   NOTE: We are only using fixed effects
+beta_hat <- fixef(mlm_3) 
+
+# Step 2: Generate sampling distribution
+
+# Step 2.1: Get the variance-covariance matrix.
+V_hat <-  vcov(mlm_3) #no info on the random effects
+
+set.seed(2024)
+# Step 2.2: Draw from the multivariate normal distribution.
+S <- mvrnorm(nsim, beta_hat, V_hat)
+
+# Additional Step 2.3: Add random effects
+
+# varying intercept
+S[, "(Intercept)"] <- 
+  S[, "(Intercept)"] +  #add fixed intercept + random intercept
+  ranef(mlm_3)$wave["9", "(Intercept)"] #intercept is above 5 units from average slope
+
+# varying slope
+S[, "interaction"] <- 
+  S[, "interaction"] + 
+  ranef(mlm_3)$wave["9", "interaction"] #subset ireland survey mean and add to the fixed intercepts
+
+
+
+# Step 3: Choose interesting covariate values. 
+# Make sure the matrix multiplication also works for single scenarios
+min_sexism <- min(data_panel_com$msexism[data_panel_com$wave == "9"])
+max_sexism <- max(data_panel_com$msexism[data_panel_com$wave == "9"])
+sexism_seq <- seq(min_sexism , max_sexism ,
+                     length.out = 100)
+
+scenario_w <- cbind(1, 
+                    sexism_seq,
+                    1,
+                    median(data_panel_com$age),
+                    mean(data_panel_com$edu3_2),
+                    mean(data_panel_com$edu3_3),
+                    mean(data_panel_com$dhincome_all),
+                    median(data_panel_com$intpol),
+                   median(data_panel_com$authoritarian),
+                    median(data_panel_com$nativism),
+                    median(data_panel_com$orgterr),
+                    median(data_panel_com$pop6amz),
+                    1*sexism_seq) #lat 1 for parl system
+scenario_m <- cbind(1,
+                    sexism_seq, 
+                    0, 
+                    median(data_panel_com$age),
+                    mean(data_panel_com$edu3_2),
+                    mean(data_panel_com$edu3_3),
+                    mean(data_panel_com$dhincome_all),
+                    median(data_panel_com$intpol),
+                   median(data_panel_com$authoritarian),
+                    median(data_panel_com$nativism),
+                    median(data_panel_com$orgterr),
+                    median(data_panel_com$pop6amz),
+                    0*sexism_seq)
+
+
+# Step 4: Calculate Quantities of Interest - 
+# Expected Values
+EV1 <- S %*% t(scenario_w)
+EV2 <- S %*% t(scenario_m)
+
+
+EV_w <-  1/(1 + exp(-EV1))
+EV_m <- 1/(1 + exp(-EV2))
+# Step 5: Summarize
+ev_mean_w <- apply(EV_w, 2, mean)
+ev_ci_w <- apply(EV_w, 2, quantile, c(0.025, 0.975))
+
+
+ev_mean_m <- apply(EV_m, 2, mean)
+ev_ci_m <- apply(EV_m, 2, quantile, c(0.025, 0.975))
+```
+
+
+``` {r plot wave 9}
+# Plot predicted probabilities with confidence intervals
+plot(x = sexism_seq,
+     y = apply(EV_w , 2, mean),
+     type = "n",
+     lwd = 2,
+     main = "Predicted probabilities", 
+     cex.main = 0.7,
+     xlab = "Level of Sexism",
+     ylab = "Pr(Intention to Vote for VOX)", 
+     ylim = c(0, 1), 
+     cex.axis = 0.7, 
+     cex.lab = 0.7,
+     xaxt = "n")
+axis(1, at = seq(0, 1, by = 0.5), cex.axis = 0.7)
+
+# Predicted probabilities for treatment and control group
+lines(x = sexism_seq, y = apply(EV_w, 2, mean), lwd = 2, col = "red")
+lines(x = sexism_seq, y = apply(EV_m, 2, mean), lwd = 2, col = "blue")
+# Add a background grid
+abline(h = seq(0, 1, by = 0.1), col = "grey90")
+abline(v = seq(0, 1, by = 0.1), col = "grey90")
+
+# Add confidence intervals as shaded areas
+polygon(c(sexism_seq, rev(sexism_seq)), c(ev_ci_w[1,], rev(ev_ci_w[2,])), col = rgb(1, 0, 0, 0.2), border = NA)
+polygon(c(sexism_seq, rev(sexism_seq)), c(ev_ci_m[1,], rev(ev_ci_m[2,])), col = rgb(0, 0, 1, 0.2), border = NA)
+```
+
+``` {r wave 10}
+
+nsim <- 10000
+
+# Step 1: Get the regression coefficients
+#   NOTE: We are only using fixed effects
+beta_hat <- fixef(mlm_3) 
+
+# Step 2: Generate sampling distribution
+
+# Step 2.1: Get the variance-covariance matrix.
+V_hat <-  vcov(mlm_3) #no info on the random effects
+
+set.seed(2024)
+# Step 2.2: Draw from the multivariate normal distribution.
+S1 <- mvrnorm(nsim, beta_hat, V_hat)
+
+# Additional Step 2.3: Add random effects
+
+# varying intercept
+S1[, "(Intercept)"] <- 
+  S1[, "(Intercept)"] +  #add fixed intercept + random intercept
+  ranef(mlm_3)$wave["10", "(Intercept)"] #intercept is above 5 units from average slope
+
+# varying slope
+S1[, "interaction"] <- 
+  S1[, "interaction"] + 
+  ranef(mlm_3)$wave["10", "interaction"] #subset ireland survey mean and add to the fixed intercepts
+
+
+
+# Step 3: Choose interesting covariate values. 
+# Make sure the matrix multiplication also works for single scenarios
+min_sexism1 <- min(data_panel_com$msexism[data_panel_com$wave == "10"])
+max_sexism1 <- max(data_panel_com$msexism[data_panel_com$wave == "10"])
+sexism_seq1 <- seq(min_sexism1 , max_sexism1 ,
+                     length.out = 100)
+
+scenario_w1 <- cbind(1, 
+                    sexism_seq1, 
+                    1,
+                    median(data_panel_com$age),
+                    mean(data_panel_com$edu3_2),
+                    mean(data_panel_com$edu3_3),
+                    mean(data_panel_com$dhincome_all),
+                    median(data_panel_com$intpol),
+                   median(data_panel_com$authoritarian),
+                    median(data_panel_com$nativism),
+                    median(data_panel_com$orgterr),
+                    median(data_panel_com$pop6amz),
+                    1*sexism_seq1) #lat 1 for parl system
+
+scenario_m1 <- cbind(1, sexism_seq1, 0, 
+             median(data_panel_com$age),
+                    mean(data_panel_com$edu3_2),
+                    mean(data_panel_com$edu3_3),
+                    mean(data_panel_com$dhincome_all),
+                    median(data_panel_com$intpol),
+                   median(data_panel_com$authoritarian),
+                    median(data_panel_com$nativism),
+                    median(data_panel_com$orgterr),
+                    median(data_panel_com$pop6amz),
+                    0*sexism_seq1)
+
+
+# Step 4: Calculate Quantities of Interest - 
+# Expected Values
+EV11 <- S1 %*% t(scenario_w1)
+EV21 <- S1 %*% t(scenario_m1)
+
+
+EV_w1 <-  1/(1 + exp(-EV11))
+EV_m1 <- 1/(1 + exp(-EV21))
+# Step 5: Summarize
+ev_mean_w1 <- apply(EV_w1, 2, mean)
+ev_ci_w1 <- apply(EV_w1, 2, quantile, c(0.025, 0.975))
+
+
+ev_mean_m1 <- apply(EV_m1, 2, mean)
+ev_ci_m1 <- apply(EV_m1, 2, quantile, c(0.025, 0.975))
+
+# Plot predicted probabilities with confidence intervals
+plot(x = sexism_seq1,
+     y = apply(EV_w1 , 2, mean),
+     type = "n",
+     lwd = 2,
+     main = "Predicted probabilities", 
+     cex.main = 0.7,
+     xlab = "Level of Sexism",
+     ylab = "Pr(Intention to Vote for VOX)", 
+     ylim = c(0, 0.4), 
+     cex.axis = 0.7, 
+     cex.lab = 0.7,
+     xaxt = "n")
+axis(1, at = seq(0, 1, by = 0.5), cex.axis = 0.7)
+
+# Predicted probabilities for treatment and control group
+lines(x = sexism_seq1, y = apply(EV_w1, 2, mean), lwd = 2, col = "red")
+lines(x = sexism_seq1, y = apply(EV_m1, 2, mean), lwd = 2, col = "blue")
+# Add a background grid
+abline(h = seq(0, 1, by = 0.1), col = "grey90")
+abline(v = seq(0, 1, by = 0.1), col = "grey90")
+
+# Add confidence intervals as shaded areas
+polygon(c(sexism_seq1, rev(sexism_seq1)), c(ev_ci_w1[1,], rev(ev_ci_w1[2,])), col = rgb(1, 0, 0, 0.2), border = NA)
+polygon(c(sexism_seq1, rev(sexism_seq1)), c(ev_ci_m1[1,], rev(ev_ci_m1[2,])), col = rgb(0, 0, 1, 0.2), border = NA)
+```
+
+``` {r wave 11}
+nsim <- 10000
+
+# Step 1: Get the regression coefficients
+#   NOTE: We are only using fixed effects
+beta_hat <- fixef(mlm_3) 
+
+# Step 2: Generate sampling distribution
+
+# Step 2.1: Get the variance-covariance matrix.
+V_hat <-  vcov(mlm_3) #no info on the random effects
+
+set.seed(2024)
+# Step 2.2: Draw from the multivariate normal distribution.
+S <- mvrnorm(nsim, beta_hat, V_hat)
+
+# Additional Step 2.3: Add random effects
+
+# varying intercept
+S[, "(Intercept)"] <- 
+  S[, "(Intercept)"] +  #add fixed intercept + random intercept
+  ranef(mlm_3)$wave["11", "(Intercept)"] #intercept is above 5 units from average slope
+
+# varying slope
+S[, "interaction"] <- 
+  S[, "interaction"] + 
+  ranef(mlm_3)$wave["11", "interaction"] #subset ireland survey mean and add to the fixed intercepts
+
+
+
+# Step 3: Choose interesting covariate values. 
+# Make sure the matrix multiplication also works for single scenarios
+min_sexism <- min(data_panel_com$msexism[data_panel_com$wave == "11"])
+max_sexism <- max(data_panel_com$msexism[data_panel_com$wave == "11"])
+sexism_seq <- seq(min_sexism , max_sexism ,
+                     length.out = 100)
+
+scenario_w <- cbind(1, sexism_seq, 1, median(data_panel_com$age),
+                    mean(data_panel_com$edu3_2),
+                    mean(data_panel_com$edu3_3),
+                    mean(data_panel_com$dhincome_all),
+                    median(data_panel_com$intpol),
+                   median(data_panel_com$authoritarian),
+                    median(data_panel_com$nativism),
+                    median(data_panel_com$orgterr),
+                    median(data_panel_com$pop6amz), 1*sexism_seq) #lat 1 for parl system
+scenario_m <- cbind(1, sexism_seq, 0, median(data_panel_com$age),
+                    mean(data_panel_com$edu3_2),
+                    mean(data_panel_com$edu3_3),
+                    mean(data_panel_com$dhincome_all),
+                    median(data_panel_com$intpol),
+                   median(data_panel_com$authoritarian),
+                    median(data_panel_com$nativism),
+                    median(data_panel_com$orgterr),
+                    median(data_panel_com$pop6amz), 0*sexism_seq)
+
+
+# Step 4: Calculate Quantities of Interest - 
+# Expected Values
+EV1 <- S %*% t(scenario_w)
+EV2 <- S %*% t(scenario_m)
+
+
+EV_w <-  1/(1 + exp(-EV1))
+EV_m <- 1/(1 + exp(-EV2))
+# Step 5: Summarize
+ev_mean_w <- apply(EV_w, 2, mean)
+ev_ci_w <- apply(EV_w, 2, quantile, c(0.025, 0.975))
+
+
+ev_mean_m <- apply(EV_m, 2, mean)
+ev_ci_m <- apply(EV_m, 2, quantile, c(0.025, 0.975))
+
+# Plot predicted probabilities with confidence intervals
+plot(x = sexism_seq,
+     y = apply(EV_w , 2, mean),
+     type = "n",
+     lwd = 2,
+     main = "Predicted probabilities", 
+     cex.main = 0.7,
+     xlab = "Level of Sexism",
+     ylab = "Pr(Intention to Vote for VOX)", 
+     ylim = c(0, 1), 
+     cex.axis = 0.7, 
+     cex.lab = 0.7,
+     xaxt = "n")
+axis(1, at = seq(0, 1, by = 0.5), cex.axis = 0.7)
+
+# Predicted probabilities for treatment and control group
+lines(x = sexism_seq, y = apply(EV_w, 2, mean), lwd = 2, col = "red")
+lines(x = sexism_seq, y = apply(EV_m, 2, mean), lwd = 2, col = "blue")
+# Add a background grid
+abline(h = seq(0, 1, by = 0.1), col = "grey90")
+abline(v = seq(0, 1, by = 0.1), col = "grey90")
+
+# Add confidence intervals as shaded areas
+polygon(c(sexism_seq, rev(sexism_seq)), c(ev_ci_w[1,], rev(ev_ci_w[2,])), col = rgb(1, 0, 0, 0.2), border = NA)
+polygon(c(sexism_seq, rev(sexism_seq)), c(ev_ci_m[1,], rev(ev_ci_m[2,])), col = rgb(0, 0, 1, 0.2), border = NA)
+```
+
+```{r wave 12}
+nsim <- 10000
+
+# Step 1: Get the regression coefficients
+#   NOTE: We are only using fixed effects
+beta_hat <- fixef(mlm_3) 
+
+# Step 2: Generate sampling distribution
+
+# Step 2.1: Get the variance-covariance matrix.
+V_hat <-  vcov(mlm_3) #no info on the random effects
+
+set.seed(2024)
+# Step 2.2: Draw from the multivariate normal distribution.
+S <- mvrnorm(nsim, beta_hat, V_hat)
+
+# Additional Step 2.3: Add random effects
+
+# varying intercept
+S[, "(Intercept)"] <- 
+  S[, "(Intercept)"] +  #add fixed intercept + random intercept
+  ranef(mlm_3)$wave["12", "(Intercept)"] #intercept is above 5 units from average slope
+
+# varying slope
+S[, "interaction"] <- 
+  S[, "interaction"] + 
+  ranef(mlm_3)$wave["12", "interaction"] #subset ireland survey mean and add to the fixed intercepts
+
+
+
+# Step 3: Choose interesting covariate values. 
+# Make sure the matrix multiplication also works for single scenarios
+min_sexism <- min(data_panel_com$msexism[data_panel_com$wave == "12"])
+max_sexism <- max(data_panel_com$msexism[data_panel_com$wave == "12"])
+sexism_seq <- seq(min_sexism , max_sexism ,
+                     length.out = 100)
+
+scenario_w <- cbind(1, sexism_seq, 1, median(data_panel_com$age),
+                    mean(data_panel_com$edu3_2),
+                    mean(data_panel_com$edu3_3),
+                    mean(data_panel_com$dhincome_all),
+                    median(data_panel_com$intpol),
+                   median(data_panel_com$authoritarian),
+                    median(data_panel_com$nativism),
+                    median(data_panel_com$orgterr),
+                    median(data_panel_com$pop6amz),1*sexism_seq) #lat 1 for parl system
+scenario_m <- cbind(1, sexism_seq, 0, median(data_panel_com$age),
+                    mean(data_panel_com$edu3_2),
+                    mean(data_panel_com$edu3_3),
+                    mean(data_panel_com$dhincome_all),
+                    median(data_panel_com$intpol),
+                   median(data_panel_com$authoritarian),
+                    median(data_panel_com$nativism),
+                    median(data_panel_com$orgterr),
+                    median(data_panel_com$pop6amz),0*sexism_seq)
+
+
+# Step 4: Calculate Quantities of Interest - 
+# Expected Values
+EV1 <- S %*% t(scenario_w)
+EV2 <- S %*% t(scenario_m)
+
+
+EV_w <-  1/(1 + exp(-EV1))
+EV_m <- 1/(1 + exp(-EV2))
+# Step 5: Summarize
+ev_mean_w <- apply(EV_w, 2, mean)
+ev_ci_w <- apply(EV_w, 2, quantile, c(0.025, 0.975))
+
+
+ev_mean_m <- apply(EV_m, 2, mean)
+ev_ci_m <- apply(EV_m, 2, quantile, c(0.025, 0.975))
+
+# Plot predicted probabilities with confidence intervals
+plot(x = sexism_seq,
+     y = apply(EV_w , 2, mean),
+     type = "n",
+     lwd = 2,
+     main = "Predicted probabilities", 
+     cex.main = 0.7,
+     xlab = "Level of Sexism",
+     ylab = "Pr(Intention to Vote for VOX)", 
+     ylim = c(0, 1), 
+     cex.axis = 0.7, 
+     cex.lab = 0.7,
+     xaxt = "n")
+axis(1, at = seq(0, 1, by = 0.5), cex.axis = 0.7)
+
+# Predicted probabilities for treatment and control group
+lines(x = sexism_seq, y = apply(EV_w, 2, mean), lwd = 2, col = "red")
+lines(x = sexism_seq, y = apply(EV_m, 2, mean), lwd = 2, col = "blue")
+# Add a background grid
+abline(h = seq(0, 1, by = 0.1), col = "grey90")
+abline(v = seq(0, 1, by = 0.1), col = "grey90")
+
+# Add confidence intervals as shaded areas
+polygon(c(sexism_seq, rev(sexism_seq)), c(ev_ci_w[1,], rev(ev_ci_w[2,])), col = rgb(1, 0, 0, 0.2), border = NA)
+polygon(c(sexism_seq, rev(sexism_seq)), c(ev_ci_m[1,], rev(ev_ci_m[2,])), col = rgb(0, 0, 1, 0.2), border = NA)
+```
+
+#Difference between women and men (multi-level regr)
+
+
+``` {r sim}
+nsim <- 10000
+
+# Step 1: Get the regression coefficients
+#   NOTE: We are only using fixed effects
+beta_hat <- fixef(mlm_3) 
+
+# Step 2: Generate sampling distribution
+
+# Step 2.1: Get the variance-covariance matrix.
+V_hat <-  vcov(mlm_3) #no info on the random effects
+
+set.seed(2024)
+# Step 2.2: Draw from the multivariate normal distribution.
+S <- mvrnorm(nsim, beta_hat, V_hat)
+
+# Additional Step 2.3: Add random effects
+
+# varying intercept
+S[, "(Intercept)"] <- 
+  S[, "(Intercept)"] +  #add fixed intercept + random intercept
+  ranef(mlm_3)$wave["9", "(Intercept)"] #intercept is above 5 units from average slope
+
+# varying slope
+S[, "interaction"] <- 
+  S[, "interaction"] + 
+  ranef(mlm_3)$wave["9", "interaction"] #subset ireland survey mean and add to the fixed intercepts
+quantile(data_panel$msexism[data_panel$wave == "9"], 0.975)
+
+#scenarios
+
+scenario_w_l <- cbind(1, 
+                    0.018,
+                    1,
+                    median(data_panel_com$age),
+                    mean(data_panel_com$edu3_2),
+                    mean(data_panel_com$edu3_3),
+                    mean(data_panel_com$dhincome_all),
+                    median(data_panel_com$intpol),
+                   median(data_panel_com$authoritarian),
+                    median(data_panel_com$nativism),
+                    median(data_panel_com$orgterr),
+                    median(data_panel_com$pop6amz),
+                    1*0.018) #lat 1 for parl system
+
+
+scenario_w_h <- cbind(1, 
+                    0.7,
+                    1,
+                    median(data_panel_com$age),
+                    mean(data_panel_com$edu3_2),
+                    mean(data_panel_com$edu3_3),
+                    mean(data_panel_com$dhincome_all),
+                    median(data_panel_com$intpol),
+                   median(data_panel_com$authoritarian),
+                    median(data_panel_com$nativism),
+                    median(data_panel_com$orgterr),
+                    median(data_panel_com$pop6amz),
+                    1*0.7) #lat 1 for parl system
+
+scenario_m_l <- cbind(1,
+                    0.018, 
+                    0, 
+                    median(data_panel_com$age),
+                    mean(data_panel_com$edu3_2),
+                    mean(data_panel_com$edu3_3),
+                    mean(data_panel_com$dhincome_all),
+                    median(data_panel_com$intpol),
+                   median(data_panel_com$authoritarian),
+                    median(data_panel_com$nativism),
+                    median(data_panel_com$orgterr),
+                    median(data_panel_com$pop6amz),
+                    0*0.018)
+
+scenario_m_h <- cbind(1, 
+                    0.7,
+                    0,
+                    median(data_panel_com$age),
+                    mean(data_panel_com$edu3_2),
+                    mean(data_panel_com$edu3_3),
+                    mean(data_panel_com$dhincome_all),
+                    median(data_panel_com$intpol),
+                   median(data_panel_com$authoritarian),
+                    median(data_panel_com$nativism),
+                    median(data_panel_com$orgterr),
+                    median(data_panel_com$pop6amz),
+                    0*0.7) #lat 1 for parl system
+
+# Step 4: Calculate Quantities of Interest - 
+# Expected Values
+EV_w_h <- S %*% t(scenario_w_h)
+EV_w_l <- S %*% t(scenario_w_l)
+
+EV_m_h <- S %*% t(scenario_m_h)
+EV_m_l <- S %*% t(scenario_m_l)
+
+#get pred prob
+p_w_h <-  1/(1 + exp(-EV_w_h))
+p_w_l <-  1/(1 + exp(-EV_w_l))
+
+p_m_h <-  1/(1 + exp(-EV_m_h))
+p_m_l <-  1/(1 + exp(-EV_m_l))
+
+# Step 5: fd
+
+#for women
+fd_w_99 <- p_w_h - p_w_l 
+mean_fd_w_99  <- apply(fd_w_99, 2, mean)
+ci_fd_w_99 <- apply(fd_w_99, 2, quantile, c(0.025, 0.975))
+
+#for men
+fd_m_99 <- p_m_h - p_m_l 
+mean_fd_m_99  <- apply(fd_m_99, 2, mean)
+ci_fd_m_99 <- apply(fd_m_99, 2, quantile, c(0.025, 0.975))
+```
+
+```{r sim 10}
+nsim <- 10000
+
+# Step 1: Get the regression coefficients
+#   NOTE: We are only using fixed effects
+beta_hat <- fixef(mlm_3) 
+
+# Step 2: Generate sampling distribution
+
+# Step 2.1: Get the variance-covariance matrix.
+V_hat <-  vcov(mlm_3) #no info on the random effects
+
+set.seed(2024)
+# Step 2.2: Draw from the multivariate normal distribution.
+S1 <- mvrnorm(nsim, beta_hat, V_hat)
+
+# Additional Step 2.3: Add random effects
+
+# varying intercept
+S1[, "(Intercept)"] <- 
+  S1[, "(Intercept)"] +  #add fixed intercept + random intercept
+  ranef(mlm_3)$wave["10", "(Intercept)"] #intercept is above 5 units from average slope
+
+# varying slope
+S1[, "interaction"] <- 
+  S1[, "interaction"] + 
+  ranef(mlm_3)$wave["10", "interaction"] #subset ireland survey mean and add to the fixed intercepts
+min_sexism <- quantile(data_panel$msexism[data_panel$wave == "10"], 0.975)
+
+
+#scenarios
+
+scenario_w_l <- cbind(1, 
+                    0.1,
+                    1,
+                    median(data_panel_com$age),
+                    mean(data_panel_com$edu3_2),
+                    mean(data_panel_com$edu3_3),
+                    mean(data_panel_com$dhincome_all),
+                    median(data_panel_com$intpol),
+                   median(data_panel_com$authoritarian),
+                    median(data_panel_com$nativism),
+                    median(data_panel_com$orgterr),
+                    median(data_panel_com$pop6amz),
+                    1*0.1) #lat 1 for parl system
+
+
+scenario_w_h <- cbind(1, 
+                    0.72,
+                    1,
+                    median(data_panel_com$age),
+                    mean(data_panel_com$edu3_2),
+                    mean(data_panel_com$edu3_3),
+                    mean(data_panel_com$dhincome_all),
+                    median(data_panel_com$intpol),
+                   median(data_panel_com$authoritarian),
+                    median(data_panel_com$nativism),
+                    median(data_panel_com$orgterr),
+                    median(data_panel_com$pop6amz),
+                    1*0.72) #lat 1 for parl system
+
+scenario_m_l <- cbind(1,
+                    0.1, 
+                    0, 
+                    median(data_panel_com$age),
+                    mean(data_panel_com$edu3_2),
+                    mean(data_panel_com$edu3_3),
+                    mean(data_panel_com$dhincome_all),
+                    median(data_panel_com$intpol),
+                   median(data_panel_com$authoritarian),
+                    median(data_panel_com$nativism),
+                    median(data_panel_com$orgterr),
+                    median(data_panel_com$pop6amz),
+                    0*0.1)
+
+scenario_m_h <- cbind(1, 
+                    0.72,
+                    0,
+                    median(data_panel_com$age),
+                    mean(data_panel_com$edu3_2),
+                    mean(data_panel_com$edu3_3),
+                    mean(data_panel_com$dhincome_all),
+                    median(data_panel_com$intpol),
+                   median(data_panel_com$authoritarian),
+                    median(data_panel_com$nativism),
+                    median(data_panel_com$orgterr),
+                    median(data_panel_com$pop6amz),
+                    0*0.72) #lat 1 for parl system
+
+# Step 4: Calculate Quantities of Interest - 
+# Expected Values
+EV_w_h1 <- S1 %*% t(scenario_w_h)
+EV_w_l1 <- S1 %*% t(scenario_w_l)
+
+EV_m_h1 <- S1 %*% t(scenario_m_h)
+EV_m_l1 <- S1 %*% t(scenario_m_l)
+
+#get pred prob
+p_w_h1 <-  1/(1 + exp(-EV_w_h1))
+p_w_l1 <-  1/(1 + exp(-EV_w_l1))
+
+p_m_h1 <-  1/(1 + exp(-EV_m_h1))
+p_m_l1 <-  1/(1 + exp(-EV_m_l1))
+
+# Step 5: fd
+
+#for women
+fd_w_10 <- p_w_h1 - p_w_l1 
+mean_fd_w_10  <- apply(fd_w_10, 2, mean)
+ci_fd_w_10 <- apply(fd_w_10, 2, quantile, c(0.025, 0.975))
+
+#for men
+fd_m_10 <- p_m_h1 - p_m_l1 
+mean_fd_m_10  <- apply(fd_m_10, 2, mean)
+ci_fd_m_10 <- apply(fd_m_10, 2, quantile, c(0.025, 0.975))
+```
+
+```{r sim 11}
+nsim <- 10000
+
+# Step 1: Get the regression coefficients
+#   NOTE: We are only using fixed effects
+beta_hat <- fixef(mlm_3) 
+
+# Step 2: Generate sampling distribution
+
+# Step 2.1: Get the variance-covariance matrix.
+V_hat <-  vcov(mlm_3) #no info on the random effects
+
+set.seed(12345)
+# Step 2.2: Draw from the multivariate normal distribution.
+S2 <- mvrnorm(nsim, beta_hat, V_hat)
+
+# Additional Step 2.3: Add random effects
+
+# varying intercept
+S2[, "(Intercept)"] <- 
+  S2[, "(Intercept)"] +  #add fixed intercept + random intercept
+  ranef(mlm_3)$wave["11", "(Intercept)"] #intercept is above 5 units from average slope
+
+# varying slope
+S2[, "interaction"] <- 
+  S2[, "interaction"] + 
+  ranef(mlm_3)$wave["11", "interaction"] #subset ireland survey mean and add to the fixed intercepts
+
+quantile(data_panel$msexism[data_panel$wave == "11"], 0.025)
+
+#scenarios
+
+scenario_w_l <- cbind(1, 
+                    0.018,
+                    1,
+                    median(data_panel_com$age),
+                    mean(data_panel_com$edu3_2),
+                    mean(data_panel_com$edu3_3),
+                    mean(data_panel_com$dhincome_all),
+                    median(data_panel_com$intpol),
+                   median(data_panel_com$authoritarian),
+                    median(data_panel_com$nativism),
+                    median(data_panel_com$orgterr),
+                    median(data_panel_com$pop6amz),
+                    1*0.018) #lat 1 for parl system
+
+
+scenario_w_h <- cbind(1, 
+                    0.8,
+                    1,
+                    median(data_panel_com$age),
+                    mean(data_panel_com$edu3_2),
+                    mean(data_panel_com$edu3_3),
+                    mean(data_panel_com$dhincome_all),
+                    median(data_panel_com$intpol),
+                   median(data_panel_com$authoritarian),
+                    median(data_panel_com$nativism),
+                    median(data_panel_com$orgterr),
+                    median(data_panel_com$pop6amz),
+                    1*0.8) #lat 1 for parl system
+
+scenario_m_l <- cbind(1,
+                    0.018, 
+                    0, 
+                    median(data_panel_com$age),
+                    mean(data_panel_com$edu3_2),
+                    mean(data_panel_com$edu3_3),
+                    mean(data_panel_com$dhincome_all),
+                    median(data_panel_com$intpol),
+                   median(data_panel_com$authoritarian),
+                    median(data_panel_com$nativism),
+                    median(data_panel_com$orgterr),
+                    median(data_panel_com$pop6amz),
+                    0*0.018)
+
+scenario_m_h <- cbind(1, 
+                    0.8,
+                    0,
+                    median(data_panel_com$age),
+                    mean(data_panel_com$edu3_2),
+                    mean(data_panel_com$edu3_3),
+                    mean(data_panel_com$dhincome_all),
+                    median(data_panel_com$intpol),
+                   median(data_panel_com$authoritarian),
+                    median(data_panel_com$nativism),
+                    median(data_panel_com$orgterr),
+                    median(data_panel_com$pop6amz),
+                    0*0.8) #lat 1 for parl system
+
+# Step 4: Calculate Quantities of Interest - 
+# Expected Values
+EV_w_h2 <- S2 %*% t(scenario_w_h)
+EV_w_l2 <- S2 %*% t(scenario_w_l)
+
+EV_m_h2 <- S2 %*% t(scenario_m_h)
+EV_m_l2 <- S2 %*% t(scenario_m_l)
+
+#get pred prob
+p_w_h2 <-  1/(1 + exp(-EV_w_h2))
+p_w_l2 <-  1/(1 + exp(-EV_w_l2))
+
+p_m_h2 <-  1/(1 + exp(-EV_m_h2))
+p_m_l2 <-  1/(1 + exp(-EV_m_l2))
+
+# Step 5: fd
+
+#for women
+fd_w_11 <- p_w_h2 - p_w_l2
+mean_fd_w_11  <- apply(fd_w_11, 2, mean)
+ci_fd_w_11 <- apply(fd_w_11, 2, quantile, c(0.025, 0.975))
+
+#for men
+fd_m_11 <- p_m_h2 - p_m_l2
+mean_fd_m_11  <- apply(fd_m_11, 2, mean)
+ci_fd_m_11 <- apply(fd_m_11, 2, quantile, c(0.025, 0.975))
+```
+
+
+```{r sim 12}
+nsim <- 10000
+
+# Step 1: Get the regression coefficients
+#   NOTE: We are only using fixed effects
+beta_hat <- fixef(mlm_3) 
+
+# Step 2: Generate sampling distribution
+
+# Step 2.1: Get the variance-covariance matrix.
+V_hat <-  vcov(mlm_3) #no info on the random effects
+
+set.seed(12345)
+# Step 2.2: Draw from the multivariate normal distribution.
+S3 <- mvrnorm(nsim, beta_hat, V_hat)
+
+# Additional Step 2.3: Add random effects
+
+# varying intercept
+S3[, "(Intercept)"] <- 
+  S3[, "(Intercept)"] +  #add fixed intercept + random intercept
+  ranef(mlm_3)$wave["12", "(Intercept)"] #intercept is above 5 units from average slope
+
+# varying slope
+S3[, "interaction"] <- 
+  S3[, "interaction"] + 
+  ranef(mlm_3)$wave["12", "interaction"] #subset ireland survey mean and add to the fixed intercepts
+
+quantile(data_panel$msexism[data_panel$wave == "12"], 0.025)
+#scenarios
+
+scenario_w_l <- cbind(1, 
+                    0.05,
+                    1,
+                    median(data_panel_com$age),
+                    mean(data_panel_com$edu3_2),
+                    mean(data_panel_com$edu3_3),
+                    mean(data_panel_com$dhincome_all),
+                    median(data_panel_com$intpol),
+                   median(data_panel_com$authoritarian),
+                    median(data_panel_com$nativism),
+                    median(data_panel_com$orgterr),
+                    median(data_panel_com$pop6amz),
+                    1*0.05) #lat 1 for parl system
+
+
+scenario_w_h <- cbind(1, 
+                    0.85,
+                    1,
+                    median(data_panel_com$age),
+                    mean(data_panel_com$edu3_2),
+                    mean(data_panel_com$edu3_3),
+                    mean(data_panel_com$dhincome_all),
+                    median(data_panel_com$intpol),
+                   median(data_panel_com$authoritarian),
+                    median(data_panel_com$nativism),
+                    median(data_panel_com$orgterr),
+                    median(data_panel_com$pop6amz),
+                    1*0.85) #lat 1 for parl system
+
+scenario_m_l <- cbind(1,
+                    0.05, 
+                    0, 
+                    median(data_panel_com$age),
+                    mean(data_panel_com$edu3_2),
+                    mean(data_panel_com$edu3_3),
+                    mean(data_panel_com$dhincome_all),
+                    median(data_panel_com$intpol),
+                   median(data_panel_com$authoritarian),
+                    median(data_panel_com$nativism),
+                    median(data_panel_com$orgterr),
+                    median(data_panel_com$pop6amz),
+                    0*0.05)
+
+scenario_m_h <- cbind(1, 
+                    0.85,
+                    0,
+                    median(data_panel_com$age),
+                    mean(data_panel_com$edu3_2),
+                    mean(data_panel_com$edu3_3),
+                    mean(data_panel_com$dhincome_all),
+                    median(data_panel_com$intpol),
+                   median(data_panel_com$authoritarian),
+                    median(data_panel_com$nativism),
+                    median(data_panel_com$orgterr),
+                    median(data_panel_com$pop6amz),
+                    0*0.85) #lat 1 for parl system
+
+# Step 4: Calculate Quantities of Interest - 
+# Expected Values
+EV_w_h3 <- S3 %*% t(scenario_w_h)
+EV_w_l3 <- S3 %*% t(scenario_w_l)
+
+EV_m_h3 <- S3 %*% t(scenario_m_h)
+EV_m_l3 <- S3 %*% t(scenario_m_l)
+
+#get pred prob
+p_w_h3 <-  1/(1 + exp(-EV_w_h3))
+p_w_l3 <-  1/(1 + exp(-EV_w_l3))
+
+p_m_h3 <-  1/(1 + exp(-EV_m_h3))
+p_m_l3 <-  1/(1 + exp(-EV_m_l3))
+
+# Step 5: fd
+
+#for women
+fd_w_12 <- p_w_h3 - p_w_l3
+mean_fd_w_12  <- apply(fd_w_12, 2, mean)
+ci_fd_w_12 <- as.matrix(apply(fd_w_12, 2, quantile, c(0.025, 0.975)))
+
+#for men
+fd_m_12 <- p_m_h3 - p_m_l3
+mean_fd_m_12  <- apply(fd_m_12, 2, mean)
+ci_fd_m_12 <- as.matrix(apply(fd_m_12, 2, quantile, c(0.025, 0.975)))
+```
+
+
+``` {r plot}
+
+cis4 <- rbind(
+  ci_fd_w_99,
+  ci_fd_m_99,
+  ci_fd_w_10,
+  ci_fd_m_10,
+  ci_fd_w_11,
+  ci_fd_m_11,
+  ci_fd_w_12,
+  ci_fd_m_11
+)
+cis4 <- matrix(cis4, ncol=2, byrow=TRUE)
+col <- c(viridis(1, 0.4), adjustcolor(viridis(3)[2], 0.4), viridis(1, 0.4), adjustcolor(viridis(3)[2], 0.4), viridis(1, 0.4), adjustcolor(viridis(3)[2], 0.4), viridis(1, 0.4), adjustcolor(viridis(3)[2], 0.4))
+
+
+
+plot(
+  y = c(8:1),
+  x = c(
+    mean_fd_w_99,
+    mean_fd_m_99,
+    mean_fd_w_10,
+   mean_fd_m_10,
+   mean_fd_w_11,
+   mean_fd_m_11,
+   mean_fd_w_12,
+   mean_fd_m_12
+  ),
+  cex = 1.5,
+  xlab = "First Difference ",
+  col = col,
+  ylab = "",
+  yaxt = "n",
+  xlim = c(-0.2, 0.4),
+  ylim = c(0, 8),
+  pch = 19,
+  main = "First Differences",
+  bty = "n"
+)
+segments(
+  x0 = c(cis4[1:8, 1]),
+  y0 = c(8:1),
+  x1 = c(cis4[1:8, 2]),
+  y1 = c(8:1),
+  col = c(col[1:8]),
+  lwd = 2
+)
+segments(
+  x0 = 0,
+  y0 = 0,
+  x1 = 0,
+  y1 = 15,
+  lty = "dashed"
+)
+legend(
+  "topright",
+  c("Women", "Men"),
+  lty = 1,
+  pch = 19,
+  lwd = 2,
+  col = c(col[1], col[2]),
+  bty = "n"
+)
+```
+
+
